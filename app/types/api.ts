@@ -86,13 +86,23 @@ export interface Bp21Read {
   recipient_identity_number: string
   recipient_name: string
   recipient_address: string | null
+  recipient_nitku: string | null
+  ptkp_status: string | null
   tax_object_code: string
   income_type: string
   tax_nature: Bp21TaxNature
   tax_facility: Bp21TaxFacility
+  previous_gross_income: number
+  gross_income: number
   dpp: number
+  dpp_percent: number
   rate_percent: number
   income_tax: number
+  kap_kjs: string | null
+  document_type: string | null
+  document_number: string | null
+  document_date: string | null
+  document_nitku: string | null
   score: number | null
   teacher_feedback: string | null
   created_at: string | null
@@ -110,12 +120,21 @@ export interface Bp21Create {
   recipient_identity_number: string
   recipient_name: string
   recipient_address?: string | null
+  recipient_nitku?: string | null
+  ptkp_status?: string | null
   tax_object_code: string
   income_type: string
   tax_nature: Bp21TaxNature
   tax_facility: Bp21TaxFacility
-  dpp: number
+  previous_gross_income?: number
+  gross_income: number
+  dpp_percent: number
   rate_percent: number
+  kap_kjs?: string | null
+  document_type?: string | null
+  document_number?: string | null
+  document_date?: string | null
+  document_nitku?: string | null
 }
 
 export interface Bp21ListResponse {

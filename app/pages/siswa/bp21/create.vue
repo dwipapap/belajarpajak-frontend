@@ -171,12 +171,21 @@ function buildPayload(): Bp21Create {
     recipient_identity_number: formState.recipient_identity_number,
     recipient_name: formState.recipient_name,
     recipient_address: formState.recipient_address || null,
+    recipient_nitku: formState.recipient_nitku || null,
+    ptkp_status: formState.ptkp_status || null,
     tax_object_code: formState.tax_object_code,
     income_type: formState.income_type,
     tax_nature: formState.tax_nature,
     tax_facility: formState.tax_facility,
-    dpp: dppAmount.value,
-    rate_percent: Number(formState.rate_percent)
+    previous_gross_income: Number(formState.previous_gross_income || 0),
+    gross_income: Number(formState.gross_income),
+    dpp_percent: Number(formState.dpp_percent),
+    rate_percent: Number(formState.rate_percent),
+    kap_kjs: formState.kap_kjs || null,
+    document_type: formState.document_type || null,
+    document_number: formState.document_number || null,
+    document_date: formState.document_date || null,
+    document_nitku: formState.document_nitku || null
   }
 }
 
