@@ -62,3 +62,72 @@ export interface DashboardSummary {
   guru?: number | null
   siswa?: number | null
 }
+
+export type Bp21Status = 'draft' | 'issued' | 'invalid'
+export type Bp21TaxNature = 'final' | 'non_final'
+export type Bp21TaxFacility = 'none' | 'dtp' | 'skb' | 'rate_0'
+
+export interface Bp21Read {
+  id: number
+  tenant_id: number
+  class_id: number | null
+  siswa_id: number
+  created_by_id: number
+  status: Bp21Status
+  withholding_number: string | null
+  issued_at: string | null
+  invalid_reason: string | null
+  tax_month: number
+  tax_year: number
+  electronic_signature_status: string
+  withholder_npwp: string | null
+  withholder_name: string | null
+  withholder_nitku: string | null
+  recipient_identity_number: string
+  recipient_name: string
+  recipient_address: string | null
+  tax_object_code: string
+  income_type: string
+  tax_nature: Bp21TaxNature
+  tax_facility: Bp21TaxFacility
+  dpp: number
+  rate_percent: number
+  income_tax: number
+  score: number | null
+  teacher_feedback: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface Bp21Create {
+  class_id?: number | null
+  siswa_id?: number | null
+  tax_month: number
+  tax_year: number
+  withholder_npwp?: string | null
+  withholder_name?: string | null
+  withholder_nitku?: string | null
+  recipient_identity_number: string
+  recipient_name: string
+  recipient_address?: string | null
+  tax_object_code: string
+  income_type: string
+  tax_nature: Bp21TaxNature
+  tax_facility: Bp21TaxFacility
+  dpp: number
+  rate_percent: number
+}
+
+export interface Bp21ListResponse {
+  items: Bp21Read[]
+  total: number
+  page: number
+  size: number
+}
+
+export interface Bp21Summary {
+  draft: number
+  issued: number
+  invalid: number
+  total: number
+}

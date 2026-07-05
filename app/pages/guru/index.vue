@@ -55,6 +55,20 @@ function selectClass(id: number) {
           </div>
         </div>
       </UCard>
+      <UCard>
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="rounded-lg bg-primary/10 p-3">
+              <UIcon name="i-lucide-scroll-text" class="size-6 text-primary" />
+            </div>
+            <div>
+              <p class="text-sm text-muted">Monitoring e-Bupot</p>
+              <p class="text-lg font-semibold text-default">BP21 Siswa</p>
+            </div>
+          </div>
+          <UButton to="/guru/bp21" icon="i-lucide-arrow-right" color="neutral" variant="ghost" />
+        </div>
+      </UCard>
     </div>
 
     <!-- Class list -->
