@@ -35,12 +35,7 @@ export interface AccessTokenResponse {
   token_type: string
 }
 
-export interface UserListResponse {
-  items: User[]
-  total: number
-  page: number
-  size: number
-}
+export type UserListResponse = Paginated<User>
 
 export interface SchoolClass {
   id: number
@@ -137,16 +132,114 @@ export interface Bp21Create {
   document_nitku?: string | null
 }
 
-export interface Bp21ListResponse {
-  items: Bp21Read[]
+export interface Paginated<T> {
+  items: T[]
   total: number
   page: number
   size: number
 }
+
+export type Bp21ListResponse = Paginated<Bp21Read>
 
 export interface Bp21Summary {
   draft: number
   issued: number
   invalid: number
   total: number
+}
+
+// BP26 shares the BP21 slip lifecycle; only the SPT flag is BP26-specific.
+export type Bp26Status = Bp21Status
+export type Bp26TaxNature = Bp21TaxNature
+export type Bp26TaxFacility = Bp21TaxFacility
+export type Bp26SptFlag =
+  | 'reported_in_spt'
+  | 'objection_in_progress'
+  | 'objection_completed'
+  | 'objection_rejected_formal'
+  | 'objection_withdrawal_review'
+  | 'objection_withdrawal_accepted'
+  | 'spt_audited'
+  | 'spt_legal_process'
+
+export interface Bp26Read {
+  id: number
+  tenant_id: number
+  class_id: number | null
+  siswa_id: number
+  created_by_id: number
+  status: Bp26Status
+  withholding_number: string | null
+  issued_at: string | null
+  invalid_reason: string | null
+  spt_flag: Bp26SptFlag | null
+  tax_month: number
+  tax_year: number
+  electronic_signature_status: string
+  recipient_identity_number: string
+  recipient_name: string
+  tax_type: string
+  tax_object_code: string
+  tax_object_name: string
+  tax_nature: Bp26TaxNature
+  tax_facility: Bp26TaxFacility
+  gross_income: number
+  dpp: number
+  dpp_percent: number
+  rate_percent: number
+  income_tax: number
+  kap_kjs: string | null
+  document_type: string | null
+  document_number: string | null
+  document_date: string | null
+  document_nitku: string | null
+  score: number | null
+  teacher_feedback: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface Bp26Create {
+  class_id?: number | null
+  siswa_id?: number | null
+  tax_month: number
+  tax_year: number
+  recipient_identity_number: string
+  recipient_name: string
+  tax_type?: string
+  tax_object_code: string
+  tax_object_name: string
+  tax_nature: Bp26TaxNature
+  tax_facility: Bp26TaxFacility
+  gross_income: number
+  dpp_percent: number
+  rate_percent: number
+  kap_kjs?: string | null
+  document_type?: string | null
+  document_number?: string | null
+  document_date?: string | null
+  document_nitku?: string | null
+}
+
+export type Bp26ListResponse = Paginated<Bp26Read>
+export type Bp26Summary = Bp21Summary
+
+export interface Bp26ImportRowResult {
+  row: number
+  success: boolean
+  id: number | null
+  error: string | null
+}
+
+export interface Bp26ImportResult {
+  total_rows: number
+  imported: number
+  failed: number
+  results: Bp26ImportRowResult[]
+}
+
+export interface Bp26BulkIssueResult {
+  issued: number
+  failed: number
+  results: Bp26ImportRowResult[]
 }
