@@ -7,21 +7,6 @@ const auth = useAuth()
 const { apiFetch } = useApi()
 const toast = useToast()
 
-const monthOptions = [
-  { label: 'Januari', value: 1 },
-  { label: 'Februari', value: 2 },
-  { label: 'Maret', value: 3 },
-  { label: 'April', value: 4 },
-  { label: 'Mei', value: 5 },
-  { label: 'Juni', value: 6 },
-  { label: 'Juli', value: 7 },
-  { label: 'Agustus', value: 8 },
-  { label: 'September', value: 9 },
-  { label: 'Oktober', value: 10 },
-  { label: 'November', value: 11 },
-  { label: 'Desember', value: 12 }
-]
-
 const ptkpOptions = ['TK/0', 'TK/1', 'K/0', 'K/1', 'K/2', 'K/3']
 
 const facilityOptions: { label: string, value: Bp21TaxFacility }[] = [
@@ -142,24 +127,6 @@ const calculatedIncomeTax = computed(() => {
   return Math.round(dppAmount.value * Number(formState.rate_percent || 0) / 100)
 })
 
-function validateForm(state: Partial<typeof formState>) {
-  const errors: { name: string, message: string }[] = []
-  if (!state.class_id) errors.push({ name: 'class_id', message: 'Pilih kelas' })
-  if (!state.tax_month) errors.push({ name: 'tax_month', message: 'Pilih masa pajak' })
-  if (!state.tax_year) errors.push({ name: 'tax_year', message: 'Isi tahun pajak' })
-  if (!state.recipient_identity_number) {
-    errors.push({ name: 'recipient_identity_number', message: 'Nomor identitas wajib diisi' })
-  }
-  if (!state.recipient_name) errors.push({ name: 'recipient_name', message: 'Nama wajib diisi' })
-  if (!state.gross_income || Number(state.gross_income) <= 0) {
-    errors.push({ name: 'gross_income', message: 'Penghasilan bruto harus lebih dari 0' })
-  }
-  if (!state.document_number) {
-    errors.push({ name: 'document_number', message: 'Nomor dokumen referensi wajib diisi' })
-  }
-  return errors
-}
-
 function buildPayload(): Bp21Create {
   return {
     class_id: formState.class_id,
@@ -223,18 +190,11 @@ async function onSubmit() {
   }
 }
 
-function setSubmitIntent(intent: 'draft' | 'issue') {
-  submitIntent.value = intent
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('id-ID').format(value)
-}
 </script>
 
 <template>
-  <div class="bp21-create">
-    <div class="bp21-create__breadcrumb">
+  <div class="bupot-create">
+    <div class="bupot-breadcrumb">
       <NuxtLink to="/siswa">Beranda</NuxtLink>
       <UIcon name="i-lucide-chevron-right" class="size-3.5" />
       <NuxtLink to="/siswa/bp21">eBupot</NuxtLink>
@@ -242,13 +202,13 @@ function formatCurrency(value: number) {
       <strong>BP 21 - Bukti Pemotongan Selain Pegawai Tetap</strong>
     </div>
 
-    <UForm :state="formState" :validate="validateForm" class="bp21-form" @submit="onSubmit">
-      <div class="bp21-create__header">
+    <UForm :state="formState" :validate="validateBupotCreate" class="bupot-form" @submit="onSubmit">
+      <div class="bupot-form__header">
         <div>
           <p>{{ auth.user.value?.tenant_id ?? '1471110802000001' }}</p>
           <h1>EBUPOT BP21</h1>
         </div>
-        <div class="bp21-create__actions">
+        <div class="bupot-form__actions">
           <UButton to="/siswa/bp21" icon="i-lucide-arrow-left" color="neutral" variant="ghost">
             Go to search
           </UButton>
@@ -258,15 +218,15 @@ function formatCurrency(value: number) {
             label="Simpan Konsep"
             color="neutral"
             :loading="saving && submitIntent === 'draft'"
-            @click="setSubmitIntent('draft')"
+            @click="submitIntent = 'draft';"
           />
           <UButton
             type="submit"
             icon="i-lucide-send"
             label="Submit"
-            class="bp21-submit"
+            class="bupot-primary-button"
             :loading="saving && submitIntent === 'issue'"
-            @click="setSubmitIntent('issue')"
+            @click="submitIntent = 'issue';"
           />
         </div>
       </div>
@@ -279,12 +239,12 @@ function formatCurrency(value: number) {
         :title="submitError"
       />
 
-      <section class="bp21-section">
+      <section class="bupot-section">
         <header>
           <h2>Informasi Umum</h2>
           <UButton icon="i-lucide-chevron-down" color="neutral" variant="ghost" size="xs" />
         </header>
-        <div class="bp21-grid">
+        <div class="bupot-grid">
           <UFormField name="class_id" label="Kelas" required>
             <USelect
               v-model="formState.class_id"
@@ -329,12 +289,12 @@ function formatCurrency(value: number) {
         </div>
       </section>
 
-      <section class="bp21-section">
+      <section class="bupot-section">
         <header>
           <h2>Pajak Penghasilan (Rp)</h2>
           <UButton icon="i-lucide-chevron-down" color="neutral" variant="ghost" size="xs" />
         </header>
-        <div class="bp21-grid">
+        <div class="bupot-grid">
           <UFormField name="ptkp_status" label="Status PTKP" required>
             <USelect v-model="formState.ptkp_status" :items="ptkpOptions" class="w-full" />
           </UFormField>
@@ -364,12 +324,12 @@ function formatCurrency(value: number) {
           </UFormField>
         </div>
 
-        <div class="bp21-note">
+        <div class="bupot-note">
           Pendapatan Bruto yang Telah Dibayar Sebelumnya, khusus untuk kode objek tertentu jika
           terdapat pembayaran lebih dari sekali dalam periode dua tahun.
         </div>
 
-        <div class="bp21-grid">
+        <div class="bupot-grid">
           <UFormField name="previous_gross_income" label="Jumlah">
             <UInput v-model="formState.previous_gross_income" type="number" disabled class="w-full" />
           </UFormField>
@@ -396,12 +356,12 @@ function formatCurrency(value: number) {
         </div>
       </section>
 
-      <section class="bp21-section">
+      <section class="bupot-section">
         <header>
           <h2>Dokumen Referensi</h2>
           <UButton icon="i-lucide-chevron-down" color="neutral" variant="ghost" size="xs" />
         </header>
-        <div class="bp21-grid">
+        <div class="bupot-grid">
           <UFormField name="document_type" label="Jenis Dokumen" required>
             <USelect v-model="formState.document_type" :items="documentTypeOptions" class="w-full" />
           </UFormField>
@@ -423,122 +383,3 @@ function formatCurrency(value: number) {
   </div>
 </template>
 
-<style scoped>
-.bp21-create {
-  display: grid;
-  gap: 1rem;
-}
-
-.bp21-create__breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: oklch(0.39 0.05 265);
-  font-size: 0.78rem;
-}
-
-.bp21-create__breadcrumb a {
-  color: oklch(0.42 0.065 265);
-  text-decoration: none;
-}
-
-.bp21-create__breadcrumb strong {
-  color: oklch(0.27 0.075 270);
-}
-
-.bp21-form {
-  display: grid;
-  gap: 0.85rem;
-}
-
-.bp21-create__header,
-.bp21-section {
-  border: 1px solid oklch(0.89 0.014 255);
-  border-radius: 0.35rem;
-  background: oklch(0.99 0.004 250);
-}
-
-.bp21-create__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 5.8rem;
-  padding: 1rem;
-}
-
-.bp21-create__header p {
-  color: oklch(0.4 0.045 265);
-  font-size: 0.86rem;
-  font-weight: 700;
-}
-
-.bp21-create__header h1 {
-  color: oklch(0.25 0.025 265);
-  font-size: 1.4rem;
-  font-weight: 850;
-}
-
-.bp21-create__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: end;
-  gap: 0.5rem;
-}
-
-.bp21-submit {
-  background: oklch(0.28 0.09 270);
-  color: oklch(0.98 0.005 250);
-}
-
-.bp21-section {
-  overflow: hidden;
-}
-
-.bp21-section header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid oklch(0.9 0.013 255);
-  padding: 0.85rem 1rem;
-}
-
-.bp21-section h2 {
-  color: oklch(0.28 0.075 270);
-  font-size: 1rem;
-  font-weight: 800;
-}
-
-.bp21-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.bp21-note {
-  margin: 0.15rem 1rem 0;
-  border: 1px solid oklch(0.88 0.075 92);
-  border-radius: 0.35rem;
-  background: oklch(0.96 0.055 92);
-  color: oklch(0.33 0.07 80);
-  font-size: 0.85rem;
-  font-weight: 650;
-  padding: 0.8rem;
-}
-
-@media (max-width: 980px) {
-  .bp21-create__header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .bp21-create__actions {
-    justify-content: flex-start;
-  }
-
-  .bp21-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
