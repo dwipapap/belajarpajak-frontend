@@ -1,10 +1,22 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+@theme {
+  --font-sans: "Figtree", system-ui, sans-serif;
+}
+
+:root {
+  font-family: var(--font-sans);
+}
+
 /* Shell shared by the siswa eBupot pages (BP21, BP26, ...). */
 .bupot-page {
   display: grid;
   gap: 1rem;
+  border: 1px solid oklch(0.9 0.012 255);
+  border-radius: 0.65rem;
+  background: oklch(0.99 0.004 250);
+  padding: 1.35rem;
 }
 
 .bupot-breadcrumb {
@@ -40,6 +52,7 @@
 .bupot-side {
   overflow: hidden;
   align-self: start;
+  border-radius: 0.35rem;
 }
 
 .bupot-side__identity {
@@ -60,9 +73,10 @@
 }
 
 .bupot-side__title {
-  min-height: 5.8rem;
+  min-height: 4.65rem;
   color: oklch(0.26 0.055 270);
-  font-weight: 750;
+  font-size: 0.92rem;
+  font-weight: 800;
   padding: 0.95rem 1rem;
 }
 
@@ -80,7 +94,8 @@
   background: transparent;
   color: oklch(0.39 0.04 265);
   font-weight: 650;
-  padding: 0.75rem 1rem;
+  min-height: 2.55rem;
+  padding: 0.62rem 1rem;
   text-align: left;
 }
 
@@ -95,7 +110,7 @@
 
 .bupot-main__header {
   display: flex;
-  min-height: 7.2rem;
+  min-height: 4.85rem;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -105,7 +120,7 @@
 
 .bupot-main__header h1 {
   color: oklch(0.26 0.02 265);
-  font-size: 1.35rem;
+  font-size: 1.18rem;
   font-weight: 800;
 }
 
@@ -123,12 +138,29 @@
 }
 
 .bupot-toolbar {
-  padding: 1rem 1rem 0.35rem;
+  border-bottom: 1px solid oklch(0.92 0.012 255);
+  background: oklch(0.975 0.006 250);
+  padding: 0.75rem 1rem;
 }
 
 .bupot-table {
   overflow-x: auto;
-  padding-inline: 1rem;
+  padding: 0 1rem 0.25rem;
+}
+
+.bupot-table table {
+  min-width: 64rem;
+}
+
+.bupot-table th {
+  background: oklch(0.88 0.15 88);
+  color: oklch(0.22 0.065 270);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.bupot-table td {
+  font-size: 0.84rem;
 }
 
 .bupot-footer {
@@ -145,6 +177,10 @@
 .bupot-create {
   display: grid;
   gap: 1rem;
+  border: 1px solid oklch(0.9 0.012 255);
+  border-radius: 0.65rem;
+  background: oklch(0.99 0.004 250);
+  padding: 1.35rem;
 }
 
 .bupot-form {
