@@ -57,6 +57,11 @@ const taxObjectOptions: {
   }
 ]
 
+const taxNatureOptions: { label: string, value: Bp26TaxNature }[] = [
+  { label: 'Final', value: 'final' },
+  { label: 'Tidak Final', value: 'non_final' }
+]
+
 // Options for the BP26 create form.
 const documentTypeOptions = [
   'Akta Perjanjian',
@@ -104,6 +109,10 @@ const formState = reactive({
   dpp_percent: 100,
   rate_percent: 20,
   kap_kjs: '411127-100',
+  negara_treaty: '',
+  pasal_treaty: '',
+  nomor_skd: '',
+  tarif_treaty_percent: undefined as number | undefined,
   document_type: 'Bukti Pembayaran',
   document_number: '',
   document_date: new Date().toISOString().slice(0, 10),
@@ -135,10 +144,24 @@ const dppAmount = computed(() =>
 )
 
 const calculatedIncomeTax = computed(() =>
-  Math.round(dppAmount.value * Number(formState.rate_percent || 0) / 100)
+  Math.round(
+    dppAmount.value
+    * Number(
+      formState.tax_nature === 'non_final'
+      && formState.negara_treaty
+      && formState.tarif_treaty_percent !== undefined
+        ? formState.tarif_treaty_percent
+        : formState.rate_percent
+    )
+    / 100
+  )
 )
 
 function buildPayload(): Bp26Create {
+  const treatyRate =
+    formState.tarif_treaty_percent === undefined || formState.tarif_treaty_percent === null
+      ? null
+      : Math.round(Number(formState.tarif_treaty_percent) * 100)
   return {
     class_id: formState.class_id,
     tax_month: Number(formState.tax_month),
@@ -154,6 +177,10 @@ function buildPayload(): Bp26Create {
     dpp_percent: Number(formState.dpp_percent),
     rate_percent: Number(formState.rate_percent),
     kap_kjs: formState.kap_kjs || null,
+    negara_treaty: formState.negara_treaty || null,
+    pasal_treaty: formState.pasal_treaty || null,
+    nomor_skd: formState.nomor_skd || null,
+    tarif_treaty_basis_points: treatyRate,
     document_type: formState.document_type || null,
     document_number: formState.document_number || null,
     document_date: formState.document_date || null,
@@ -309,11 +336,7 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="tax_nature" label="Sifat Pajak Penghasilan" required>
-            <UInput
-              :model-value="formState.tax_nature === 'final' ? 'Final' : 'Tidak Final'"
-              disabled
-              class="w-full"
-            />
+            <USelect v-model="formState.tax_nature" :items="taxNatureOptions" class="w-full" />
           </UFormField>
 
           <UFormField name="gross_income" label="Penghasilan Bruto (Rp)" required>
@@ -334,6 +357,36 @@ async function onSubmit() {
 
           <UFormField name="kap_kjs" label="KAP" required>
             <UInput v-model="formState.kap_kjs" disabled class="w-full" />
+          </UFormField>
+        </div>
+      </section>
+
+      <section class="bupot-section">
+        <header>
+          <h2>Treaty / P3B</h2>
+          <UButton icon="i-lucide-chevron-down" color="neutral" variant="ghost" size="xs" />
+        </header>
+        <div class="bupot-grid">
+          <UFormField name="negara_treaty" label="Negara Treaty">
+            <UInput v-model="formState.negara_treaty" placeholder="SGP" class="w-full" />
+          </UFormField>
+
+          <UFormField name="pasal_treaty" label="Pasal Treaty">
+            <UInput v-model="formState.pasal_treaty" placeholder="10" class="w-full" />
+          </UFormField>
+
+          <UFormField name="nomor_skd" label="Nomor SKD">
+            <UInput v-model="formState.nomor_skd" class="w-full" />
+          </UFormField>
+
+          <UFormField name="tarif_treaty_percent" label="Tarif Treaty (%)">
+            <UInput
+              v-model="formState.tarif_treaty_percent"
+              type="number"
+              min="0"
+              max="100"
+              class="w-full"
+            />
           </UFormField>
         </div>
       </section>

@@ -189,6 +189,10 @@ export interface Bp26Read {
   rate_percent: number
   income_tax: number
   kap_kjs: string | null
+  negara_treaty: string | null
+  pasal_treaty: string | null
+  nomor_skd: string | null
+  tarif_treaty_basis_points: number | null
   document_type: string | null
   document_number: string | null
   document_date: string | null
@@ -215,6 +219,10 @@ export interface Bp26Create {
   dpp_percent: number
   rate_percent: number
   kap_kjs?: string | null
+  negara_treaty?: string | null
+  pasal_treaty?: string | null
+  nomor_skd?: string | null
+  tarif_treaty_basis_points?: number | null
   document_type?: string | null
   document_number?: string | null
   document_date?: string | null

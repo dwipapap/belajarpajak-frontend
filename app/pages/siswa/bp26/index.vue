@@ -83,6 +83,7 @@ const columns: TableColumn<Bp26Read>[] = [
   { accessorKey: 'recipient_name', header: 'Nama' },
   { accessorKey: 'dpp', header: 'DPP (Rp)' },
   { accessorKey: 'income_tax', header: 'PPh (Rp)' },
+  { accessorKey: 'tarif_treaty_basis_points', header: 'P3B' },
   { accessorKey: 'tax_facility', header: 'Fasilitas Pajak' },
   { id: 'actions' }
 ]
@@ -430,6 +431,19 @@ function closeImport() {
 
             <template #income_tax-cell="{ row }">
               Rp {{ formatCurrency(row.original.income_tax) }}
+            </template>
+
+            <template #tarif_treaty_basis_points-cell="{ row }">
+              <UBadge
+                v-if="row.original.negara_treaty && row.original.tarif_treaty_basis_points !== null"
+                color="info"
+                variant="subtle"
+              >
+                {{ row.original.negara_treaty }} {{
+                  (row.original.tarif_treaty_basis_points / 100).toFixed(2)
+                }}%
+              </UBadge>
+              <span v-else>-</span>
             </template>
 
             <template #tax_facility-cell="{ row }">
