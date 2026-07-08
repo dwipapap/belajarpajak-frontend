@@ -12,7 +12,7 @@ export function useApi() {
   const config = useRuntimeConfig()
   const auth = useAuth()
 
-  async function apiFetch<T>(path: string, options: FetchOptions<'json'> = {}): Promise<T> {
+  async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
     const doFetch = () =>
       $fetch<T>(`${config.public.apiBase}${path}`, {
         ...options,
@@ -46,6 +46,20 @@ export function useApi() {
 /** Extract a human-readable message from a FastAPI error response. */
 export function apiErrorMessage(error: unknown, fallback = 'Terjadi kesalahan. Coba lagi.'): string {
   const data = (error as { data?: { detail?: unknown } })?.data
-  if (typeof data?.detail === 'string') return data.detail
+  const detail = data?.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    const first = detail[0]
+    if (first && typeof first === 'object') {
+      const item = first as { loc?: unknown, msg?: unknown }
+      if (typeof item.msg === 'string') {
+        if (Array.isArray(item.loc)) {
+          const field = item.loc.at(-1)
+          if (typeof field === 'string' || typeof field === 'number') return `${field}: ${item.msg}`
+        }
+        return item.msg
+      }
+    }
+  }
   return fallback
 }
