@@ -13,7 +13,6 @@ import type {
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
 const auth = useAuth()
-const config = useRuntimeConfig()
 const { apiFetch } = useApi()
 const toast = useToast()
 
@@ -192,12 +191,7 @@ async function issueSelected() {
 
 async function downloadFile(path: string, filename: string) {
   try {
-    const blob = await $fetch<Blob>(`${config.public.apiBase}${path}`, {
-      responseType: 'blob',
-      headers: auth.accessToken.value
-        ? { Authorization: `Bearer ${auth.accessToken.value}` }
-        : {}
-    })
+    const blob = await apiFetch<Blob>(path, { responseType: 'blob' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
