@@ -243,3 +243,46 @@ export interface Bp26BulkIssueResult {
   failed: number
   results: Bp26ImportRowResult[]
 }
+
+export interface TierPtkp {
+  id: number
+  status_kode: string
+  jumlah_ptkp: number
+  tahun_pajak: number
+  keterangan: string | null
+  is_active: boolean
+}
+
+export interface TierPtkpCreate {
+  status_kode: string
+  jumlah_ptkp: number
+  tahun_pajak: number
+  keterangan?: string | null
+  is_active?: boolean
+}
+
+export type TierPtkpUpdate = Partial<TierPtkpCreate>
+
+export interface TarifProgresifPasal17 {
+  id: number
+  batas_bawah: number
+  batas_atas: number | null
+  persentase_basis_points: number
+  tahun_pajak: number
+  keterangan: string | null
+  is_active: boolean
+}
+
+export interface TarifProgresifCreate {
+  batas_bawah: number
+  batas_atas?: number | null
+  persentase_basis_points: number
+  tahun_pajak: number
+  keterangan?: string | null
+  is_active?: boolean
+}
+
+export type TarifProgresifUpdate = Partial<TarifProgresifCreate>
+
+export type TierPtkpList = TierPtkp[]
+export type TarifProgresifList = TarifProgresifPasal17[]

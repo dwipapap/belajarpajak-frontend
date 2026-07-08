@@ -174,13 +174,23 @@ async function onCreateUser() {
   <div class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-semibold text-default">Dasbor Admin</h1>
-      <USelect
-        v-if="isSuperadmin"
-        v-model="selectedTenantId"
-        :items="tenantOptions"
-        placeholder="Pilih institusi"
-        class="w-56"
-      />
+      <div class="flex flex-wrap items-center gap-2">
+        <UButton
+          v-if="isSuperadmin"
+          to="/admin/tarif-pajak"
+          icon="i-lucide-percent"
+          label="Kelola Tarif Pajak"
+          color="neutral"
+          variant="soft"
+        />
+        <USelect
+          v-if="isSuperadmin"
+          v-model="selectedTenantId"
+          :items="tenantOptions"
+          placeholder="Pilih institusi"
+          class="w-56"
+        />
+      </div>
     </div>
 
     <!-- Stat cards -->

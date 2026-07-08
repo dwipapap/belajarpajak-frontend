@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import type { Bp21Create, Bp21Read, Bp21TaxFacility, Bp21TaxNature, SchoolClass } from '~/types/api'
+import type {
+  Bp21Create,
+  Bp21Read,
+  Bp21TaxFacility,
+  Bp21TaxNature,
+  SchoolClass,
+  TarifProgresifPasal17,
+  TierPtkp
+} from '~/types/api'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
 const auth = useAuth()
 const { apiFetch } = useApi()
 const toast = useToast()
-
-const ptkpOptions = ['TK/0', 'TK/1', 'K/0', 'K/1', 'K/2', 'K/3']
 
 const facilityOptions: { label: string, value: Bp21TaxFacility }[] = [
   { label: 'Tanpa Fasilitas', value: 'none' },
@@ -98,6 +104,29 @@ const formState = reactive({
   document_nitku: ''
 })
 
+const tariffYear = computed(() => Number(formState.tax_year || new Date().getFullYear()))
+
+const { data: tariffData } = useAsyncData(
+  'siswa-bp21-create-tarif',
+  async () => {
+    const query = `tahun_pajak=${tariffYear.value}&is_active=true&size=100`
+    const [ptkp, brackets] = await Promise.all([
+      apiFetch<TierPtkp[]>(`/api/v1/tarif-pajak/ptkp?${query}`),
+      apiFetch<TarifProgresifPasal17[]>(`/api/v1/tarif-pajak/progresif?${query}`)
+    ])
+    return { ptkp, brackets }
+  },
+  {
+    watch: [tariffYear],
+    default: () => ({ ptkp: [] as TierPtkp[], brackets: [] as TarifProgresifPasal17[] })
+  }
+)
+
+const ptkpOptions = computed(() => {
+  const items = tariffData.value.ptkp.map(item => item.status_kode)
+  return items.length ? items : ['TK/0', 'TK/1', 'K/0', 'K/1', 'K/2', 'K/3']
+})
+
 const saving = ref(false)
 const submitIntent = ref<'draft' | 'issue'>('draft')
 const submitError = ref<string | null>(null)
@@ -122,8 +151,31 @@ const dppAmount = computed(() =>
   Math.round(Number(formState.gross_income || 0) * Number(formState.dpp_percent || 0) / 100)
 )
 
+function taxByBasisPoints(amount: number, basisPoints: number) {
+  return Math.round(amount * basisPoints / 10000)
+}
+
+function progressiveBp21Preview() {
+  if (formState.tax_nature !== 'non_final' || !formState.ptkp_status) return null
+  const ptkp = tariffData.value.ptkp.find(item => item.status_kode === formState.ptkp_status)
+  const brackets = tariffData.value.brackets
+  if (!ptkp || !brackets.length) return null
+
+  const pkp = Math.max(0, Number(formState.gross_income || 0) * 12 - ptkp.jumlah_ptkp)
+  let annualTax = 0
+  for (const bracket of brackets) {
+    if (pkp <= bracket.batas_bawah) continue
+    const upper = bracket.batas_atas ?? pkp
+    const chunk = Math.min(pkp, upper) - bracket.batas_bawah
+    if (chunk > 0) annualTax += taxByBasisPoints(chunk, bracket.persentase_basis_points)
+  }
+  return Math.floor(annualTax / 12)
+}
+
 const calculatedIncomeTax = computed(() => {
   if (formState.tax_facility === 'skb' || formState.tax_facility === 'rate_0') return 0
+  const progressiveTax = progressiveBp21Preview()
+  if (progressiveTax !== null) return progressiveTax
   return Math.round(dppAmount.value * Number(formState.rate_percent || 0) / 100)
 })
 
@@ -382,4 +434,3 @@ async function onSubmit() {
     </UForm>
   </div>
 </template>
-

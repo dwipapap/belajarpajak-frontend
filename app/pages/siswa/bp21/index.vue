@@ -41,6 +41,7 @@ const columns: TableColumn<Bp21Read>[] = [
   { accessorKey: 'status', header: 'Status' },
   { accessorKey: 'recipient_identity_number', header: 'Nomor Identitas WP' },
   { accessorKey: 'recipient_name', header: 'Nama' },
+  { accessorKey: 'ptkp_status', header: 'PTKP' },
   { accessorKey: 'tax_object_code', header: 'Kode Objek Pajak' },
   { accessorKey: 'dpp', header: 'DPP (Rp)' },
   { accessorKey: 'income_tax', header: 'PPh (Rp)' },
@@ -153,6 +154,12 @@ async function refreshAll() {
 
             <template #dpp-cell="{ row }">
               Rp {{ formatCurrency(row.original.dpp) }}
+            </template>
+
+            <template #ptkp_status-cell="{ row }">
+              <UBadge color="neutral" variant="subtle">
+                {{ row.original.ptkp_status || '-' }}
+              </UBadge>
             </template>
 
             <template #income_tax-cell="{ row }">
