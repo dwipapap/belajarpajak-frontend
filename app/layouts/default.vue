@@ -23,53 +23,76 @@ function modulePath(slug: string) {
 const moduleItems = computed<NavigationMenuItem[]>(() => [
   {
     label: 'Portal Saya',
-    icon: 'i-lucide-shield-user'
+    icon: 'i-lucide-shield-user',
+    to: homePath.value,
+    active: route.path === homePath.value
   },
   {
     label: 'e-Faktur',
     icon: 'i-lucide-receipt-text',
-    to: homePath.value,
-    active: route.path === homePath.value
+    disabled: true
   },
   {
     label: 'eBUPOT',
     icon: 'i-lucide-scroll-text',
     active: route.path.includes('/bp21') || route.path.includes('/bp26'),
     children: [
-      { label: 'BP 21 - Selain Pegawai Tetap', icon: 'i-lucide-file-text', to: modulePath('bp21') },
-      { label: 'BP 26 - WP Luar Negeri', icon: 'i-lucide-globe', to: modulePath('bp26') }
+      { label: 'Bukti Potong Saya', icon: 'i-lucide-file-user', disabled: true },
+      { label: 'BPPU', icon: 'i-lucide-files', disabled: true },
+      { label: 'BPNR', icon: 'i-lucide-files', disabled: true },
+      { label: 'Penyetoran Sendiri', icon: 'i-lucide-wallet-cards', disabled: true },
+      { label: 'Pemotongan Secara Digunggung', icon: 'i-lucide-layers-3', disabled: true },
+      { label: 'Dokumen yang Dipersamakan dengan Bukti Potong', icon: 'i-lucide-file-check-2', disabled: true },
+      { label: 'BP 21 - Bukti Pemotongan Selain Pegawai Tetap', icon: 'i-lucide-file-text', to: modulePath('bp21') },
+      { label: 'BP 26 - Bukti Pemotongan Wajib Pajak Luar Negeri', icon: 'i-lucide-globe', to: modulePath('bp26') },
+      { label: 'BP A1 - Bukti Pemotongan A1 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', disabled: true },
+      { label: 'BP A2 - Bukti Pemotongan A2 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', disabled: true },
+      { label: 'Bukti Pemotongan Bulanan Pegawai Tetap', icon: 'i-lucide-file-stack', disabled: true }
     ]
   },
   {
     label: 'SPT',
     icon: 'i-lucide-clipboard-list',
     children: [
-      { label: 'Draft SPT', icon: 'i-lucide-files' },
-      { label: 'Pelaporan', icon: 'i-lucide-send' }
+      { label: 'Surat Pemberitahuan (SPT)', icon: 'i-lucide-file-spreadsheet', disabled: true },
+      { label: 'Coretax Form', icon: 'i-lucide-clipboard-pen', disabled: true },
+      { label: 'Pencatatan', icon: 'i-lucide-book-text', disabled: true },
+      { label: 'Dasbor Kompensasi', icon: 'i-lucide-layout-dashboard', disabled: true },
+      { label: 'Pengungkapan Ketidakbenaran SPT', icon: 'i-lucide-file-warning', disabled: true }
     ]
   },
   {
     label: 'Pembayaran',
-    icon: 'i-lucide-badge-dollar-sign'
+    icon: 'i-lucide-badge-dollar-sign',
+    children: [
+      { label: 'Permohonan Pemindahbukuan', icon: 'i-lucide-arrow-left-right', disabled: true },
+      { label: 'Layanan Mandiri Kode Billing', icon: 'i-lucide-receipt', disabled: true },
+      { label: 'Pembuatan Kode Billing atas Tagihan Pajak', icon: 'i-lucide-file-plus-2', disabled: true },
+      { label: 'Daftar Kode Billing Belum Dibayar', icon: 'i-lucide-list-checks', disabled: true },
+      { label: 'Formulir Restitusi Pajak', icon: 'i-lucide-file-input', disabled: true },
+      { label: 'Permohonan Pemberian Imbalan Bunga', icon: 'i-lucide-circle-dollar-sign', disabled: true },
+      { label: 'Permohonan PPh DTP atas Penghasilan PDAM', icon: 'i-lucide-landmark', disabled: true }
+    ]
   },
   {
     label: 'Buku Besar',
-    icon: 'i-lucide-book-open-check'
+    icon: 'i-lucide-book-open-check',
+    disabled: true
   },
   {
     label: 'Layanan WP',
     icon: 'i-lucide-layout-grid',
     children: [
-      { label: 'Profil Wajib Pajak', icon: 'i-lucide-id-card' },
-      { label: 'Permohonan', icon: 'i-lucide-inbox' }
+      { label: 'Profil Wajib Pajak', icon: 'i-lucide-id-card', disabled: true },
+      { label: 'Permohonan', icon: 'i-lucide-inbox', disabled: true }
     ]
   },
   {
     label: 'Manajemen Akses',
     icon: 'i-lucide-key-round',
     children: [
-      { label: 'Role Akses', icon: 'i-lucide-key-round' },
-      { label: 'Pengguna', icon: 'i-lucide-users' }
+      { label: 'Role Akses', icon: 'i-lucide-key-round', disabled: true },
+      { label: 'Pengguna', icon: 'i-lucide-users', disabled: true }
     ]
   }
 ])
@@ -131,6 +154,23 @@ async function onLogout() {
           <strong class="app-shell__title"><span>Sistem Pembelajaran Pajak Online</span></strong>
         </div>
 
+        <UInput
+          model-value=""
+          icon="i-lucide-search"
+          placeholder="Cari layanan..."
+          readonly
+          aria-label="Cari layanan"
+          class="app-shell__search"
+          :ui="{ base: 'h-10 text-[0.86rem]' }"
+        >
+          <template #trailing>
+            <div class="app-shell__search-kbd" aria-hidden="true">
+              <UKbd value="Ctrl" />
+              <UKbd value="K" />
+            </div>
+          </template>
+        </UInput>
+
         <div class="app-shell__actions">
           <UButton
             icon="i-lucide-chevron-left"
@@ -145,6 +185,14 @@ async function onLogout() {
             variant="ghost"
             aria-label="Notifikasi"
             class="app-shell__icon-button"
+          />
+          <UButton
+            icon="i-lucide-circle"
+            label="ID"
+            color="neutral"
+            variant="ghost"
+            trailing-icon="i-lucide-chevron-down"
+            class="app-shell__language"
           />
           <UDropdownMenu :items="userMenuItems">
             <UButton
@@ -222,9 +270,9 @@ async function onLogout() {
 .app-shell__topbar {
   display: grid;
   min-height: 4.08rem;
-  grid-template-columns: minmax(16rem, 1fr) auto;
+  grid-template-columns: minmax(16rem, 1fr) minmax(16rem, 28rem) minmax(25rem, auto);
   align-items: center;
-  gap: clamp(1.2rem, 4vw, 7rem);
+  gap: clamp(0.9rem, 2vw, 2.5rem);
   border-bottom: 1px solid oklch(0.9 0.013 255);
   padding: 0 1.15rem;
 }
@@ -274,8 +322,23 @@ async function onLogout() {
   min-width: 0;
 }
 
+.app-shell__search {
+  width: 100%;
+  min-width: 0;
+}
+
+.app-shell__search-kbd {
+  display: flex;
+  gap: 0.25rem;
+}
+
 .app-shell__icon-button {
   border-radius: 0.55rem;
+}
+
+.app-shell__language {
+  border-radius: 0.55rem;
+  font-weight: 750;
 }
 
 .app-shell__account {
@@ -332,6 +395,11 @@ async function onLogout() {
   line-height: 1;
 }
 
+.app-shell__nav :deep([aria-disabled="true"]),
+.app-shell__nav :deep([data-disabled]) {
+  opacity: 0.58;
+}
+
 .app-shell__nav :deep([role="menuitem"]:hover),
 .app-shell__nav :deep(a:hover),
 .app-shell__nav :deep(button:hover) {
@@ -367,6 +435,11 @@ async function onLogout() {
     padding-block: 0.75rem;
   }
 
+  .app-shell__search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
   .app-shell__actions {
     grid-column: 2;
   }
@@ -395,6 +468,11 @@ async function onLogout() {
     justify-content: flex-start;
     overflow-x: auto;
     padding-bottom: 0.1rem;
+  }
+
+  .app-shell__search {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   .app-shell__account {
