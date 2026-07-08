@@ -78,6 +78,10 @@ const { data: userList, status: usersStatus, refresh: refreshUsers } = useAsyncD
   { watch: [page, roleFilter, selectedTenantId] }
 )
 
+watch([roleFilter, selectedTenantId], () => {
+  page.value = 1
+})
+
 const columns: TableColumn<User>[] = [
   { accessorKey: 'full_name', header: 'Nama' },
   { accessorKey: 'email', header: 'Email' },
@@ -206,23 +210,25 @@ async function onCreateUser() {
         </div>
       </template>
 
-      <UTable
-        :data="userList?.items ?? []"
-        :columns="columns"
-        :loading="usersStatus === 'pending'"
-      >
-        <template #role-cell="{ row }">
-          <UBadge color="neutral" variant="subtle">{{ row.original.role }}</UBadge>
-        </template>
-        <template #is_active-cell="{ row }">
-          <UBadge :color="row.original.is_active ? 'success' : 'neutral'" variant="subtle">
-            {{ row.original.is_active ? 'Aktif' : 'Nonaktif' }}
-          </UBadge>
-        </template>
-        <template #empty>
-          <p class="py-6 text-center text-sm text-muted">Belum ada pengguna.</p>
-        </template>
-      </UTable>
+      <div class="overflow-x-auto">
+        <UTable
+          :data="userList?.items ?? []"
+          :columns="columns"
+          :loading="usersStatus === 'pending'"
+        >
+          <template #role-cell="{ row }">
+            <UBadge color="neutral" variant="subtle">{{ row.original.role }}</UBadge>
+          </template>
+          <template #is_active-cell="{ row }">
+            <UBadge :color="row.original.is_active ? 'success' : 'neutral'" variant="subtle">
+              {{ row.original.is_active ? 'Aktif' : 'Nonaktif' }}
+            </UBadge>
+          </template>
+          <template #empty>
+            <p class="py-6 text-center text-sm text-muted">Belum ada pengguna.</p>
+          </template>
+        </UTable>
+      </div>
 
       <template #footer>
         <div class="flex items-center justify-between">
