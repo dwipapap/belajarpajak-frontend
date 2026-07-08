@@ -221,62 +221,64 @@ async function refreshAll() {
         </div>
       </template>
 
-      <UTable
-        :data="slipList?.items ?? []"
-        :columns="columns"
-        :loading="listStatus === 'pending'"
-      >
-        <template #tax_month-cell="{ row }">
-          <span class="font-medium">{{ formatPeriod(row.original) }}</span>
-        </template>
+      <div class="overflow-x-auto">
+        <UTable
+          :data="slipList?.items ?? []"
+          :columns="columns"
+          :loading="listStatus === 'pending'"
+        >
+          <template #tax_month-cell="{ row }">
+            <span class="font-medium">{{ formatPeriod(row.original) }}</span>
+          </template>
 
-        <template #withholding_number-cell="{ row }">
-          <span>{{ row.original.withholding_number || '-' }}</span>
-        </template>
+          <template #withholding_number-cell="{ row }">
+            <span>{{ row.original.withholding_number || '-' }}</span>
+          </template>
 
-        <template #status-cell="{ row }">
-          <UBadge :color="statusColor[row.original.status]" variant="subtle">
-            {{ statusLabel[row.original.status] }}
-          </UBadge>
-        </template>
+          <template #status-cell="{ row }">
+            <UBadge :color="statusColor[row.original.status]" variant="subtle">
+              {{ statusLabel[row.original.status] }}
+            </UBadge>
+          </template>
 
-        <template #dpp-cell="{ row }">
-          Rp {{ formatCurrency(row.original.dpp) }}
-        </template>
+          <template #dpp-cell="{ row }">
+            Rp {{ formatCurrency(row.original.dpp) }}
+          </template>
 
-        <template #income_tax-cell="{ row }">
-          Rp {{ formatCurrency(row.original.income_tax) }}
-        </template>
+          <template #income_tax-cell="{ row }">
+            Rp {{ formatCurrency(row.original.income_tax) }}
+          </template>
 
-        <template #score-cell="{ row }">
-          <span>{{ row.original.score ?? '-' }}</span>
-        </template>
+          <template #score-cell="{ row }">
+            <span>{{ row.original.score ?? '-' }}</span>
+          </template>
 
-        <template #actions-cell="{ row }">
-          <div class="flex justify-end gap-1">
-            <UButton
-              icon="i-lucide-clipboard-check"
-              label="Review"
-              size="xs"
-              @click="openReview(row.original)"
-            />
-            <UButton
-              icon="i-lucide-ban"
-              color="error"
-              variant="soft"
-              size="xs"
-              :disabled="row.original.status === 'invalid'"
-              @click="invalidateSlip(row.original)"
-            />
-          </div>
-        </template>
+          <template #actions-cell="{ row }">
+            <div class="flex justify-end gap-1">
+              <UButton
+                icon="i-lucide-clipboard-check"
+                label="Review"
+                size="xs"
+                @click="openReview(row.original)"
+              />
+              <UButton
+                icon="i-lucide-ban"
+                color="error"
+                variant="soft"
+                size="xs"
+                :disabled="row.original.status === 'invalid'"
+                @click="invalidateSlip(row.original)"
+              />
+            </div>
+          </template>
 
-        <template #empty>
-          <p class="py-8 text-center text-sm text-muted">
-            Tidak ada data yang ditemukan.
-          </p>
-        </template>
-      </UTable>
+          <template #empty>
+            <p class="py-8 text-center text-sm text-muted">
+              Tidak ada data yang ditemukan.
+            </p>
+          </template>
+        </UTable>
+      </div>
 
       <template #footer>
         <div class="guru-bupot__footer">
