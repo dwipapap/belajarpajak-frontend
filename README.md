@@ -1,6 +1,6 @@
-# Simulator Pajak — Frontend (Phase 1: Foundation)
+# Simulator Pajak — Frontend
 
-Nuxt 4 + Nuxt UI 4 frontend for the multi-tenant **tax administration learning simulator**. Phase 1 delivers login, role-based routing, and three dashboard shells (admin, guru, siswa) backed by real API data.
+Nuxt 4 + Nuxt UI 4 frontend for the multi-tenant **tax administration learning simulator**. The app covers authentication, role-based dashboards, admin management, tariff management, and national tax portal-inspired BP21/BP26 e-Bupot simulator screens.
 
 The backend lives in a **separate repository**: `pajak-simulator-backend` (FastAPI). Start it first — see its README for the database bootstrap and seed credentials.
 
@@ -34,26 +34,39 @@ App: http://localhost:3000 — log in with the seed credentials from the backend
 
 ## Architecture notes
 
-- **SPA mode** (`ssr: false`): auth is fully client-side in Phase 1, so SSR has nothing to render.
-- **Token storage tradeoff**: access token in memory (`useState`), refresh token in `localStorage`. Acceptable for Phase 1 dev; switch to httpOnly cookies before production.
+- **SPA mode** (`ssr: false`): auth is fully client-side, so SSR has nothing useful to render.
+- **Token storage tradeoff**: access token in memory (`useState`), refresh token in `localStorage`. Acceptable for current development; switch to httpOnly cookies before production.
 - **Silent session restore**: on boot, `auth.global.ts` middleware exchanges a stored refresh token for a new access token before deciding any redirect.
 - **401 recovery**: the `useApi()` wrapper attempts one refresh + retry on 401, then logs out on failure.
 - **Role guard**: pages declare `definePageMeta({ middleware: 'role', roles: [...] })`; wrong-role access redirects to the user's own dashboard.
+- **Document module UX**: BP21/BP26 screens intentionally mimic the workflow structure of the national tax portal while using PajakSim branding only.
 - UI labels are **Bahasa Indonesia**; code and comments are English.
 
 ## Structure
 
 ```
 app/
-├── pages/            # login, index (role redirect), admin/, guru/, siswa/
-├── layouts/          # default (sidebar + topbar), auth (centered card)
+├── pages/            # login, index, admin, guru, siswa, bp21/bp26 module pages
+├── layouts/          # default authenticated shell
 ├── middleware/       # auth.global.ts, role.ts
 ├── composables/      # useAuth.ts, useApi.ts
+├── components/       # shared BP21/BP26 guru monitor
+├── utils/            # bupot labels, options, formatters, validation
 └── types/            # api.ts (API contract types)
 ```
 
-## Phase 1 scope & what's next
+## Current feature coverage
 
-**Done:** login (with optional tenant code), silent refresh, role dashboards with live stats, admin user management (list, filter, paginate, create), guru class/student views, siswa class list, superadmin tenant switcher.
+- Login with optional tenant code, silent refresh, and automatic 401 recovery.
+- Role dashboards for superadmin/admin/guru/siswa.
+- Admin user management and superadmin tenant switcher.
+- Admin tax tariff management page for PTKP and Pasal 17 progressive brackets.
+- Guru BP21/BP26 monitoring and review workflow.
+- Siswa BP21/BP26 list, create, issue, and document lifecycle views.
+- Formal PajakSim UI shell with module menubar and document status tabs.
 
-**Next phases:** faktur pajak simulasi, bupot PPh 21/23, kode billing, SPT simulasi, PDF generation, grading, reports.
+## Scope & what's next
+
+**Done:** foundation, BP21/BP26 simulated e-Bupot, basic grading/review, PTKP/progressive tariff management.
+
+**Next phases:** faktur pajak simulasi, bupot PPh 23, kode billing, SPT simulasi, PDF generation, expanded reports.

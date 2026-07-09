@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   // SPA mode: auth lives entirely client-side (JWT in memory + refresh token in
-  // localStorage), so there is nothing useful to render on the server in Phase 1.
+  // localStorage), so there is nothing useful to render on the server.
   ssr: false,
 
   runtimeConfig: {

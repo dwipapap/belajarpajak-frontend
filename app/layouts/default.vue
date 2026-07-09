@@ -55,7 +55,7 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
     icon: 'i-lucide-clipboard-list',
     children: [
       { label: 'Surat Pemberitahuan (SPT)', icon: 'i-lucide-file-spreadsheet', disabled: true },
-      { label: 'Coretax Form', icon: 'i-lucide-clipboard-pen', disabled: true },
+      { label: 'Formulir Pajak', icon: 'i-lucide-clipboard-pen', disabled: true },
       { label: 'Pencatatan', icon: 'i-lucide-book-text', disabled: true },
       { label: 'Dasbor Kompensasi', icon: 'i-lucide-layout-dashboard', disabled: true },
       { label: 'Pengungkapan Ketidakbenaran SPT', icon: 'i-lucide-file-warning', disabled: true }

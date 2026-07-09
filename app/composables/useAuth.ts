@@ -1,6 +1,6 @@
 import type { AccessTokenResponse, LoginResponse, Me, Role } from '~/types/api'
 
-// Phase 1 tradeoff (documented in README): access token in memory, refresh token in
+// Current dev tradeoff (documented in README): access token in memory, refresh token in
 // localStorage. Revisit with httpOnly cookies before production.
 const REFRESH_TOKEN_KEY = 'pajaksim.refresh_token'
 
