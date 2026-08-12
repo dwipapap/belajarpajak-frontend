@@ -19,5 +19,11 @@
   "devDependencies": {
     "typescript": "^5.6.0",
     "vue-tsc": "^3.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.27.7": true,
+    "esbuild@0.28.1": true,
+    "@parcel/watcher@2.5.6": true,
+    "vue-demi@0.14.10": true
   }
 }

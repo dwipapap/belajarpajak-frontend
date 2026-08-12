@@ -3,6 +3,9 @@ import type {
   Bp21ListResponse,
   Bp21Read,
   Bp21Summary,
+  Bp23ListResponse,
+  Bp23Read,
+  Bp23Summary,
   Bp26ListResponse,
   Bp26Read,
   Bp26Summary,
@@ -32,6 +35,12 @@ const { data: bp21Summary } = useAsyncData(
   { default: () => ({ draft: 0, issued: 0, invalid: 0, total: 0 }) }
 )
 
+const { data: bp23Summary } = useAsyncData(
+  'siswa-dashboard-bp23-summary',
+  () => apiFetch<Bp23Summary>('/api/v1/bp23/summary'),
+  { default: () => ({ draft: 0, issued: 0, invalid: 0, total: 0 }) }
+)
+
 const { data: bp26Summary } = useAsyncData(
   'siswa-dashboard-bp26-summary',
   () => apiFetch<Bp26Summary>('/api/v1/bp26/summary'),
@@ -44,6 +53,12 @@ const { data: bp21List, status: bp21Status } = useAsyncData(
   { default: () => ({ items: [], total: 0, page: 1, size: 5 }) }
 )
 
+const { data: bp23List, status: bp23Status } = useAsyncData(
+  'siswa-dashboard-bp23-list',
+  () => apiFetch<Bp23ListResponse>('/api/v1/bp23?page=1&size=5'),
+  { default: () => ({ items: [], total: 0, page: 1, size: 5 }) }
+)
+
 const { data: bp26List, status: bp26Status } = useAsyncData(
   'siswa-dashboard-bp26-list',
   () => apiFetch<Bp26ListResponse>('/api/v1/bp26?page=1&size=5'),
@@ -52,7 +67,7 @@ const { data: bp26List, status: bp26Status } = useAsyncData(
 
 type RecentDocument = {
   id: number
-  module: 'BP21' | 'BP26'
+  module: 'BP21' | 'BP23' | 'BP26'
   to: string
   recipient_name: string
   tax_month: number
@@ -64,10 +79,10 @@ type RecentDocument = {
   created_at: string | null
 }
 
-const bupotTotal = computed(() => bp21Summary.value.total + bp26Summary.value.total)
-const issuedTotal = computed(() => bp21Summary.value.issued + bp26Summary.value.issued)
-const draftTotal = computed(() => bp21Summary.value.draft + bp26Summary.value.draft)
-const invalidTotal = computed(() => bp21Summary.value.invalid + bp26Summary.value.invalid)
+const bupotTotal = computed(() => bp21Summary.value.total + bp23Summary.value.total + bp26Summary.value.total)
+const issuedTotal = computed(() => bp21Summary.value.issued + bp23Summary.value.issued + bp26Summary.value.issued)
+const draftTotal = computed(() => bp21Summary.value.draft + bp23Summary.value.draft + bp26Summary.value.draft)
+const invalidTotal = computed(() => bp21Summary.value.invalid + bp23Summary.value.invalid + bp26Summary.value.invalid)
 
 const statCards = computed(() => [
   {
@@ -105,6 +120,13 @@ const modules = computed(() => [
     summary: bp21Summary.value
   },
   {
+    title: 'BP23',
+    description: 'Bukti pemotongan PPh 23',
+    to: '/siswa/bp23',
+    icon: 'i-lucide-file-signature',
+    summary: bp23Summary.value
+  },
+  {
     title: 'BP26',
     description: 'Bukti pemotongan wajib pajak luar negeri',
     to: '/siswa/bp26',
@@ -119,13 +141,18 @@ const recentDocuments = computed<RecentDocument[]>(() => {
     module: 'BP21' as const,
     to: '/siswa/bp21'
   }))
+  const bp23 = bp23List.value.items.map((item: Bp23Read) => ({
+    ...item,
+    module: 'BP23' as const,
+    to: '/siswa/bp23'
+  }))
   const bp26 = bp26List.value.items.map((item: Bp26Read) => ({
     ...item,
     module: 'BP26' as const,
     to: '/siswa/bp26'
   }))
 
-  return [...bp21, ...bp26]
+  return [...bp21, ...bp23, ...bp26]
     .sort((a, b) => {
       const left = a.updated_at || a.created_at || ''
       const right = b.updated_at || b.created_at || ''
@@ -135,7 +162,7 @@ const recentDocuments = computed<RecentDocument[]>(() => {
 })
 
 const isDocumentsLoading = computed(
-  () => bp21Status.value === 'pending' || bp26Status.value === 'pending'
+  () => bp21Status.value === 'pending' || bp23Status.value === 'pending' || bp26Status.value === 'pending'
 )
 </script>
 
@@ -149,6 +176,13 @@ const isDocumentsLoading = computed(
       </div>
       <div class="siswa-dashboard__hero-actions">
         <UButton to="/siswa/bp21/create" icon="i-lucide-file-plus-2" label="Buat BP21" />
+        <UButton
+          to="/siswa/bp23/create"
+          icon="i-lucide-file-plus-2"
+          label="Buat BP23"
+          color="neutral"
+          variant="outline"
+        />
         <UButton
           to="/siswa/bp26/create"
           icon="i-lucide-file-plus-2"
@@ -207,13 +241,13 @@ const isDocumentsLoading = computed(
         <header>
           <div>
             <h2>Dokumen Terbaru</h2>
-            <p>BP21 dan BP26 yang terakhir Anda kerjakan.</p>
+            <p>BP21, BP23, dan BP26 yang terakhir Anda kerjakan.</p>
           </div>
         </header>
 
         <div v-if="isDocumentsLoading" class="siswa-dashboard__empty">Memuat dokumen...</div>
         <div v-else-if="recentDocuments.length === 0" class="siswa-dashboard__empty">
-          Belum ada dokumen. Mulai dari BP21 atau BP26.
+          Belum ada dokumen. Mulai dari BP21, BP23, atau BP26.
         </div>
         <ul v-else class="siswa-dashboard__documents">
           <li v-for="doc in recentDocuments" :key="`${doc.module}-${doc.id}`">

@@ -55,6 +55,7 @@ function selectClass(id: number) {
           </div>
         </div>
       </UCard>
+      
       <UCard>
         <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-4">
@@ -67,6 +68,36 @@ function selectClass(id: number) {
             </div>
           </div>
           <UButton to="/guru/bp21" icon="i-lucide-arrow-right" color="neutral" variant="ghost" />
+        </div>
+      </UCard>
+
+      <UCard>
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="rounded-lg bg-primary/10 p-3">
+              <UIcon name="i-lucide-file-signature" class="size-6 text-primary" />
+            </div>
+            <div>
+              <p class="text-sm text-muted">Monitoring e-Bupot</p>
+              <p class="text-lg font-semibold text-default">BP23 Siswa</p>
+            </div>
+          </div>
+          <UButton to="/guru/bp23" icon="i-lucide-arrow-right" color="neutral" variant="ghost" />
+        </div>
+      </UCard>
+
+      <UCard>
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="rounded-lg bg-primary/10 p-3">
+              <UIcon name="i-lucide-globe" class="size-6 text-primary" />
+            </div>
+            <div>
+              <p class="text-sm text-muted">Monitoring e-Bupot</p>
+              <p class="text-lg font-semibold text-default">BP26 Siswa</p>
+            </div>
+          </div>
+          <UButton to="/guru/bp26" icon="i-lucide-arrow-right" color="neutral" variant="ghost" />
         </div>
       </UCard>
     </div>

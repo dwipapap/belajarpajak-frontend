@@ -17,7 +17,7 @@ interface BupotRow {
   teacher_feedback: string | null
 }
 
-const props = defineProps<{ module: 'bp21' | 'bp26' }>()
+const props = defineProps<{ module: 'bp21' | 'bp23' | 'bp26' }>()
 
 const label = props.module.toUpperCase()
 const apiBase = `/api/v1/${props.module}`

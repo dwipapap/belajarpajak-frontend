@@ -147,11 +147,19 @@ export interface Bp21Summary {
   invalid: number
   total: number
 }
+// BP23 and BP26 share the BP21 slip lifecycle; only the SPT flag is BP26-specific.
+export type Bp23Status = Bp21Status
+export type Bp23TaxNature = Bp21TaxNature
+export type Bp23TaxFacility = Bp21TaxFacility
 
-// BP26 shares the BP21 slip lifecycle; only the SPT flag is BP26-specific.
 export type Bp26Status = Bp21Status
 export type Bp26TaxNature = Bp21TaxNature
 export type Bp26TaxFacility = Bp21TaxFacility
+
+export type Bp23Create = Omit<Bp21Create, 'ptkp_status' | 'negara_treaty' | 'pasal_treaty' | 'nomor_skd' | 'tarif_treaty_basis_points'>
+export type Bp23Read = Omit<Bp21Read, 'ptkp_status'> & { ptkp_status: string | null }
+export type Bp23ListResponse = Paginated<Bp23Read>
+export type Bp23Summary = Bp21Summary
 export type Bp26SptFlag =
   | 'reported_in_spt'
   | 'objection_in_progress'
