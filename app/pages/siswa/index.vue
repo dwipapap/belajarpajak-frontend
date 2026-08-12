@@ -12,6 +12,7 @@ import type {
   DashboardSummary,
   SchoolClass
 } from '~/types/api'
+import { formatCurrency, formatPeriod, statusColor, statusLabel } from '~/utils/bupot'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -87,26 +88,30 @@ const invalidTotal = computed(() => bp21Summary.value.invalid + bp23Summary.valu
 const statCards = computed(() => [
   {
     label: 'Kelas Saya',
+    description: 'Kelas aktif yang diikuti',
     value: summary.value?.classes ?? 0,
-    icon: 'i-lucide-book-open',
+    icon: 'i-lucide-users',
     tone: 'info'
   },
   {
     label: 'Total e-Bupot',
+    description: 'BP21 + BP23 + BP26',
     value: bupotTotal.value,
-    icon: 'i-lucide-scroll-text',
+    icon: 'i-lucide-file-text',
     tone: 'primary'
   },
   {
     label: 'Telah Terbit',
+    description: 'Dokumen yang telah terbit',
     value: issuedTotal.value,
-    icon: 'i-lucide-badge-check',
+    icon: 'i-lucide-check-circle-2',
     tone: 'success'
   },
   {
     label: 'Perlu Diselesaikan',
+    description: 'Konsep + Tidak valid',
     value: draftTotal.value + invalidTotal.value,
-    icon: 'i-lucide-triangle-alert',
+    icon: 'i-lucide-hourglass',
     tone: 'warning'
   }
 ])
@@ -114,23 +119,23 @@ const statCards = computed(() => [
 const modules = computed(() => [
   {
     title: 'BP21',
-    description: 'Bukti pemotongan selain pegawai tetap',
+    description: 'Bukti pemotongan PPh Pasal 21',
     to: '/siswa/bp21',
-    icon: 'i-lucide-file-text',
+    colorClass: 'is-bp21',
     summary: bp21Summary.value
   },
   {
     title: 'BP23',
-    description: 'Bukti pemotongan PPh 23',
+    description: 'Bukti pemotongan PPh Pasal 23',
     to: '/siswa/bp23',
-    icon: 'i-lucide-file-signature',
+    colorClass: 'is-bp23',
     summary: bp23Summary.value
   },
   {
     title: 'BP26',
-    description: 'Bukti pemotongan wajib pajak luar negeri',
+    description: 'Bukti pemotongan PPh Pasal 26',
     to: '/siswa/bp26',
-    icon: 'i-lucide-globe',
+    colorClass: 'is-bp26',
     summary: bp26Summary.value
   }
 ])
@@ -167,349 +172,170 @@ const isDocumentsLoading = computed(
 </script>
 
 <template>
-  <div class="siswa-dashboard">
-    <section class="siswa-dashboard__hero">
-      <div>
-        <p>{{ auth.user.value?.tenant_name || 'Institusi Simulasi' }}</p>
-        <h1>Dasbor Siswa</h1>
-        <span>{{ auth.user.value?.full_name }}</span>
+  <div class="siswa-dashboard space-y-4">
+    <section class="siswa-dashboard__hero flex justify-between items-center bg-blue-50/50 p-6 rounded-xl border border-blue-100">
+      <div class="space-y-4 max-w-lg">
+        <UBadge color="primary" variant="subtle" class="gap-1.5" size="md">
+          <UIcon name="i-lucide-building" class="size-4" />
+          {{ auth.user.value?.tenant_id ?? '1471110802000001' }}
+        </UBadge>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Dasbor Siswa</h1>
+          <p class="text-gray-600 mt-1 text-lg">{{ auth.user.value?.full_name }}</p>
+        </div>
       </div>
-      <div class="siswa-dashboard__hero-actions">
-        <UButton to="/siswa/bp21/create" icon="i-lucide-file-plus-2" label="Buat BP21" />
-        <UButton
-          to="/siswa/bp23/create"
-          icon="i-lucide-file-plus-2"
-          label="Buat BP23"
-          color="neutral"
-          variant="outline"
-        />
-        <UButton
-          to="/siswa/bp26/create"
-          icon="i-lucide-file-plus-2"
-          label="Buat BP26"
-          color="neutral"
-          variant="outline"
-        />
+      
+      <div class="hidden md:block absolute right-72 opacity-20 pointer-events-none">
+        <UIcon name="i-lucide-graduation-cap" class="size-48 text-primary" />
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm z-10 w-64 space-y-3">
+        <p class="text-sm font-semibold text-gray-900 mb-2">Aksi Cepat</p>
+        <UButton to="/siswa/bp21/create" icon="i-lucide-file-plus-2" label="Buat BP21" class="w-full justify-center" size="md" />
+        <UButton to="/siswa/bp23/create" icon="i-lucide-file-plus-2" label="Buat BP23" color="neutral" variant="outline" class="w-full justify-center" size="md" />
+        <UButton to="/siswa/bp26/create" icon="i-lucide-file-plus-2" label="Buat BP26" color="neutral" variant="outline" class="w-full justify-center" size="md" />
       </div>
     </section>
 
-    <section class="siswa-dashboard__stats" aria-label="Ringkasan siswa">
-      <div v-for="card in statCards" :key="card.label" class="siswa-dashboard__stat">
-        <div :class="['siswa-dashboard__stat-icon', `is-${card.tone}`]">
-          <UIcon :name="card.icon" class="size-5" />
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4" aria-label="Ringkasan siswa">
+      <div v-for="card in statCards" :key="card.label" class="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
+        <div :class="['size-12 rounded-full flex items-center justify-center flex-shrink-0', `bg-${card.tone}-50 text-${card.tone}-600`]">
+          <UIcon :name="card.icon" class="size-6" />
         </div>
         <div>
-          <span>{{ card.label }}</span>
-          <strong>{{ card.value }}</strong>
+          <p class="text-sm font-medium text-gray-500">{{ card.label }}</p>
+          <p class="text-2xl font-bold text-gray-900 leading-none mt-1">{{ card.value }}</p>
+          <p class="text-xs text-gray-400 mt-1">{{ card.description }}</p>
         </div>
       </div>
     </section>
 
-    <section class="siswa-dashboard__grid">
-      <div class="siswa-dashboard__panel">
-        <header>
-          <div>
-            <h2>Simulasi yang Aktif</h2>
-            <p>Masuk ke modul latihan yang paling sering dipakai.</p>
-          </div>
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden lg:col-span-4 flex flex-col">
+        <header class="p-5 border-b border-gray-100 bg-gray-50/50">
+          <h2 class="font-bold text-gray-900">Simulasi yang Aktif</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Pilih modul untuk membuat e-Bupot</p>
         </header>
 
-        <div class="siswa-dashboard__modules">
+        <div class="flex-1 p-3 space-y-2">
           <NuxtLink
             v-for="item in modules"
             :key="item.title"
             :to="item.to"
-            class="siswa-dashboard__module"
+            class="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-colors"
           >
-            <div class="siswa-dashboard__module-icon">
-              <UIcon :name="item.icon" class="size-5" />
+            <div :class="['size-12 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-lg', item.colorClass]">
+              {{ item.title.replace('BP', '') }}
             </div>
-            <div>
-              <strong>{{ item.title }}</strong>
-              <span>{{ item.description }}</span>
+            <div class="flex-1 min-w-0">
+              <strong class="block text-gray-900 text-sm truncate">{{ item.title }}</strong>
+              <span class="block text-xs text-gray-500 truncate">{{ item.description }}</span>
             </div>
-            <div class="siswa-dashboard__module-counts">
-              <UBadge color="warning" variant="subtle">{{ item.summary.draft }} konsep</UBadge>
-              <UBadge color="success" variant="subtle">{{ item.summary.issued }} terbit</UBadge>
+            <div class="flex gap-2">
+              <div class="text-center">
+                <span class="block text-sm font-bold text-orange-600">{{ item.summary.draft }}</span>
+                <span class="block text-[10px] text-orange-600/70 font-medium uppercase tracking-wider">Konsep</span>
+              </div>
+              <div class="text-center">
+                <span class="block text-sm font-bold text-green-600">{{ item.summary.issued }}</span>
+                <span class="block text-[10px] text-green-600/70 font-medium uppercase tracking-wider">Terbit</span>
+              </div>
             </div>
-            <UIcon name="i-lucide-arrow-right" class="size-5" />
+            <UIcon name="i-lucide-chevron-right" class="size-4 text-gray-300 ml-1" />
           </NuxtLink>
         </div>
       </div>
 
-      <div class="siswa-dashboard__panel">
-        <header>
-          <div>
-            <h2>Dokumen Terbaru</h2>
-            <p>BP21, BP23, dan BP26 yang terakhir Anda kerjakan.</p>
-          </div>
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden lg:col-span-8 flex flex-col">
+        <header class="p-5 border-b border-gray-100 bg-gray-50/50">
+          <h2 class="font-bold text-gray-900">Dokumen Terbaru</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Dokumen e-Bupot terbaru dari semua modul</p>
         </header>
 
-        <div v-if="isDocumentsLoading" class="siswa-dashboard__empty">Memuat dokumen...</div>
-        <div v-else-if="recentDocuments.length === 0" class="siswa-dashboard__empty">
+        <div v-if="isDocumentsLoading" class="p-8 text-center text-sm text-gray-500">Memuat dokumen...</div>
+        <div v-else-if="recentDocuments.length === 0" class="p-8 text-center text-sm text-gray-500">
           Belum ada dokumen. Mulai dari BP21, BP23, atau BP26.
         </div>
-        <ul v-else class="siswa-dashboard__documents">
-          <li v-for="doc in recentDocuments" :key="`${doc.module}-${doc.id}`">
-            <NuxtLink :to="doc.to">
-              <div>
-                <strong>{{ doc.module }}</strong>
-                <span>{{ doc.recipient_name }}</span>
-                <small>{{ formatPeriod(doc) }} · Rp {{ formatCurrency(doc.income_tax) }}</small>
-              </div>
-              <div class="siswa-dashboard__document-status">
-                <UBadge :color="statusColor[doc.status]" variant="subtle">
-                  {{ statusLabel[doc.status] }}
-                </UBadge>
-                <span v-if="doc.score !== null">Nilai {{ doc.score }}</span>
-              </div>
-            </NuxtLink>
-          </li>
-        </ul>
+        <div v-else class="flex-1 p-2">
+          <NuxtLink 
+            v-for="doc in recentDocuments" 
+            :key="`${doc.module}-${doc.id}`"
+            :to="doc.to"
+            class="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <div :class="['size-10 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-sm', `is-${doc.module.toLowerCase()}`]">
+              {{ doc.module.replace('BP', '') }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <strong class="block text-gray-900 text-sm truncate">{{ doc.recipient_name }}</strong>
+              <span class="block text-xs text-gray-500 truncate">{{ formatPeriod(doc) }}</span>
+            </div>
+            <div class="text-right tabular-nums text-sm text-gray-600 font-medium px-4 w-36">
+              Rp {{ formatCurrency(doc.income_tax) }}
+            </div>
+            <div class="w-28 text-center">
+              <UBadge :color="statusColor[doc.status]" variant="subtle" size="sm" class="justify-center w-full">
+                {{ statusLabel[doc.status] }}
+              </UBadge>
+            </div>
+            <div class="w-20 text-right text-sm font-medium text-gray-900 flex items-center justify-end gap-2">
+              <span class="text-gray-400 font-normal">Nilai</span>
+              <span v-if="doc.score !== null" class="text-primary">{{ doc.score }}</span>
+              <span v-else class="text-gray-300">-</span>
+              <UIcon name="i-lucide-chevron-right" class="size-4 text-gray-300" />
+            </div>
+          </NuxtLink>
+        </div>
       </div>
     </section>
 
-    <section class="siswa-dashboard__panel">
-      <header>
-        <div>
-          <h2>Kelas yang Diikuti</h2>
-          <p>Informasi kelas aktif untuk latihan pajak.</p>
-        </div>
+    <section class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <header class="p-5 border-b border-gray-100 bg-gray-50/50">
+        <h2 class="font-bold text-gray-900">Kelas yang Diikuti</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Daftar kelas yang sedang Anda ikuti</p>
       </header>
 
-      <div v-if="classesStatus === 'pending'" class="siswa-dashboard__empty">Memuat kelas...</div>
-      <div v-else-if="classes.length === 0" class="siswa-dashboard__empty">
+      <div v-if="classesStatus === 'pending'" class="p-8 text-center text-sm text-gray-500">Memuat kelas...</div>
+      <div v-else-if="classes.length === 0" class="p-8 text-center text-sm text-gray-500">
         Anda belum terdaftar di kelas mana pun.
       </div>
-      <ul v-else class="siswa-dashboard__classes">
-        <li v-for="c in classes" :key="c.id">
-          <div class="siswa-dashboard__class-icon">
-            <UIcon name="i-lucide-book-open" class="size-5" />
+      <UTable 
+        v-else 
+        :data="classes" 
+        :columns="[{accessorKey: 'name', header: 'Nama Kelas'}, {accessorKey: 'academic_year', header: 'Tahun Ajaran'}, {accessorKey: 'guru', header: 'Pengajar'}, {id: 'status', header: 'Status'}, {id: 'action', header: ''}]"
+        :ui="{ th: 'bg-transparent text-xs font-medium text-gray-500 uppercase tracking-wider py-3', td: 'py-3 cursor-pointer' }"
+      >
+        <template #name-cell="{ row }">
+          <div class="flex items-center gap-3">
+            <div class="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <UIcon name="i-lucide-book-open" class="size-4" />
+            </div>
+            <span class="font-medium text-gray-900 text-sm">{{ row.original.name }}</span>
           </div>
-          <div>
-            <strong>{{ c.name }}</strong>
-            <span>Tahun Ajaran {{ c.academic_year }}</span>
-          </div>
-          <UBadge color="neutral" variant="subtle">Aktif</UBadge>
-        </li>
-      </ul>
+        </template>
+        <template #academic_year-cell="{ row }">
+          <span class="text-sm text-gray-600">{{ row.original.academic_year }}</span>
+        </template>
+        <template #guru-cell="{ row }">
+          <span class="text-sm text-gray-600">{{ row.original.guru?.full_name || '-' }}</span>
+        </template>
+        <template #status-cell>
+          <UBadge color="success" variant="subtle" size="sm">Aktif</UBadge>
+        </template>
+        <template #action-cell>
+          <UIcon name="i-lucide-chevron-right" class="size-4 text-gray-300" />
+        </template>
+      </UTable>
     </section>
   </div>
 </template>
 
 <style scoped>
-.siswa-dashboard {
-  display: grid;
-  gap: 1rem;
-}
-
-.siswa-dashboard__hero,
-.siswa-dashboard__panel,
-.siswa-dashboard__stat {
-  border: 1px solid oklch(0.89 0.014 255);
-  border-radius: 0.45rem;
-  background: oklch(0.99 0.004 250);
-}
-
 .siswa-dashboard__hero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.15rem 1.25rem;
-}
-
-.siswa-dashboard__hero p,
-.siswa-dashboard__hero span,
-.siswa-dashboard__panel header p,
-.siswa-dashboard__stat span,
-.siswa-dashboard__module span,
-.siswa-dashboard__documents small,
-.siswa-dashboard__classes span {
-  color: oklch(0.45 0.045 260);
-  font-size: 0.84rem;
-}
-
-.siswa-dashboard__hero h1 {
-  color: oklch(0.27 0.075 270);
-  font-size: 1.35rem;
-  font-weight: 850;
-}
-
-.siswa-dashboard__hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: end;
-  gap: 0.5rem;
-}
-
-.siswa-dashboard__stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.85rem;
-}
-
-.siswa-dashboard__stat {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.9rem 1rem;
-}
-
-.siswa-dashboard__stat strong {
-  display: block;
-  color: oklch(0.26 0.075 270);
-  font-size: 1.55rem;
-  line-height: 1;
-}
-
-.siswa-dashboard__stat-icon,
-.siswa-dashboard__module-icon,
-.siswa-dashboard__class-icon {
-  display: grid;
-  width: 2.45rem;
-  height: 2.45rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 0.45rem;
-  background: oklch(0.93 0.025 250);
-  color: oklch(0.31 0.095 270);
-}
-
-.siswa-dashboard__stat-icon.is-success {
-  background: oklch(0.94 0.04 150);
-  color: oklch(0.36 0.1 150);
-}
-
-.siswa-dashboard__stat-icon.is-warning {
-  background: oklch(0.96 0.055 92);
-  color: oklch(0.42 0.09 80);
-}
-
-.siswa-dashboard__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(24rem, 0.9fr);
-  gap: 1rem;
-}
-
-.siswa-dashboard__panel {
+  position: relative;
   overflow: hidden;
 }
-
-.siswa-dashboard__panel header {
-  border-bottom: 1px solid oklch(0.9 0.013 255);
-  padding: 0.9rem 1rem;
-}
-
-.siswa-dashboard__panel h2 {
-  color: oklch(0.27 0.075 270);
-  font-weight: 800;
-}
-
-.siswa-dashboard__modules,
-.siswa-dashboard__documents,
-.siswa-dashboard__classes {
-  display: grid;
-}
-
-.siswa-dashboard__module,
-.siswa-dashboard__documents a,
-.siswa-dashboard__classes li {
-  display: grid;
-  align-items: center;
-  gap: 0.8rem;
-  border-bottom: 1px solid oklch(0.91 0.012 255);
-  color: oklch(0.28 0.075 270);
-  text-decoration: none;
-}
-
-.siswa-dashboard__module {
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  padding: 0.9rem 1rem;
-}
-
-.siswa-dashboard__module:hover,
-.siswa-dashboard__documents a:hover {
-  background: oklch(0.975 0.006 250);
-}
-
-.siswa-dashboard__module strong,
-.siswa-dashboard__documents strong,
-.siswa-dashboard__classes strong {
-  display: block;
-  font-weight: 800;
-}
-
-.siswa-dashboard__documents span,
-.siswa-dashboard__documents small {
-  display: block;
-}
-
-.siswa-dashboard__module-counts,
-.siswa-dashboard__document-status {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: end;
-  gap: 0.35rem;
-}
-
-.siswa-dashboard__documents a {
-  grid-template-columns: minmax(0, 1fr) auto;
-  padding: 0.78rem 1rem;
-}
-
-.siswa-dashboard__document-status span {
-  color: oklch(0.36 0.08 150);
-  font-size: 0.78rem;
-  font-weight: 750;
-}
-
-.siswa-dashboard__classes li {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  padding: 0.85rem 1rem;
-}
-
-.siswa-dashboard__empty {
-  color: oklch(0.45 0.045 260);
-  font-size: 0.9rem;
-  padding: 1.2rem;
-  text-align: center;
-}
-
-@media (max-width: 1180px) {
-  .siswa-dashboard__stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .siswa-dashboard__grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 720px) {
-  .siswa-dashboard__hero {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .siswa-dashboard__hero-actions {
-    justify-content: flex-start;
-  }
-
-  .siswa-dashboard__stats {
-    grid-template-columns: 1fr;
-  }
-
-  .siswa-dashboard__module,
-  .siswa-dashboard__documents a,
-  .siswa-dashboard__classes li {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .siswa-dashboard__module-counts,
-  .siswa-dashboard__document-status {
-    grid-column: 2;
-    justify-content: flex-start;
-  }
-}
+.is-bp21 { background: oklch(0.92 0.05 270); color: oklch(0.4 0.1 270); }
+.is-bp23 { background: oklch(0.92 0.04 250); color: oklch(0.4 0.08 250); }
+.is-bp26 { background: oklch(0.92 0.05 150); color: oklch(0.4 0.1 150); }
 </style>

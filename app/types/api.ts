@@ -43,10 +43,10 @@ export interface SchoolClass {
   name: string
   academic_year: string
   guru_id: number
+  guru: User | null
 }
 
 export interface ClassDetail extends SchoolClass {
-  guru: User | null
   students: User[]
 }
 
