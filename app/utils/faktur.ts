@@ -50,9 +50,8 @@ export const transactionCodeFilterOptions: { label: string, value: string | unde
 export const DPP_OTHER_CODES = ['04', '05']
 
 export const invoiceKindOptions: { label: string, value: TaxInvoiceKind }[] = [
-  { label: 'Normal', value: 'normal' },
-  { label: 'Pengganti', value: 'pengganti' },
-  { label: 'Dibatalkan', value: 'dibatalkan' }
+  { label: 'Normal', value: 'normal' }
+  // 'pengganti' is intentionally not offered: the backend rejects it (item 6).
 ]
 
 export const invoiceKindLabel = {
@@ -150,9 +149,25 @@ export interface CalculatedLine {
 }
 
 /**
+ * ROUND_HALF_UP division of two non-negative integers — mirrors the backend's
+ * ``Decimal.quantize(..., rounding=ROUND_HALF_UP)`` so a preview never disagrees
+ * with the stored figures.
+ */
+function roundHalfUpDivide(num: bigint, den: bigint): bigint {
+  if (num < 0n) return 0n
+  const q = num / den
+  const rem = num % den
+  return rem * 2n >= den ? q + 1n : q
+}
+
+const percentToBasis = (percent: number) => Math.round(Number(percent) * 100)
+
+/**
  * Preview of one Detail Transaksi row, mirroring the backend tax engine so the
  * modal can show live figures. The saved values always come from the API
- * response — this is display only.
+ * response — this is display only. All money math stays on integers (BigInt),
+ * never ``Number`` arithmetic, so large rupiah amounts and fractional rates
+ * round exactly like the server.
  */
 export function calculateLine(
   line: Pick<
@@ -160,18 +175,60 @@ export function calculateLine(
     'unit_price' | 'quantity' | 'discount' | 'use_dpp_other' | 'ppn_rate_percent' | 'ppnbm_rate_percent'
   >
 ): CalculatedLine {
-  const totalPrice = Math.round(Number(line.unit_price || 0) * Number(line.quantity || 0))
-  const dpp = Math.max(totalPrice - Number(line.discount || 0), 0)
-  const dppOther = line.use_dpp_other ? Math.round((dpp * 11) / 12) : 0
-  const ppnBase = line.use_dpp_other ? dppOther : dpp
+  const qtyMilli = BigInt(Math.round(Number(line.quantity || 0) * 1000))
+  const total = roundHalfUpDivide(BigInt(line.unit_price || 0) * qtyMilli, 1000n)
+
+  let dpp = total - BigInt(line.discount || 0)
+  if (dpp < 0n) dpp = 0n
+
+  let dppOther = 0n
+  let ppnBase = dpp
+  if (line.use_dpp_other) {
+    dppOther = roundHalfUpDivide(dpp * 11n, 12n) // 11/12 of DPP
+    ppnBase = dppOther
+  }
+
+  const ppn = roundHalfUpDivide(ppnBase * BigInt(percentToBasis(line.ppn_rate_percent || 0)), 10000n)
+  const ppnbm = roundHalfUpDivide(dpp * BigInt(percentToBasis(line.ppnbm_rate_percent || 0)), 10000n)
 
   return {
-    total_price: totalPrice,
-    dpp,
-    dpp_other: dppOther,
-    ppn: Math.round((ppnBase * Number(line.ppn_rate_percent || 0)) / 100),
-    ppnbm: Math.round((dpp * Number(line.ppnbm_rate_percent || 0)) / 100)
+    total_price: Number(total),
+    dpp: Number(dpp),
+    dpp_other: Number(dppOther),
+    ppn: Number(ppn),
+    ppnbm: Number(ppnbm)
   }
+}
+
+/**
+ * Runnable self-check for the preview arithmetic (the repo has no JS test
+ * runner). Run via `npm run check:faktur`; it throws unless every case matches
+ * the backend engine.
+ */
+export function selfCheckFakturPreview(): void {
+  const expect = (label: string, actual: CalculatedLine, want: CalculatedLine) => {
+    for (const key of ['total_price', 'dpp', 'dpp_other', 'ppn', 'ppnbm'] as const) {
+      if (actual[key] !== want[key]) {
+        throw new Error(`${label}.${key}: got ${actual[key]}, want ${want[key]}`)
+      }
+    }
+  }
+
+  expect(
+    'fractional quantity',
+    calculateLine({ unit_price: 1_000_000, quantity: 2.5, discount: 0, use_dpp_other: false, ppn_rate_percent: 12, ppnbm_rate_percent: 0 }),
+    { total_price: 2_500_000, dpp: 2_500_000, dpp_other: 0, ppn: 300_000, ppnbm: 0 }
+  )
+  expect(
+    'DPP Nilai Lain (11/12)',
+    calculateLine({ unit_price: 1_000_000, quantity: 1, discount: 0, use_dpp_other: true, ppn_rate_percent: 12, ppnbm_rate_percent: 20 }),
+    { total_price: 1_000_000, dpp: 1_000_000, dpp_other: 916_667, ppn: 110_000, ppnbm: 200_000 }
+  )
+  expect(
+    'large amount',
+    calculateLine({ unit_price: 9_999_999_999, quantity: 3, discount: 0, use_dpp_other: false, ppn_rate_percent: 12, ppnbm_rate_percent: 0 }),
+    { total_price: 29_999_999_997, dpp: 29_999_999_997, dpp_other: 0, ppn: 3_600_000_000, ppnbm: 0 }
+  )
 }
 
 /** Client-side validation for the Buat/Ubah Faktur form. UX only — the API re-validates. */
@@ -181,10 +238,10 @@ export function validateFakturCreate(state: {
   invoice_kind?: TaxInvoiceKind
   tax_month?: number
   tax_year?: number
+  buyer_identity_type?: BuyerIdentityType
   buyer_identity_number?: string
+  buyer_document_number?: string
   buyer_name?: string
-  buyer_address?: string
-  buyer_idtku?: string
   lines?: unknown[]
 }) {
   const errors: { name: string, message: string }[] = []
@@ -195,12 +252,31 @@ export function validateFakturCreate(state: {
   if (!state.invoice_kind) errors.push({ name: 'invoice_kind', message: 'Pilih jenis faktur' })
   if (!state.tax_month) errors.push({ name: 'tax_month', message: 'Pilih masa pajak' })
   if (!state.tax_year) errors.push({ name: 'tax_year', message: 'Isi tahun pajak' })
-  if (!state.buyer_identity_number) {
+
+  // Identity mirrors the server authority (item 10).
+  const idNumber = state.buyer_identity_number || ''
+  const identityType = state.buyer_identity_type
+  if (identityType === 'nik') {
+    if (!/^\d{16}$/.test(idNumber)) {
+      errors.push({ name: 'buyer_identity_number', message: 'NIK wajib 16 digit angka' })
+    }
+  } else if (identityType === 'npwp') {
+    const cleaned = idNumber.replace(/[.\-]/g, '')
+    if (!/^\d{15,16}$/.test(cleaned)) {
+      errors.push({ name: 'buyer_identity_number', message: 'Nomor NPWP tidak valid' })
+    }
+  } else if (identityType === 'paspor' || identityType === 'identitas_lain') {
+    if (!idNumber) {
+      errors.push({ name: 'buyer_identity_number', message: 'Nomor identitas wajib diisi' })
+    }
+    if (!state.buyer_document_number) {
+      errors.push({ name: 'buyer_document_number', message: 'Nomor dokumen wajib diisi' })
+    }
+  } else if (!idNumber) {
     errors.push({ name: 'buyer_identity_number', message: 'Nomor identitas WP wajib diisi' })
   }
+
   if (!state.buyer_name) errors.push({ name: 'buyer_name', message: 'Nama pembeli wajib diisi' })
-  if (!state.buyer_address) errors.push({ name: 'buyer_address', message: 'Alamat wajib diisi' })
-  if (!state.buyer_idtku) errors.push({ name: 'buyer_idtku', message: 'IDTKU wajib diisi' })
   if (!state.lines?.length) {
     errors.push({ name: 'lines', message: 'Tambahkan minimal satu detail transaksi' })
   }
@@ -222,6 +298,11 @@ export function validateFakturLine(state: {
   }
   if (!state.quantity || Number(state.quantity) <= 0) {
     errors.push({ name: 'quantity', message: 'Kuantitas harus lebih dari 0' })
+  } else {
+    const [, frac = ''] = String(state.quantity).split('.')
+    if (frac.length > 3) {
+      errors.push({ name: 'quantity', message: 'Kuantitas maksimal 3 digit pecahan' })
+    }
   }
   return errors
 }
