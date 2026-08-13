@@ -8,6 +8,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
+    "check:faktur": "node scripts/faktur-preview-check.mjs",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
