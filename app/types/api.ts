@@ -302,3 +302,130 @@ export type TarifProgresifUpdate = Partial<TarifProgresifCreate>
 
 export type TierPtkpList = TierPtkp[]
 export type TarifProgresifList = TarifProgresifPasal17[]
+
+/* --- e-Faktur: Pajak Keluaran --- */
+
+export type TaxInvoiceStatus = Bp21Status
+export type TaxInvoiceKind = 'normal' | 'pengganti' | 'dibatalkan'
+export type TaxInvoiceLineType = 'barang' | 'jasa'
+export type BuyerIdentityType = 'npwp' | 'nik' | 'paspor' | 'identitas_lain'
+
+export interface TaxInvoiceLineCreate {
+  line_type: TaxInvoiceLineType
+  item_code?: string | null
+  item_name: string
+  unit: string
+  unit_price: number
+  quantity: number
+  discount: number
+  use_dpp_other: boolean
+  ppn_rate_percent: number
+  ppnbm_rate_percent: number
+}
+
+export interface TaxInvoiceLineRead extends TaxInvoiceLineCreate {
+  id: number
+  invoice_id: number
+  line_order: number
+  /** Derived server-side: unit_price x quantity. */
+  total_price: number
+  dpp: number
+  dpp_other: number
+  ppn: number
+  ppnbm: number
+}
+
+export interface TaxInvoiceCreate {
+  class_id?: number | null
+  siswa_id?: number | null
+  is_advance_payment: boolean
+  is_settlement: boolean
+  transaction_code: string
+  invoice_date: string
+  invoice_kind: TaxInvoiceKind
+  tax_month: number
+  tax_year: number
+  reference?: string | null
+  seller_npwp?: string | null
+  seller_name?: string | null
+  seller_address?: string | null
+  seller_idtku?: string | null
+  buyer_identity_type: BuyerIdentityType
+  buyer_identity_number: string
+  buyer_country: string
+  buyer_document_number?: string | null
+  buyer_name: string
+  buyer_address?: string | null
+  buyer_idtku?: string | null
+  buyer_email?: string | null
+  lines: TaxInvoiceLineCreate[]
+}
+
+export type TaxInvoiceUpdate = Partial<TaxInvoiceCreate>
+
+export interface TaxInvoiceRead {
+  id: number
+  tenant_id: number
+  class_id: number | null
+  siswa_id: number
+  created_by_id: number
+
+  status: TaxInvoiceStatus
+  invoice_number: string | null
+  issued_at: string | null
+  invalid_reason: string | null
+  electronic_signature_status: string
+
+  is_advance_payment: boolean
+  is_settlement: boolean
+  transaction_code: string
+  invoice_date: string
+  invoice_kind: TaxInvoiceKind
+  tax_month: number
+  tax_year: number
+  reference: string | null
+
+  seller_npwp: string | null
+  seller_name: string | null
+  seller_address: string | null
+  seller_idtku: string | null
+
+  buyer_identity_type: BuyerIdentityType
+  buyer_identity_number: string
+  buyer_country: string
+  buyer_document_number: string | null
+  buyer_name: string
+  buyer_address: string | null
+  buyer_idtku: string | null
+  buyer_email: string | null
+
+  /** All totals are computed by the backend from the lines. */
+  total_price: number
+  total_discount: number
+  total_dpp: number
+  total_dpp_other: number
+  total_ppn: number
+  total_ppnbm: number
+
+  score: number | null
+  teacher_feedback: string | null
+  created_at: string | null
+  updated_at: string | null
+
+  lines: TaxInvoiceLineRead[]
+}
+
+export type TaxInvoiceListResponse = Paginated<TaxInvoiceRead>
+
+export interface TaxInvoiceSummary {
+  draft: number
+  issued: number
+  invalid: number
+  total: number
+}
+
+export interface TaxInvoiceBulkIssueResult {
+  issued: number
+  skipped: number
+  errors: string[]
+}
