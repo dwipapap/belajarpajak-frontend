@@ -19,6 +19,6 @@ definePageMeta({ middleware: 'role', roles: ['guru'] })
       base: 'total_dpp',
       tax: 'total_ppn'
     }"
-    :invalidate="{ path: 'cancel', body: { reason: 'Dibatalkan oleh guru saat review.' } }"
+    :invalidate="null"
   />
 </template>
