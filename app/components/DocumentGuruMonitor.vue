@@ -2,25 +2,82 @@
 import type { TableColumn } from '@nuxt/ui'
 import type { Bp21Status, Bp21Summary, Paginated, SchoolClass } from '~/types/api'
 
-// Fields shared by every bupot read schema that this monitor renders.
-interface BupotRow {
+/**
+ * Every document module (bupot, faktur, ...) has the same monitor shape —
+ * period, document number, status, counterparty, a code, a base and a tax
+ * amount — but names those fields differently. `fields` maps this component's
+ * display slots onto the module's row keys so one component serves all of them.
+ */
+interface DocumentRow {
   id: number
   tax_month: number
   tax_year: number
   status: Bp21Status
-  withholding_number: string | null
-  recipient_name: string
-  tax_object_code: string
-  dpp: number
-  income_tax: number
   score: number | null
   teacher_feedback: string | null
+  [key: string]: unknown
 }
 
-const props = defineProps<{ module: 'bp21' | 'bp23' | 'bp26' }>()
+interface MonitorFields {
+  number: string
+  name: string
+  code: string
+  base: string
+  tax: string
+}
 
-const label = props.module.toUpperCase()
-const apiBase = `/api/v1/${props.module}`
+const props = withDefaults(
+  defineProps<{
+    /** Used for the useAsyncData keys and, by default, the API base and label. */
+    module: string
+    apiBase?: string
+    label?: string
+    /** Breadcrumb group above the document name, e.g. "eBupot" or "e-Faktur". */
+    group?: string
+    numberHeader?: string
+    codeHeader?: string
+    baseHeader?: string
+    taxHeader?: string
+    fields?: MonitorFields
+    /**
+     * How this module marks a document invalid. Bupot has /invalidate, faktur
+     * cancels an issued document instead; null hides the action.
+     */
+    invalidate?: { path: string, body: Record<string, unknown> } | null
+  }>(),
+  {
+    apiBase: undefined,
+    label: undefined,
+    group: 'eBupot',
+    numberHeader: 'Nomor Pemotongan',
+    codeHeader: 'Kode Objek Pajak',
+    baseHeader: 'DPP (Rp)',
+    taxHeader: 'PPh (Rp)',
+    fields: () => ({
+      number: 'withholding_number',
+      name: 'recipient_name',
+      code: 'tax_object_code',
+      base: 'dpp',
+      tax: 'income_tax'
+    }),
+    invalidate: () => ({
+      path: 'invalidate',
+      body: { invalid_reason: 'Ditandai tidak valid oleh guru saat review.' }
+    })
+  }
+)
+
+const label = computed(() => props.label ?? props.module.toUpperCase())
+const apiBase = computed(() => props.apiBase ?? `/api/v1/${props.module}`)
+
+function text(row: DocumentRow, key: string) {
+  const value = row[key]
+  return value === null || value === undefined || value === '' ? '-' : String(value)
+}
+
+function amount(row: DocumentRow, key: string) {
+  return formatCurrency(Number(row[key] ?? 0))
+}
 
 const { apiFetch } = useApi()
 const toast = useToast()
@@ -51,7 +108,7 @@ const classOptions = computed(() => [
 
 const { data: summary, refresh: refreshSummary } = useAsyncData(
   `guru-${props.module}-summary`,
-  () => apiFetch<Bp21Summary>(`${apiBase}/summary`),
+  () => apiFetch<Bp21Summary>(`${apiBase.value}/summary`),
   { default: () => ({ draft: 0, issued: 0, invalid: 0, total: 0 }) }
 )
 
@@ -64,7 +121,7 @@ const { data: slipList, status: listStatus, refresh: refreshList } = useAsyncDat
     })
     if (activeStatus.value !== 'all') query.set('status', activeStatus.value)
     if (selectedClassId.value !== undefined) query.set('class_id', String(selectedClassId.value))
-    return apiFetch<Paginated<BupotRow>>(`${apiBase}?${query.toString()}`)
+    return apiFetch<Paginated<DocumentRow>>(`${apiBase.value}?${query.toString()}`)
   },
   { watch: [activeStatus, selectedClassId, page] }
 )
@@ -73,19 +130,19 @@ watch([activeStatus, selectedClassId], () => {
   page.value = 1
 })
 
-const columns: TableColumn<BupotRow>[] = [
+const columns = computed<TableColumn<DocumentRow>[]>(() => [
   { accessorKey: 'tax_month', header: 'Masa Pajak' },
-  { accessorKey: 'withholding_number', header: 'Nomor Pemotongan' },
+  { id: 'number', header: props.numberHeader },
   { accessorKey: 'status', header: 'Status' },
-  { accessorKey: 'recipient_name', header: 'Nama' },
-  { accessorKey: 'tax_object_code', header: 'Kode Objek Pajak' },
-  { accessorKey: 'dpp', header: 'DPP (Rp)' },
-  { accessorKey: 'income_tax', header: 'PPh (Rp)' },
+  { id: 'name', header: 'Nama' },
+  { id: 'code', header: props.codeHeader },
+  { id: 'base', header: props.baseHeader },
+  { id: 'tax', header: props.taxHeader },
   { accessorKey: 'score', header: 'Nilai' },
   { id: 'actions' }
-]
+])
 
-const selectedSlip = ref<BupotRow | null>(null)
+const selectedSlip = ref<DocumentRow | null>(null)
 const reviewOpen = ref(false)
 const savingReview = ref(false)
 const reviewError = ref<string | null>(null)
@@ -95,7 +152,7 @@ const reviewState = reactive({
   teacher_feedback: ''
 })
 
-function openReview(slip: BupotRow) {
+function openReview(slip: DocumentRow) {
   selectedSlip.value = slip
   reviewState.score = slip.score ?? undefined
   reviewState.teacher_feedback = slip.teacher_feedback ?? ''
@@ -122,7 +179,7 @@ async function saveReview() {
   savingReview.value = true
   reviewError.value = null
   try {
-    await apiFetch(`${apiBase}/${selectedSlip.value.id}/review`, {
+    await apiFetch(`${apiBase.value}/${selectedSlip.value.id}/review`, {
       method: 'PATCH',
       body: {
         score: Number(reviewState.score),
@@ -131,7 +188,7 @@ async function saveReview() {
     })
     toast.add({
       title: 'Review tersimpan',
-      description: selectedSlip.value.recipient_name,
+      description: text(selectedSlip.value, props.fields.name),
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
@@ -144,15 +201,16 @@ async function saveReview() {
   }
 }
 
-async function invalidateSlip(slip: BupotRow) {
+async function invalidateSlip(slip: DocumentRow) {
+  if (!props.invalidate) return
   try {
-    await apiFetch(`${apiBase}/${slip.id}/invalidate`, {
+    await apiFetch(`${apiBase.value}/${slip.id}/${props.invalidate.path}`, {
       method: 'POST',
-      body: { invalid_reason: 'Ditandai tidak valid oleh guru saat review.' }
+      body: props.invalidate.body
     })
     toast.add({
-      title: `${label} ditandai tidak valid`,
-      description: slip.recipient_name,
+      title: `${label.value} ditandai tidak valid`,
+      description: text(slip, props.fields.name),
       color: 'warning',
       icon: 'i-lucide-triangle-alert'
     })
@@ -179,11 +237,11 @@ async function refreshAll() {
         <div class="bupot-breadcrumb">
           <NuxtLink to="/guru">Beranda</NuxtLink>
           <UIcon name="i-lucide-chevron-right" class="size-3.5" />
-          <span>eBupot</span>
+          <span>{{ group }}</span>
           <UIcon name="i-lucide-chevron-right" class="size-3.5" />
           <strong>{{ label }} Siswa</strong>
         </div>
-        <h1>Monitoring eBupot {{ label }}</h1>
+        <h1>Monitoring {{ group }} {{ label }}</h1>
       </div>
       <UButton icon="i-lucide-refresh-cw" color="neutral" variant="soft" @click="refreshAll" />
     </div>
@@ -231,8 +289,8 @@ async function refreshAll() {
             <span class="font-medium">{{ formatPeriod(row.original) }}</span>
           </template>
 
-          <template #withholding_number-cell="{ row }">
-            <span>{{ row.original.withholding_number || '-' }}</span>
+          <template #number-cell="{ row }">
+            <span>{{ text(row.original, fields.number) }}</span>
           </template>
 
           <template #status-cell="{ row }">
@@ -241,12 +299,22 @@ async function refreshAll() {
             </UBadge>
           </template>
 
-          <template #dpp-cell="{ row }">
-            Rp {{ formatCurrency(row.original.dpp) }}
+          <template #name-cell="{ row }">
+            {{ text(row.original, fields.name) }}
           </template>
 
-          <template #income_tax-cell="{ row }">
-            Rp {{ formatCurrency(row.original.income_tax) }}
+          <template #code-cell="{ row }">
+            <UBadge color="neutral" variant="subtle">
+              {{ text(row.original, fields.code) }}
+            </UBadge>
+          </template>
+
+          <template #base-cell="{ row }">
+            Rp {{ amount(row.original, fields.base) }}
+          </template>
+
+          <template #tax-cell="{ row }">
+            Rp {{ amount(row.original, fields.tax) }}
           </template>
 
           <template #score-cell="{ row }">
@@ -262,6 +330,7 @@ async function refreshAll() {
                 @click="openReview(row.original)"
               />
               <UButton
+                v-if="invalidate"
                 icon="i-lucide-ban"
                 color="error"
                 variant="soft"
@@ -302,19 +371,19 @@ async function refreshAll() {
           <div class="guru-bupot__detail">
             <div>
               <span>Nama</span>
-              <strong>{{ selectedSlip.recipient_name }}</strong>
+              <strong>{{ text(selectedSlip, fields.name) }}</strong>
             </div>
             <div>
               <span>Masa Pajak</span>
               <strong>{{ formatPeriod(selectedSlip) }}</strong>
             </div>
             <div>
-              <span>DPP</span>
-              <strong>Rp {{ formatCurrency(selectedSlip.dpp) }}</strong>
+              <span>{{ baseHeader }}</span>
+              <strong>Rp {{ amount(selectedSlip, fields.base) }}</strong>
             </div>
             <div>
-              <span>PPh</span>
-              <strong>Rp {{ formatCurrency(selectedSlip.income_tax) }}</strong>
+              <span>{{ taxHeader }}</span>
+              <strong>Rp {{ amount(selectedSlip, fields.tax) }}</strong>
             </div>
           </div>
 

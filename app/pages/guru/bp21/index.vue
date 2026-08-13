@@ -3,5 +3,5 @@ definePageMeta({ middleware: 'role', roles: ['guru'] })
 </script>
 
 <template>
-  <BupotGuruMonitor module="bp21" />
+  <DocumentGuruMonitor module="bp21" />
 </template>
