@@ -259,6 +259,150 @@
   padding: 0.8rem;
 }
 
+/* Shell additions for the e-Faktur modules (Pajak Keluaran, ...).
+   Builds on .bupot-* rather than replacing it — same page frame, denser tables
+   and a navy action bar, matching the reference portal's faktur screens. */
+.faktur-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid oklch(0.92 0.012 255);
+  padding: 1rem;
+}
+
+.faktur-toolbar__spacer {
+  flex: 1 1 auto;
+}
+
+.faktur-table {
+  overflow-x: auto;
+  padding: 0 1rem 0.25rem;
+}
+
+.faktur-table table {
+  min-width: 78rem;
+}
+
+.faktur-table th {
+  background: linear-gradient(oklch(0.9 0.14 92), oklch(0.85 0.16 86));
+  color: oklch(0.22 0.065 270);
+  font-size: 0.76rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.faktur-table td {
+  font-size: 0.82rem;
+}
+
+.faktur-table__filters {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid oklch(0.92 0.012 255);
+  background: oklch(0.985 0.005 250);
+  padding: 0.6rem 1rem;
+}
+
+/* Collapsible section header inside the faktur form. */
+.faktur-section {
+  overflow: hidden;
+  border: 1px solid oklch(0.89 0.014 255);
+  border-radius: 0.35rem;
+  background: oklch(0.99 0.004 250);
+}
+
+.faktur-section__trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid oklch(0.9 0.013 255);
+  background: oklch(0.975 0.006 250);
+  color: oklch(0.28 0.075 270);
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.faktur-section__trigger:hover {
+  background: oklch(0.955 0.01 250);
+}
+
+.faktur-section__body {
+  padding: 1rem;
+}
+
+/* JUMLAH row under the Detail Transaksi table. */
+.faktur-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.5rem;
+  border-top: 1px solid oklch(0.91 0.012 255);
+  background: oklch(0.975 0.006 250);
+  font-size: 0.84rem;
+  font-weight: 800;
+  padding: 0.75rem 1rem;
+}
+
+.faktur-total-row span {
+  color: oklch(0.4 0.045 265);
+  font-weight: 650;
+}
+
+.faktur-total-row strong {
+  color: oklch(0.25 0.025 265);
+}
+
+/* Module cards on the e-Faktur dashboard. */
+.faktur-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+
+.faktur-card {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid oklch(0.89 0.014 255);
+  border-radius: 0.5rem;
+  background: oklch(0.99 0.004 250);
+  color: inherit;
+  padding: 1.1rem;
+  text-decoration: none;
+}
+
+.faktur-card--active:hover {
+  border-color: oklch(0.7 0.09 270);
+  background: oklch(0.975 0.012 265);
+}
+
+.faktur-card--disabled {
+  background: oklch(0.97 0.005 250);
+  color: oklch(0.6 0.02 260);
+}
+
+.faktur-card h2 {
+  color: oklch(0.27 0.075 270);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.faktur-card p {
+  color: oklch(0.47 0.035 260);
+  font-size: 0.83rem;
+}
+
+.faktur-card__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-top: 0.2rem;
+}
+
 @media (max-width: 980px) {
   .bupot-shell {
     grid-template-columns: 1fr;
