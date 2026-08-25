@@ -3,6 +3,7 @@
 // reused here — a faktur has the same draft/issued/invalid lifecycle as a bupot.
 import type {
   BuyerIdentityType,
+  TaxInputCreditStatus,
   TaxInvoiceKind,
   TaxInvoiceLineCreate,
   TaxInvoiceLineType
@@ -123,12 +124,29 @@ export const ppnRateOptions = [
 
 export const pageSizeOptions = [10, 25, 50, 100]
 
-/** Display a stored 16-digit Nomor Faktur as 010.000-26.00000001. */
+export const creditStatusLabel: Record<TaxInputCreditStatus, string> = {
+  not_credited: 'Belum Dikreditkan',
+  credited: 'Dikreditkan'
+}
+
+export const creditStatusColor: Record<TaxInputCreditStatus, 'warning' | 'success'> = {
+  not_credited: 'warning',
+  credited: 'success'
+}
+
+export const creditTabs: { label: string, value: TaxInputCreditStatus }[] = [
+  { label: 'Belum Dikreditkan', value: 'not_credited' },
+  { label: 'Dikreditkan', value: 'credited' }
+]
+
+/** Display a stored 17-digit Nomor Faktur as 01.00-26.00000000001 (PER-11/PJ/2025). */
 export function formatInvoiceNumber(digits: string | null | undefined) {
   if (!digits) return '-'
-  if (digits.length !== 16) return digits
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}-${digits.slice(6, 8)}.${digits.slice(8)}`
+  if (digits.length === 17) return `${digits.slice(0, 2)}.${digits.slice(2, 4)}-${digits.slice(4, 6)}.${digits.slice(6)}`
+  if (digits.length === 16) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}-${digits.slice(6, 8)}.${digits.slice(8)}` // fallback read-only legacy
+  return digits
 }
+// Example: 01002600000000001 -> 01.00-26.00000000001
 
 export function formatQuantity(value: number) {
   return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 3 }).format(value)
@@ -282,6 +300,8 @@ export function validateFakturCreate(state: {
   }
   return errors
 }
+
+export const validateFakturMasukanCreate = validateFakturCreate
 
 /** Validation for one Detail Transaksi row inside the Tambah Transaksi modal. */
 export function validateFakturLine(state: {

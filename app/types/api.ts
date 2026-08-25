@@ -429,3 +429,135 @@ export interface TaxInvoiceBulkIssueResult {
   skipped: number
   errors: string[]
 }
+
+/* --- e-Faktur: Pajak Masukan --- */
+
+export type TaxInputCreditStatus = 'not_credited' | 'credited'
+
+export interface TaxInputLineCreate {
+  line_type: TaxInvoiceLineType
+  item_code?: string | null
+  item_name: string
+  unit: string
+  unit_price: number
+  quantity: number
+  discount: number
+  use_dpp_other: boolean
+  ppn_rate_percent: number
+  ppnbm_rate_percent: number
+}
+
+export interface TaxInputLineRead extends TaxInputLineCreate {
+  id: number
+  invoice_id: number
+  line_order: number
+  total_price: number
+  dpp: number
+  dpp_other: number
+  ppn: number
+  ppnbm: number
+}
+
+export interface TaxInputCreate {
+  class_id?: number | null
+  siswa_id?: number | null
+  source_invoice_id?: number | null
+  is_advance_payment: boolean
+  is_settlement: boolean
+  transaction_code: string
+  invoice_date: string
+  invoice_kind: TaxInvoiceKind
+  tax_month: number
+  tax_year: number
+  reference?: string | null
+  seller_npwp?: string | null
+  seller_name?: string | null
+  seller_address?: string | null
+  seller_idtku?: string | null
+  buyer_identity_type: BuyerIdentityType
+  buyer_identity_number: string
+  buyer_country: string
+  buyer_document_number?: string | null
+  buyer_name: string
+  buyer_address?: string | null
+  buyer_idtku?: string | null
+  buyer_email?: string | null
+  lines: TaxInputLineCreate[]
+}
+
+export type TaxInputUpdate = Partial<TaxInputCreate>
+
+export interface TaxInputRead {
+  id: number
+  tenant_id: number
+  class_id: number | null
+  siswa_id: number
+  created_by_id: number
+  status: TaxInvoiceStatus
+  invoice_number: string | null
+  issued_at: string | null
+  invalid_reason: string | null
+  electronic_signature_status: string
+  credit_status: TaxInputCreditStatus
+  credited_at: string | null
+  source_invoice_id: number | null
+  is_advance_payment: boolean
+  is_settlement: boolean
+  transaction_code: string
+  invoice_date: string
+  invoice_kind: TaxInvoiceKind
+  tax_month: number
+  tax_year: number
+  reference: string | null
+  seller_npwp: string | null
+  seller_name: string | null
+  seller_address: string | null
+  seller_idtku: string | null
+  buyer_identity_type: BuyerIdentityType
+  buyer_identity_number: string
+  buyer_country: string
+  buyer_document_number: string | null
+  buyer_name: string
+  buyer_address: string | null
+  buyer_idtku: string | null
+  buyer_email: string | null
+  total_price: number
+  total_discount: number
+  total_dpp: number
+  total_dpp_other: number
+  total_ppn: number
+  total_ppnbm: number
+  score: number | null
+  teacher_feedback: string | null
+  created_at: string | null
+  updated_at: string | null
+  lines: TaxInputLineRead[]
+}
+
+export type TaxInputListResponse = Paginated<TaxInputRead>
+
+export interface TaxInputSummary {
+  draft: number
+  credited: number
+  not_credited: number
+  invalid: number
+  total: number
+}
+
+export interface TaxInputBulkCreditResult {
+  credited: number
+  skipped: number
+  errors: string[]
+}
+
+export interface TaxInputBulkUncreditResult {
+  uncredited: number
+  skipped: number
+  errors: string[]
+}
+
+export interface TaxInputBulkDeleteResult {
+  deleted: number
+  skipped: number
+  errors: string[]
+}
