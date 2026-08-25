@@ -34,7 +34,7 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
     children: [
       { label: 'Dashboard e-Faktur', icon: 'i-lucide-layout-dashboard', to: modulePath('e-faktur') },
       { label: 'Pajak Keluaran', icon: 'i-lucide-file-output', to: modulePath('e-faktur/keluaran') },
-      { label: 'Pajak Masukan', icon: 'i-lucide-file-input', disabled: true },
+      { label: 'Pajak Masukan', icon: 'i-lucide-file-input', to: modulePath('e-faktur/masukan') },
       { label: 'Retur', icon: 'i-lucide-undo-2', disabled: true },
       { label: 'Dokumen Lain', icon: 'i-lucide-files', disabled: true },
       { label: 'Prepopulated', icon: 'i-lucide-database', disabled: true }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TaxInvoiceSummary } from '~/types/api'
+import type { TaxInputSummary, TaxInvoiceSummary } from '~/types/api'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -11,13 +11,14 @@ const { data: summary, status, refresh } = useAsyncData(
   { default: () => ({ draft: 0, issued: 0, invalid: 0, total: 0 }) }
 )
 
-/** Mirrors the reference portal's e-Faktur menu; only Pajak Keluaran is live so far. */
+const { data: masukanSummary } = useAsyncData(
+  'siswa-e-faktur-masukan-summary',
+  () => apiFetch<TaxInputSummary>('/api/v1/faktur-masukan/summary'),
+  { default: () => ({ draft: 0, credited: 0, not_credited: 0, invalid: 0, total: 0 }) }
+)
+
+/** Mirrors the reference portal's e-Faktur menu. */
 const placeholders = [
-  {
-    title: 'Pajak Masukan',
-    description: 'Faktur pajak yang diterima dari penjual.',
-    icon: 'i-lucide-file-input'
-  },
   {
     title: 'Retur',
     description: 'Nota retur dan nota pembatalan.',
@@ -76,6 +77,25 @@ const placeholders = [
               <UBadge color="neutral" variant="subtle">
                 Total: {{ summary.total }}
               </UBadge>
+            </div>
+          </NuxtLink>
+
+          <NuxtLink to="/siswa/e-faktur/masukan" class="faktur-card faktur-card--active">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-file-input" class="size-5 text-primary" />
+              <h2>Pajak Masukan</h2>
+            </div>
+            <p>Faktur pajak yang diterima dari penjual.</p>
+            <div class="faktur-card__counts">
+              <UBadge
+                v-for="tab in creditTabs"
+                :key="tab.value"
+                :color="creditStatusColor[tab.value]"
+                variant="subtle"
+              >
+                {{ tab.label }}: {{ masukanSummary[tab.value === 'credited' ? 'credited' : 'not_credited'] }}
+              </UBadge>
+              <UBadge color="neutral" variant="subtle">Total: {{ masukanSummary.total }}</UBadge>
             </div>
           </NuxtLink>
 
