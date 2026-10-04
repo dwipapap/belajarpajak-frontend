@@ -62,8 +62,9 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
   {
     label: 'SPT',
     icon: 'i-lucide-clipboard-list',
+    active: route.path.includes('/siswa/spt') || route.path.includes('/guru/spt'),
     children: [
-      { label: 'Surat Pemberitahuan (SPT)', icon: 'i-lucide-file-spreadsheet', disabled: true },
+      { label: 'Surat Pemberitahuan (SPT)', icon: 'i-lucide-file-spreadsheet', to: modulePath('spt') },
       { label: 'Formulir Pajak', icon: 'i-lucide-clipboard-pen', disabled: true },
       { label: 'Pencatatan', icon: 'i-lucide-book-text', disabled: true },
       { label: 'Dasbor Kompensasi', icon: 'i-lucide-layout-dashboard', disabled: true },
@@ -73,11 +74,12 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
   {
     label: 'Pembayaran',
     icon: 'i-lucide-badge-dollar-sign',
+    active: route.path.includes('/siswa/pembayaran'),
     children: [
       { label: 'Permohonan Pemindahbukuan', icon: 'i-lucide-arrow-left-right', disabled: true },
       { label: 'Layanan Mandiri Kode Billing', icon: 'i-lucide-receipt', disabled: true },
       { label: 'Pembuatan Kode Billing atas Tagihan Pajak', icon: 'i-lucide-file-plus-2', disabled: true },
-      { label: 'Daftar Kode Billing Belum Dibayar', icon: 'i-lucide-list-checks', disabled: true },
+      { label: 'Daftar Kode Billing', icon: 'i-lucide-list-checks', to: modulePath('pembayaran') },
       { label: 'Formulir Restitusi Pajak', icon: 'i-lucide-file-input', disabled: true },
       { label: 'Permohonan Pemberian Imbalan Bunga', icon: 'i-lucide-circle-dollar-sign', disabled: true },
       { label: 'Permohonan PPh DTP atas Penghasilan PDAM', icon: 'i-lucide-landmark', disabled: true }

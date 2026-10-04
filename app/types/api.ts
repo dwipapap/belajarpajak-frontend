@@ -561,3 +561,109 @@ export interface TaxInputBulkDeleteResult {
   skipped: number
   errors: string[]
 }
+
+/* --- SPT Masa --- */
+
+export type TaxReturnType = 'ppn' | 'pph_unifikasi'
+export type TaxReturnKind = 'normal' | 'pembetulan'
+export type TaxReturnStatus = 'draft' | 'awaiting_payment' | 'reported'
+export type SignerCapacity = 'wajib_pajak' | 'kuasa_wajib_pajak'
+export type BillingStatus = 'unpaid' | 'paid'
+
+export interface TaxReturnLineRead {
+  id: number
+  return_id: number
+  section: string
+  code: string
+  description: string
+  dpp: number
+  dpp_nilai_lain: number
+  ppn: number
+  ppnbm: number
+  setor_sendiri: number
+  pemotongan: number
+  ditanggung_pemerintah: number
+  dibayar_dari_spt_dibetulkan: number
+}
+
+export interface TaxReturnRead {
+  id: number
+  tenant_id: number
+  class_id: number | null
+  siswa_id: number
+  created_by_id: number
+
+  return_type: TaxReturnType
+  kind: TaxReturnKind
+  correction_no: number
+  status: TaxReturnStatus
+  tax_month: number
+  tax_year: number
+
+  signer_npwp: string | null
+  signer_name: string | null
+  signer_capacity: SignerCapacity
+  submitted_at: string | null
+  submitted_by_id: number | null
+
+  penyerahan_dpp: number
+  penyerahan_dpp_nilai_lain: number
+  penyerahan_ppn: number
+  penyerahan_ppnbm: number
+  masukan_dpp: number
+  masukan_dpp_nilai_lain: number
+  masukan_ppn: number
+  kompensasi_lebih_bayar: number
+  ppn_kurang_bayar: number
+  ppn_lebih_bayar: number
+  total_income_tax: number
+  amount_due: number
+
+  score: number | null
+  teacher_feedback: string | null
+  created_at: string | null
+  updated_at: string | null
+
+  lines: TaxReturnLineRead[]
+}
+
+export type TaxReturnListResponse = Paginated<TaxReturnRead>
+
+export interface TaxReturnSummary {
+  draft: number
+  awaiting_payment: number
+  reported: number
+  total: number
+}
+
+export interface TaxReturnCreate {
+  return_type: TaxReturnType
+  tax_month: number
+  tax_year: number
+  kind?: TaxReturnKind
+  class_id?: number | null
+  siswa_id?: number | null
+}
+
+export interface TaxReturnPernyataan {
+  signer_name: string
+  signer_npwp?: string | null
+  signer_capacity: SignerCapacity
+}
+
+export interface BillingRead {
+  id: number
+  tenant_id: number
+  siswa_id: number
+  spt_id: number | null
+  code: string
+  status: BillingStatus
+  amount: number
+  kap_kjs: string
+  masa_pajak: string
+  paid_at: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export type BillingListResponse = Paginated<BillingRead>
