@@ -47,17 +47,26 @@ export function useAuth() {
     return me
   }
 
-  async function login(email: string, password: string, tenantSlug?: string): Promise<Me> {
-    const body: Record<string, string> = { email, password }
-    if (tenantSlug) body.tenant_slug = tenantSlug
+  async function login(identifier: string, password: string): Promise<Me> {
     const tokens = await $fetch<LoginResponse>(`${apiBase}/api/v1/auth/login`, {
       method: 'POST',
-      body
+      body: { identifier, password }
     })
     accessToken.value = tokens.access_token
     setRefreshToken(tokens.refresh_token)
     initialized.value = true
     return await fetchMe()
+  }
+
+  /** Set a new password using the current one — clears must_change_password. */
+  async function changePassword(currentPassword: string, newPassword: string): Promise<Me> {
+    const me = await $fetch<Me>(`${apiBase}/api/v1/auth/change-password`, {
+      method: 'POST',
+      body: { current_password: currentPassword, new_password: newPassword },
+      headers: { Authorization: `Bearer ${accessToken.value}` }
+    })
+    user.value = me
+    return me
   }
 
   /** Get a fresh access token using the stored refresh token. */
@@ -110,6 +119,7 @@ export function useAuth() {
     refresh,
     init,
     fetchMe,
+    changePassword,
     clearSession
   }
 }

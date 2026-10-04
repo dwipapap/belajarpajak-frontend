@@ -4,14 +4,13 @@ definePageMeta({ layout: false })
 const auth = useAuth()
 
 const state = reactive({
-  email: '',
-  password: '',
-  tenant_slug: ''
+  identifier: '',
+  password: ''
 })
 
-function validate(state: { email?: string, password?: string }) {
+function validate(state: { identifier?: string, password?: string }) {
   const errors: { name: string, message: string }[] = []
-  if (!state.email) errors.push({ name: 'email', message: 'ID Pengguna wajib diisi' })
+  if (!state.identifier) errors.push({ name: 'identifier', message: 'ID Pengguna wajib diisi' })
   if (!state.password) errors.push({ name: 'password', message: 'Kata sandi wajib diisi' })
   return errors
 }
@@ -24,7 +23,12 @@ async function onSubmit() {
   loading.value = true
   errorMessage.value = null
   try {
-    const me = await auth.login(state.email, state.password, state.tenant_slug || undefined)
+    const me = await auth.login(state.identifier, state.password)
+    // Freshly provisioned accounts must pick a personal password first.
+    if (me.must_change_password) {
+      await navigateTo('/ganti-password', { replace: true })
+      return
+    }
     await navigateTo(roleHome(me.role), { replace: true })
   } catch (error) {
     errorMessage.value = apiErrorMessage(error, 'Login gagal. Periksa ID Pengguna dan kata sandi.')
@@ -68,12 +72,12 @@ async function onSubmit() {
             :title="errorMessage"
           />
 
-          <UFormField name="email" label="ID Pengguna" required>
+          <UFormField name="identifier" label="ID Pengguna" required>
             <UInput
-              v-model="state.email"
+              v-model="state.identifier"
               icon="i-lucide-user"
               size="xl"
-              placeholder="NIK/NPWP/NITKU identitas khusus untuk ILAP"
+              placeholder="Email (guru/admin) atau NIK/NISN (siswa)"
               autocomplete="username"
               class="w-full"
             />

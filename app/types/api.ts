@@ -1,7 +1,7 @@
 // API contract types — mirror backend response/request schemas.
 
 export type Role = 'superadmin' | 'admin' | 'guru' | 'siswa'
-export type TenantType = 'smk' | 'kampus' | 'lembaga'
+export type TenantType = 'smk' | 'kampus' | 'lembaga' | 'pt'
 
 export interface Tenant {
   id: number
@@ -9,20 +9,99 @@ export interface Tenant {
   slug: string
   type: TenantType
   is_active: boolean
+  contact_wa: string | null
+  berlaku_sampai: string | null
+  max_guru: number | null
+  max_siswa: number | null
+  max_kelas: number | null
+  deactivated_reason: string | null
+}
+
+export interface TenantAdminInput {
+  email: string
+  full_name: string
+  password?: string
+}
+
+export interface TenantCreate {
+  name: string
+  slug: string
+  type: TenantType
+  contact_wa?: string | null
+  masa_berlaku_bulan: number
+  max_guru?: number | null
+  max_siswa?: number | null
+  max_kelas?: number | null
+  admin: TenantAdminInput
+}
+
+export interface TenantUpdate {
+  name?: string
+  type?: TenantType
+  contact_wa?: string | null
+  masa_berlaku_bulan?: number
+  max_guru?: number | null
+  max_siswa?: number | null
+  max_kelas?: number | null
 }
 
 export interface User {
   id: number
   email: string
+  username: string | null
   full_name: string
   role: Role
   tenant_id: number | null
   is_active: boolean
+  must_change_password: boolean
 }
 
 export interface Me extends User {
   tenant_name: string | null
 }
+
+export interface UserBulkItemInput {
+  full_name: string
+  email?: string | null
+  username?: string | null
+  password?: string | null
+}
+
+export interface UserBulkCreate {
+  role: Role
+  accounts: UserBulkItemInput[]
+  tenant_id?: number | null
+}
+
+export interface UserBulkResultRow {
+  index: number
+  ok: boolean
+  detail: string
+  user_id: number | null
+  email: string | null
+  username: string | null
+}
+
+export interface UserBulkResult {
+  created: number
+  failed: number
+  results: UserBulkResultRow[]
+}
+
+export interface AuditLog {
+  id: number
+  tenant_id: number | null
+  actor_id: number | null
+  actor_email: string
+  actor_role: string
+  action: string
+  entity: string
+  entity_id: number | null
+  summary: string
+  created_at: string | null
+}
+
+export type AuditLogListResponse = Paginated<AuditLog>
 
 export interface LoginResponse {
   access_token: string

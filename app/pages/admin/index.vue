@@ -15,7 +15,6 @@ const { apiFetch } = useApi()
 const toast = useToast()
 
 const isSuperadmin = computed(() => auth.user.value?.role === 'superadmin')
-
 // ---- Summary cards -------------------------------------------------------
 const { data: summary, refresh: refreshSummary } = useAsyncData(
   'admin-summary',
@@ -85,8 +84,10 @@ watch([roleFilter, selectedTenantId], () => {
 const columns: TableColumn<User>[] = [
   { accessorKey: 'full_name', header: 'Nama' },
   { accessorKey: 'email', header: 'Email' },
+  { accessorKey: 'username', header: 'Username' },
   { accessorKey: 'role', header: 'Peran' },
-  { accessorKey: 'is_active', header: 'Status' }
+  { accessorKey: 'is_active', header: 'Status' },
+  { id: 'actions' }
 ]
 
 // ---- "Tambah User" modal ---------------------------------------------------
@@ -168,6 +169,75 @@ async function onCreateUser() {
     creating.value = false
   }
 }
+
+// ---- Account actions: reset password / deactivate --------------------------
+const actionTarget = ref<User | null>(null)
+const actionOpen = ref(false)
+const actionMode = ref<'reset' | 'toggle'>('reset')
+const actionNewPassword = ref('')
+const actionBusy = ref(false)
+
+function closeAction() {
+  actionOpen.value = false
+}
+
+function onBulkCreated() {
+  void Promise.all([refreshUsers(), refreshSummary()])
+}
+
+function openResetPassword(user: User) {
+  actionTarget.value = user
+  actionMode.value = 'reset'
+  actionNewPassword.value = ''
+  actionOpen.value = true
+}
+
+function openToggleActive(user: User) {
+  actionTarget.value = user
+  actionMode.value = 'toggle'
+  actionOpen.value = true
+}
+
+async function onRunAction() {
+  const target = actionTarget.value
+  if (!target) return
+  actionBusy.value = true
+  try {
+    if (actionMode.value === 'reset') {
+      if (actionNewPassword.value.length < 8) {
+        toast.add({ title: 'Kata sandi minimal 8 karakter', color: 'error', icon: 'i-lucide-circle-alert' })
+        actionBusy.value = false
+        return
+      }
+      await apiFetch(`/api/v1/users/${target.id}`, {
+        method: 'PATCH',
+        body: { password: actionNewPassword.value }
+      })
+      toast.add({
+        title: 'Kata sandi direset',
+        description: `Bagikan kata sandi baru kepada ${target.full_name}.`,
+        color: 'success',
+        icon: 'i-lucide-key-round'
+      })
+    } else {
+      await apiFetch(`/api/v1/users/${target.id}`, {
+        method: 'PATCH',
+        body: { is_active: !target.is_active }
+      })
+      toast.add({
+        title: target.is_active ? 'Akun dinonaktifkan' : 'Akun diaktifkan',
+        color: 'success',
+        icon: 'i-lucide-user-check'
+      })
+    }
+    actionOpen.value = false
+    await Promise.all([refreshUsers(), refreshSummary()])
+  } catch (error) {
+    toast.add({ title: 'Aksi gagal', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  } finally {
+    actionBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -175,6 +245,13 @@ async function onCreateUser() {
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-semibold text-default">Dasbor Admin</h1>
       <div class="flex flex-wrap items-center gap-2">
+        <UButton
+          to="/admin/audit"
+          icon="i-lucide-scroll-text"
+          label="Log Audit"
+          color="neutral"
+          variant="soft"
+        />
         <UButton
           v-if="isSuperadmin"
           to="/admin/tarif-pajak"
@@ -192,6 +269,9 @@ async function onCreateUser() {
         />
       </div>
     </div>
+
+    <!-- Superadmin: institution lifecycle -->
+    <AdminInstanceManager v-if="isSuperadmin" @changed="refreshSummary" />
 
     <!-- Stat cards -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -215,6 +295,10 @@ async function onCreateUser() {
           <h2 class="font-semibold text-default">Pengguna</h2>
           <div class="flex items-center gap-2">
             <USelect v-model="roleFilter" :items="roleFilterOptions" class="w-40" />
+            <AdminBulkCreateUsers
+              :tenants="isSuperadmin ? tenants.map(t => ({ id: t.id, name: t.name })) : undefined"
+              @created="onBulkCreated"
+            />
             <UButton icon="i-lucide-plus" label="Tambah User" @click="openModal" />
           </div>
         </div>
@@ -233,6 +317,30 @@ async function onCreateUser() {
             <UBadge :color="row.original.is_active ? 'success' : 'neutral'" variant="subtle">
               {{ row.original.is_active ? 'Aktif' : 'Nonaktif' }}
             </UBadge>
+          </template>
+          <template #username-cell="{ row }">
+            <span class="font-mono text-xs">{{ row.original.username ?? '-' }}</span>
+          </template>
+          <template #actions-cell="{ row }">
+            <div class="flex justify-end gap-1">
+              <UButton
+                icon="i-lucide-key-round"
+                size="xs"
+                color="neutral"
+                variant="soft"
+                label="Reset Sandi"
+                @click="openResetPassword(row.original)"
+              />
+              <UButton
+                v-if="row.original.role === 'guru' || row.original.role === 'siswa'"
+                icon="i-lucide-user-x"
+                size="xs"
+                :color="row.original.is_active ? 'error' : 'success'"
+                variant="soft"
+                :label="row.original.is_active ? 'Nonaktifkan' : 'Aktifkan'"
+                @click="openToggleActive(row.original)"
+              />
+            </div>
           </template>
           <template #empty>
             <p class="py-6 text-center text-sm text-muted">Belum ada pengguna.</p>
@@ -294,6 +402,35 @@ async function onCreateUser() {
             <UButton type="submit" label="Simpan" :loading="creating" />
           </div>
         </UForm>
+      </template>
+    </UModal>
+
+    <!-- Reset password / toggle active modal -->
+    <UModal v-model:open="actionOpen" :title="actionMode === 'reset' ? 'Reset Kata Sandi' : 'Ubah Status Akun'">
+      <template #body>
+        <div class="space-y-3 text-sm">
+          <p v-if="actionMode === 'reset'">
+            Reset kata sandi <strong>{{ actionTarget?.full_name }}</strong>. Bagikan kata sandi baru ke yang bersangkutan.
+          </p>
+          <p v-else>
+            {{ actionTarget?.is_active ? 'Nonaktifkan akun' : 'Aktifkan kembali akun' }}
+            <strong>{{ actionTarget?.full_name }}</strong>?
+          </p>
+          <UFormField v-if="actionMode === 'reset'" label="Kata Sandi Baru" required help="Minimal 8 karakter.">
+            <UInput v-model="actionNewPassword" type="password" class="w-full" />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton label="Batal" color="neutral" variant="ghost" @click="closeAction" />
+          <UButton
+            :label="actionMode === 'reset' ? 'Reset' : (actionTarget?.is_active ? 'Nonaktifkan' : 'Aktifkan')"
+            :color="actionMode === 'reset' ? 'primary' : (actionTarget?.is_active ? 'error' : 'success')"
+            :loading="actionBusy"
+            @click="onRunAction"
+          />
+        </div>
       </template>
     </UModal>
   </div>
