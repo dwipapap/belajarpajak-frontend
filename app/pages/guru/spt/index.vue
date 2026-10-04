@@ -72,6 +72,7 @@ async function refreshAll() {
 }
 
 const reviewTarget = ref<TaxReturnRead | null>(null)
+const reviewOpen = ref(false)
 const reviewScore = ref<number | undefined>(undefined)
 const reviewFeedback = ref('')
 const busy = ref(false)
@@ -80,10 +81,12 @@ function openReview(row: TaxReturnRead) {
   reviewTarget.value = row
   reviewScore.value = row.score ?? undefined
   reviewFeedback.value = row.teacher_feedback ?? ''
+  reviewOpen.value = true
 }
 
 function closeReview() {
   reviewTarget.value = null
+  reviewOpen.value = false
 }
 
 async function saveReview() {
@@ -187,7 +190,7 @@ const columns: TableColumn<TaxReturnRead>[] = [
       </section>
     </div>
 
-    <UModal v-model:open="reviewTarget !== null" title="Nilai SPT">
+    <UModal v-model:open="reviewOpen" title="Nilai SPT">
       <template #body>
         <div class="flex flex-col gap-3">
           <p v-if="reviewTarget" class="text-sm">

@@ -35,14 +35,17 @@ watch([activeStatus, pageSize], () => {
 })
 
 const payTarget = ref<BillingRead | null>(null)
+const payOpen = ref(false)
 const busy = ref(false)
 
 function setPayTarget(row: BillingRead) {
   payTarget.value = row
+  payOpen.value = true
 }
 
 function closePay() {
   payTarget.value = null
+  payOpen.value = false
 }
 
 async function refresh() {
@@ -61,8 +64,8 @@ async function pay() {
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
-    payTarget.value = null
-    await refreshList()
+    closePay()
+    await refresh()
   } catch (error) {
     toast.add({ title: 'Gagal membayar', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
   } finally {
@@ -167,7 +170,7 @@ const columns: TableColumn<BillingRead>[] = [
       </section>
     </div>
 
-    <UModal v-model:open="payTarget !== null" title="Bayar Kode Billing">
+    <UModal v-model:open="payOpen" title="Bayar Kode Billing">
       <template #body>
         <p class="text-sm">
           Set bayar kode billing
