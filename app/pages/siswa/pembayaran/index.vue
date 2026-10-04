@@ -52,6 +52,22 @@ async function refresh() {
   await refreshList()
 }
 
+async function downloadPdf(billing: BillingRead) {
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/billings/${billing.id}/pdf`, {
+      responseType: 'blob'
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `BILLING_${billing.code}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    toast.add({ title: 'Gagal mengunduh PDF', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+}
+
 async function pay() {
   const target = payTarget.value
   if (!target) return
@@ -137,6 +153,14 @@ const columns: TableColumn<BillingRead>[] = [
             </template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">
+                <UButton
+                  icon="i-lucide-file-down"
+                  size="xs"
+                  color="neutral"
+                  variant="soft"
+                  label="PDF"
+                  @click="downloadPdf(row.original)"
+                />
                 <UButton
                   v-if="row.original.status === 'unpaid'"
                   icon="i-lucide-badge-dollar-sign"

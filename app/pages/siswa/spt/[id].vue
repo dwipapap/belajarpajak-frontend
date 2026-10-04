@@ -34,6 +34,27 @@ const { data: billing, refresh: refreshBilling } = useAsyncData(
 )
 
 const busy = ref(false)
+const pdfBusy = ref(false)
+
+async function downloadBillingPdf() {
+  if (!billing.value) return
+  pdfBusy.value = true
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/billings/${billing.value.id}/pdf`, {
+      responseType: 'blob'
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `BILLING_${billing.value.code}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    toast.add({ title: 'Gagal mengunduh PDF', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  } finally {
+    pdfBusy.value = false
+  }
+}
 
 // --- Pernyataan ---
 const pernyataanOpen = ref(false)
@@ -262,6 +283,7 @@ function headerLabel(section: string) {
             {{ billing.status === 'paid' ? 'Sudah Dibayar' : 'Belum Dibayar' }}
           </UBadge>
           <UButton v-if="billing.status === 'unpaid'" to="/siswa/pembayaran" icon="i-lucide-badge-dollar-sign" size="xs" label="Bayar di menu Pembayaran" />
+          <UButton icon="i-lucide-file-down" size="xs" color="neutral" variant="soft" label="Unduh PDF" :loading="pdfBusy" @click="downloadBillingPdf" />
         </div>
       </div>
 
