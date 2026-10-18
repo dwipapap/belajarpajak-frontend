@@ -48,14 +48,28 @@ const columns: TableColumn<Bp23Read>[] = [
 ]
 
 async function issueSlip(slip: Bp23Read) {
+  pendingSlip.value = slip
+  signerName.value = auth.user.value?.full_name || ''
+  kodeOtorisasi.value = ''
+  showIssueModal.value = true
+}
+
+async function confirmIssue() {
+  if (!pendingSlip.value) return
+  issuing.value = true
   try {
-    await apiFetch<Bp23Read>(`/api/v1/bp23/${slip.id}/issue`, { method: 'POST' })
+    await apiFetch<Bp23Read>(`/api/v1/bp23/${pendingSlip.value.id}/issue`, {
+      method: 'POST',
+      body: { signer_name: signerName.value || undefined, kode_otorisasi: kodeOtorisasi.value || undefined }
+    })
     toast.add({
       title: 'BP23 diterbitkan',
-      description: `Nomor pemotongan dibuat untuk ${slip.recipient_name}.`,
+      description: `BPE-SIM dibuat untuk ${pendingSlip.value.recipient_name}.`,
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
+    showIssueModal.value = false
+    pendingSlip.value = null
     await Promise.all([refreshList(), refreshSummary()])
   } catch (error) {
     toast.add({
@@ -64,8 +78,30 @@ async function issueSlip(slip: Bp23Read) {
       color: 'error',
       icon: 'i-lucide-circle-alert'
     })
+  } finally {
+    issuing.value = false
   }
 }
+
+async function downloadPdf(slip: Bp23Read) {
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/bp23/${slip.id}/pdf`, { responseType: 'blob' } as never)
+    window.open(URL.createObjectURL(blob), '_blank')
+  } catch (error) {
+    toast.add({
+      title: 'Gagal mengunduh BPE',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  }
+}
+
+const showIssueModal = ref(false)
+const issuing = ref(false)
+const pendingSlip = ref<Bp23Read | null>(null)
+const signerName = ref('')
+const kodeOtorisasi = ref('')
 
 async function refreshAll() {
   await Promise.all([refreshList(), refreshSummary()])
@@ -174,8 +210,17 @@ async function refreshAll() {
                   size="xs"
                   @click="issueSlip(row.original)"
                 />
+                <UButton
+                  v-else-if="row.original.status === 'issued'"
+                  icon="i-lucide-file-down"
+                  label="BPE"
+                  size="xs"
+                  color="neutral"
+                  variant="soft"
+                  @click="downloadPdf(row.original)"
+                />
                 <UBadge
-                  v-else-if="row.original.score !== null"
+                  v-if="row.original.status !== 'draft' && row.original.score !== null"
                   color="success"
                   variant="subtle"
                 >
@@ -202,5 +247,23 @@ async function refreshAll() {
         </div>
       </section>
     </div>
+
+    <UModal v-model:open="showIssueModal" title="Terbitkan BP23 (simulasi TTE)">
+      <template #body>
+        <p class="text-sm text-muted mb-3">
+          Penandatangan simulasi + Kode Otorisasi simulasi (min 6 karakter). Bukan TTE resmi.
+        </p>
+        <UFormField name="signer_name" label="Nama penandatangan" required>
+          <UInput v-model="signerName" class="w-full" />
+        </UFormField>
+        <UFormField name="kode_otorisasi" label="Kode Otorisasi (simulasi)" required class="mt-3">
+          <UInput v-model="kodeOtorisasi" type="password" placeholder="min 6 karakter" class="w-full" />
+        </UFormField>
+      </template>
+      <template #footer>
+        <UButton color="neutral" variant="ghost" label="Batal" @click="() => { showIssueModal = false }" />
+        <UButton label="Terbitkan + Tanda tangani" icon="i-lucide-pen-line" :loading="issuing" @click="confirmIssue" />
+      </template>
+    </UModal>
   </div>
 </template>

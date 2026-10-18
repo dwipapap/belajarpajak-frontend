@@ -26,8 +26,14 @@ const typeOptions: { label: string, value: TaxReturnType, description: string, i
   {
     label: 'PPh Unifikasi',
     value: 'pph_unifikasi',
-    description: 'SPT Masa PPh Unifikasi — agregasi bukti potong Pasal 4(2), 15, 22, 23, dan 26.',
+    description: 'SPT Masa PPh Unifikasi — agregasi bukti potong Pasal 23 dan 26.',
     icon: 'i-lucide-scroll-text'
+  },
+  {
+    label: 'PPh 21/26',
+    value: 'pph21_26',
+    description: 'SPT Masa PPh 21/26 — agregasi BP21 + BP26 terbit (SIM-TER/progresif).',
+    icon: 'i-lucide-file-text'
   }
 ]
 

@@ -5,7 +5,7 @@ import type {
   BillingRead,
   BillingStatus
 } from '~/types/api'
-import { billingStatusColor, billingStatusLabel, billingStatusTabs } from '~/utils/spt'
+import { billingStatusColor, billingStatusLabel, billingStatusTabs, isBillingExpired } from '~/utils/spt'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -76,7 +76,7 @@ async function pay() {
     await apiFetch(`/api/v1/billings/${target.id}/pay`, { method: 'POST' })
     toast.add({
       title: 'Pembayaran berhasil',
-      description: 'SPT terkait kini berstatus Dilaporkan.',
+      description: target.spt_id ? 'SPT terkait kini berstatus Dilaporkan.' : 'Billing mandiri lunas.',
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
@@ -93,6 +93,7 @@ const columns: TableColumn<BillingRead>[] = [
   { accessorKey: 'code', header: 'Kode Billing' },
   { accessorKey: 'masa_pajak', header: 'Masa Pajak' },
   { accessorKey: 'kap_kjs', header: 'KAP-KJS' },
+  { accessorKey: 'uraian', header: 'Uraian' },
   { accessorKey: 'amount', header: 'Nominal (Rp)' },
   { accessorKey: 'status', header: 'Status' },
   { accessorKey: 'paid_at', header: 'Tanggal Bayar' },
@@ -129,7 +130,15 @@ const columns: TableColumn<BillingRead>[] = [
       </aside>
 
       <section class="bupot-main">
-        <div class="bupot-main__header"><h1>Daftar Kode Billing</h1></div>
+        <div class="bupot-main__header">
+          <div>
+            <h1>Daftar Kode Billing</h1>
+            <p class="text-sm text-muted">Billing SPT + mandiri. Berlaku 14 hari (simulasi PENG-4/PJ/2025); guru menilai via SPT.</p>
+          </div>
+          <div class="bupot-actions">
+            <UButton to="/siswa/pembayaran/mandiri" icon="i-lucide-plus" label="Buat Billing Mandiri" class="bupot-primary-button" />
+          </div>
+        </div>
 
         <div class="bupot-toolbar">
           <UButton icon="i-lucide-refresh-cw" color="info" variant="soft" :loading="listStatus === 'pending'" @click="refresh" />
@@ -143,9 +152,20 @@ const columns: TableColumn<BillingRead>[] = [
             <template #masa_pajak-cell="{ row }">{{ formatMasaPajak(row.original.masa_pajak) }}</template>
             <template #amount-cell="{ row }">Rp {{ formatCurrency(row.original.amount) }}</template>
             <template #status-cell="{ row }">
-              <UBadge :color="billingStatusColor[row.original.status]" variant="subtle">
-                {{ billingStatusLabel[row.original.status] }}
-              </UBadge>
+              <div class="flex flex-col gap-1">
+                <UBadge :color="billingStatusColor[row.original.status]" variant="subtle">
+                  {{ billingStatusLabel[row.original.status] }}
+                </UBadge>
+                <UBadge v-if="isBillingExpired(row.original.created_at, row.original.status)" color="error" variant="soft">
+                  Kedaluwarsa (simulasi)
+                </UBadge>
+                <UBadge v-else-if="!row.original.spt_id" color="neutral" variant="subtle">
+                  Mandiri
+                </UBadge>
+              </div>
+            </template>
+            <template #uraian-cell="{ row }">
+              <span>{{ row.original.uraian || (row.original.spt_id ? '-' : 'Billing mandiri') }}</span>
             </template>
             <template #paid_at-cell="{ row }">
               <span v-if="row.original.paid_at">{{ new Date(row.original.paid_at).toLocaleDateString('id-ID') }}</span>
@@ -201,7 +221,8 @@ const columns: TableColumn<BillingRead>[] = [
           <span v-if="payTarget" class="font-mono font-semibold">{{ payTarget.code }}</span>
           sebesar
           <strong v-if="payTarget">Rp {{ formatCurrency(payTarget.amount) }}</strong>?
-          SPT terkait akan langsung dilaporkan.
+          <span v-if="payTarget?.spt_id">SPT terkait akan langsung dilaporkan.</span>
+          <span v-else>Billing mandiri ini tidak terikat SPT.</span>
         </p>
       </template>
       <template #footer>

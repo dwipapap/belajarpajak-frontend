@@ -162,6 +162,10 @@ export interface Bp21Read {
   recipient_address: string | null
   recipient_nitku: string | null
   ptkp_status: string | null
+  ter_category: string | null
+  calculation_method: string | null
+  signer_id: number | null
+  signer_name: string | null
   tax_object_code: string
   income_type: string
   tax_nature: Bp21TaxNature
@@ -196,6 +200,7 @@ export interface Bp21Create {
   recipient_address?: string | null
   recipient_nitku?: string | null
   ptkp_status?: string | null
+  ter_category?: string | null
   tax_object_code: string
   income_type: string
   tax_nature: Bp21TaxNature
@@ -239,6 +244,36 @@ export type Bp23Create = Omit<Bp21Create, 'ptkp_status' | 'negara_treaty' | 'pas
 export type Bp23Read = Omit<Bp21Read, 'ptkp_status'> & { ptkp_status: string | null }
 export type Bp23ListResponse = Paginated<Bp23Read>
 export type Bp23Summary = Bp21Summary
+
+// Unifikasi minimal (Fase 5): reuse shared slip shapes via aliases.
+export type BppuStatus = Bp21Status
+export type BppuTaxNature = Bp21TaxNature
+export type BppuTaxFacility = Bp21TaxFacility
+export type BppuRead = Bp23Read
+export type BppuCreate = Bp23Create
+export type BppuListResponse = Paginated<BppuRead>
+export type BppuSummary = Bp21Summary
+export type BpnrStatus = Bp21Status
+export type BpnrTaxNature = Bp21TaxNature
+export type BpnrTaxFacility = Bp21TaxFacility
+export type BpnrRead = Bp26Read
+export type BpnrCreate = Bp26Create
+export type BpnrListResponse = Paginated<BpnrRead>
+export type BpnrSummary = Bp21Summary
+export type SpStatus = Bp21Status
+export type SpTaxNature = Bp21TaxNature
+export type SpTaxFacility = Bp21TaxFacility
+export type SpRead = Bp23Read
+export type SpCreate = Bp23Create
+export type SpListResponse = Paginated<SpRead>
+export type SpSummary = Bp21Summary
+export type CyStatus = Bp21Status
+export type CyTaxNature = Bp21TaxNature
+export type CyTaxFacility = Bp21TaxFacility
+export type CyRead = Bp23Read
+export type CyCreate = Bp23Create
+export type CyListResponse = Paginated<CyRead>
+export type CySummary = Bp21Summary
 export type Bp26SptFlag =
   | 'reported_in_spt'
   | 'objection_in_progress'
@@ -280,6 +315,10 @@ export interface Bp26Read {
   pasal_treaty: string | null
   nomor_skd: string | null
   tarif_treaty_basis_points: number | null
+  ter_category: string | null
+  calculation_method: string | null
+  signer_id: number | null
+  signer_name: string | null
   document_type: string | null
   document_number: string | null
   document_date: string | null
@@ -643,7 +682,7 @@ export interface TaxInputBulkDeleteResult {
 
 /* --- SPT Masa --- */
 
-export type TaxReturnType = 'ppn' | 'pph_unifikasi'
+export type TaxReturnType = 'ppn' | 'pph_unifikasi' | 'pph21_26'
 export type TaxReturnKind = 'normal' | 'pembetulan'
 export type TaxReturnStatus = 'draft' | 'awaiting_payment' | 'reported'
 export type SignerCapacity = 'wajib_pajak' | 'kuasa_wajib_pajak'
@@ -740,9 +779,18 @@ export interface BillingRead {
   amount: number
   kap_kjs: string
   masa_pajak: string
+  uraian: string | null
   paid_at: string | null
   created_at: string | null
   updated_at: string | null
+}
+
+export interface BillingCreate {
+  kap_kjs: string
+  masa_pajak: string
+  amount: number
+  uraian?: string | null
+  siswa_id?: number | null
 }
 
 export type BillingListResponse = Paginated<BillingRead>
