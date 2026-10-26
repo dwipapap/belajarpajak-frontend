@@ -348,6 +348,114 @@ export type Bp21BulkIssueResult = Bp26BulkIssueResult
 export type Bp23ImportResult = Bp26ImportResult
 export type Bp23BulkIssueResult = Bp26BulkIssueResult
 
+/* --- BPPU: Bukti Pemotongan PPh Unifikasi (WPDN/BUT: PPh 4(2)/15/22/23) --- */
+
+export type BppuStatus = Bp21Status
+export type BppuTaxNature = Bp21TaxNature
+export type BppuTaxFacility = Bp21TaxFacility
+export type BppuSptFlag = Bp26SptFlag
+
+export interface BppuRead {
+  id: number
+  tenant_id: number
+  class_id: number | null
+  siswa_id: number
+  created_by_id: number
+  status: BppuStatus
+  withholding_number: string | null
+  issued_at: string | null
+  invalid_reason: string | null
+  spt_flag: BppuSptFlag | null
+  tax_month: number
+  tax_year: number
+  electronic_signature_status: string
+  withholder_npwp: string | null
+  withholder_name: string | null
+  withholder_nitku: string | null
+  recipient_identity_number: string
+  recipient_name: string
+  recipient_address: string | null
+  recipient_nitku: string | null
+  ptkp_status: string | null
+  tax_type: string | null
+  tax_object_code: string
+  tax_object_name: string | null
+  income_type: string | null
+  tax_nature: BppuTaxNature
+  tax_facility: BppuTaxFacility
+  previous_gross_income: number
+  gross_income: number
+  dpp: number
+  dpp_percent: number
+  rate_percent: number
+  income_tax: number
+  kap_kjs: string | null
+  negara_treaty: string | null
+  pasal_treaty: string | null
+  nomor_skd: string | null
+  tarif_treaty_basis_points: number | null
+  document_type: string | null
+  document_number: string | null
+  document_date: string | null
+  document_nitku: string | null
+  score: number | null
+  teacher_feedback: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface BppuCreate {
+  class_id?: number | null
+  siswa_id?: number | null
+  tax_month: number
+  tax_year: number
+  withholder_npwp?: string | null
+  withholder_name?: string | null
+  withholder_nitku?: string | null
+  recipient_identity_number: string
+  recipient_name: string
+  recipient_address?: string | null
+  recipient_nitku?: string | null
+  tax_type?: string | null
+  tax_object_code: string
+  tax_object_name?: string | null
+  income_type?: string | null
+  tax_nature: BppuTaxNature
+  tax_facility: BppuTaxFacility
+  previous_gross_income?: number
+  gross_income: number
+  dpp_percent: number
+  rate_percent: number
+  kap_kjs?: string | null
+  document_type?: string | null
+  document_number?: string | null
+  document_date?: string | null
+  document_nitku?: string | null
+}
+
+export type BppuListResponse = Paginated<BppuRead>
+export type BppuSummary = Bp21Summary
+
+export interface BppuImportRowResult {
+  row: number
+  success: boolean
+  id: number | null
+  error: string | null
+}
+
+export interface BppuImportResult {
+  total_rows: number
+  imported: number
+  failed: number
+  results: BppuImportRowResult[]
+}
+
+export interface BppuBulkIssueResult {
+  issued: number
+  failed: number
+  results: BppuImportRowResult[]
+}
+
 export interface TierPtkp {
   id: number
   status_kode: string
