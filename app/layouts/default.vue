@@ -43,10 +43,10 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
   {
     label: 'eBUPOT',
     icon: 'i-lucide-scroll-text',
-    active: route.path.includes('/bp21') || route.path.includes('/bp23') || route.path.includes('/bp26'),
+    active: route.path.includes('/bp21') || route.path.includes('/bp23') || route.path.includes('/bp26') || route.path.includes('/bppu'),
     children: [
       { label: 'Bukti Potong Saya', icon: 'i-lucide-file-user', disabled: true },
-      { label: 'BPPU', icon: 'i-lucide-files', disabled: true },
+      { label: 'BPPU', icon: 'i-lucide-files', to: modulePath('bppu') },
       { label: 'BPNR', icon: 'i-lucide-files', disabled: true },
       { label: 'Penyetoran Sendiri', icon: 'i-lucide-wallet-cards', disabled: true },
       { label: 'Pemotongan Secara Digunggung', icon: 'i-lucide-layers-3', disabled: true },
