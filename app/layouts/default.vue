@@ -43,13 +43,13 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
   {
     label: 'eBUPOT',
     icon: 'i-lucide-scroll-text',
-    active: route.path.includes('/bp21') || route.path.includes('/bp23') || route.path.includes('/bp26') || route.path.includes('/bppu') || route.path.includes('/bpmp') || route.path.includes('/a1') || route.path.includes('/a2'),
+    active: route.path.includes('/bp21') || route.path.includes('/bp23') || route.path.includes('/bp26') || route.path.includes('/bppu') || route.path.includes('/bpnr') || route.path.includes('/bukti-potong') || route.path.includes('/sp') || route.path.includes('/cy') || route.path.includes('/bpmp') || route.path.includes('/a1') || route.path.includes('/a2'),
     children: [
-      { label: 'Bukti Potong Saya', icon: 'i-lucide-file-user', disabled: true },
+      { label: 'Bukti Potong Saya', icon: 'i-lucide-file-user', to: modulePath('bukti-potong-saya') },
       { label: 'BPPU', icon: 'i-lucide-files', to: modulePath('bppu') },
-      { label: 'BPNR', icon: 'i-lucide-files', disabled: true },
-      { label: 'Penyetoran Sendiri', icon: 'i-lucide-wallet-cards', disabled: true },
-      { label: 'Pemotongan Secara Digunggung', icon: 'i-lucide-layers-3', disabled: true },
+      { label: 'BPNR', icon: 'i-lucide-files', to: modulePath('bpnr') },
+      { label: 'Penyetoran Sendiri', icon: 'i-lucide-wallet-cards', to: modulePath('sp') },
+      { label: 'Pemotongan Secara Digunggung', icon: 'i-lucide-layers-3', to: modulePath('cy') },
       { label: 'Dokumen yang Dipersamakan dengan Bukti Potong', icon: 'i-lucide-file-check-2', disabled: true },
       { label: 'BP 21 - Bukti Pemotongan Selain Pegawai Tetap', icon: 'i-lucide-file-text', to: modulePath('bp21') },
       { label: 'BP 23 - Bukti Pemotongan PPh Pasal 23', icon: 'i-lucide-file-signature', to: modulePath('bp23') },
@@ -74,10 +74,10 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
   {
     label: 'Pembayaran',
     icon: 'i-lucide-badge-dollar-sign',
-    active: route.path.includes('/siswa/pembayaran'),
+    active: route.path.includes('/siswa/pembayaran') || route.path.includes('/pembayaran/mandiri'),
     children: [
       { label: 'Permohonan Pemindahbukuan', icon: 'i-lucide-arrow-left-right', disabled: true },
-      { label: 'Layanan Mandiri Kode Billing', icon: 'i-lucide-receipt', disabled: true },
+      { label: 'Layanan Mandiri Kode Billing', icon: 'i-lucide-receipt', to: modulePath('pembayaran/mandiri') },
       { label: 'Pembuatan Kode Billing atas Tagihan Pajak', icon: 'i-lucide-file-plus-2', disabled: true },
       { label: 'Daftar Kode Billing', icon: 'i-lucide-list-checks', to: modulePath('pembayaran') },
       { label: 'Formulir Restitusi Pajak', icon: 'i-lucide-file-input', disabled: true },

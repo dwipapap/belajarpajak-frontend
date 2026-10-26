@@ -29,7 +29,7 @@ const taxObjectOptions: {
   kapKjs: string
 }[] = [
   {
-    label: '24-100-01 - Dividen',
+    label: '24-100-01 - Dividen (15%)',
     value: '24-100-01',
     incomeType: 'Dividen',
     taxNature: 'non_final',
@@ -37,7 +37,23 @@ const taxObjectOptions: {
     kapKjs: '411124-100'
   },
   {
-    label: '24-102-01 - Sewa dan penghasilan lain sehubungan dengan penggunaan harta',
+    label: '24-101-01 - Bunga (15%)',
+    value: '24-101-01',
+    incomeType: 'Bunga',
+    taxNature: 'non_final',
+    ratePercent: 15,
+    kapKjs: '411124-102'
+  },
+  {
+    label: '24-103-01 - Royalti (15%)',
+    value: '24-103-01',
+    incomeType: 'Royalti',
+    taxNature: 'non_final',
+    ratePercent: 15,
+    kapKjs: '411124-103'
+  },
+  {
+    label: '24-102-01 - Sewa harta (2%, x2 tanpa NPWP)',
     value: '24-102-01',
     incomeType: 'Sewa dan penghasilan lain sehubungan dengan penggunaan harta',
     taxNature: 'non_final',
@@ -45,7 +61,7 @@ const taxObjectOptions: {
     kapKjs: '411124-104'
   },
   {
-    label: '24-104-01 - Jasa Konsultan',
+    label: '24-104-01 - Jasa konsultan (2%, x2 tanpa NPWP)',
     value: '24-104-01',
     incomeType: 'Jasa Konsultan',
     taxNature: 'non_final',

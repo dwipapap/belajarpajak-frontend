@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import type { BppuCreate, BppuRead, BppuTaxNature, SchoolClass } from '~/types/api'
+import type {
+  BppuCreate,
+  BppuRead,
+  BppuTaxFacility,
+  BppuTaxNature,
+  SchoolClass
+} from '~/types/api'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -7,11 +13,19 @@ const auth = useAuth()
 const { apiFetch } = useApi()
 const toast = useToast()
 
+const facilityOptions: { label: string, value: BppuTaxFacility }[] = [
+  { label: 'Tanpa Fasilitas', value: 'none' },
+  { label: 'Ditanggung Pemerintah', value: 'dtp' },
+  { label: 'Surat Keterangan Bebas', value: 'skb' },
+  { label: 'Tarif 0%', value: 'rate_0' }
+]
+
 const taxObjectOptions: {
   label: string
   value: string
-  taxObjectName: string
-  taxType: string
+  taxObjectName?: string
+  taxType?: string
+  incomeType?: string
   taxNature: BppuTaxNature
   ratePercent: number
   kapKjs: string
@@ -69,6 +83,30 @@ const taxObjectOptions: {
     taxNature: 'non_final',
     ratePercent: 2,
     kapKjs: '411124-100'
+  },
+  {
+    label: '24-100-01 - Dividen (15%)',
+    value: '24-100-01',
+    incomeType: 'Dividen',
+    taxNature: 'non_final',
+    ratePercent: 15,
+    kapKjs: '411124-100'
+  },
+  {
+    label: '24-102-01 - Sewa harta (2%, x2 tanpa NPWP)',
+    value: '24-102-01',
+    incomeType: 'Sewa dan penghasilan lain sehubungan dengan penggunaan harta',
+    taxNature: 'non_final',
+    ratePercent: 2,
+    kapKjs: '411124-104'
+  },
+  {
+    label: '24-104-01 - Jasa konsultan (2%, x2 tanpa NPWP)',
+    value: '24-104-01',
+    incomeType: 'Jasa Konsultan',
+    taxNature: 'non_final',
+    ratePercent: 2,
+    kapKjs: '411124-104'
   }
 ]
 
@@ -92,7 +130,10 @@ const documentTypeOptions = [
   'Surat Keputusan',
   'Surat Pernyataan',
   'Surat Tagihan',
-  'Trade Confirmation'
+  'Trade Confirmation',
+  'Invoice',
+  'Kuitansi',
+  'Dokumen yang dipersamakan'
 ]
 
 const { data: classes } = useAsyncData(
@@ -113,13 +154,20 @@ const formState = reactive({
   tax_month: new Date().getMonth() + 1,
   tax_year: new Date().getFullYear(),
   status: 'NORMAL',
-  tax_facility_label: 'Tanpa Fasilitas',
+  withholder_npwp: '1471110802000001',
+  withholder_name: auth.user.value?.tenant_name || 'Institusi Simulasi',
+  withholder_nitku: '1471110802000001000001',
   recipient_identity_number: '',
   recipient_name: auth.user.value?.full_name || '',
+  recipient_address: '',
+  recipient_nitku: '',
+  tax_facility: 'none' as BppuTaxFacility,
   tax_type: 'PPh 4(2)',
   tax_object_code: '28-100-01',
   tax_object_name: 'Pengalihan hak atas tanah/bangunan',
+  income_type: '',
   tax_nature: 'final' as BppuTaxNature,
+  previous_gross_income: 0,
   gross_income: 0,
   dpp_percent: 100,
   rate_percent: 2.5,
@@ -142,8 +190,9 @@ watch(
   () => formState.tax_object_code,
   () => {
     const selected = selectedTaxObject.value
-    formState.tax_object_name = selected.taxObjectName
-    formState.tax_type = selected.taxType
+    formState.tax_object_name = selected.taxObjectName ?? ''
+    formState.tax_type = selected.taxType ?? ''
+    formState.income_type = selected.incomeType ?? ''
     formState.tax_nature = selected.taxNature
     formState.rate_percent = selected.ratePercent
     formState.kap_kjs = selected.kapKjs
@@ -155,22 +204,36 @@ const dppAmount = computed(() =>
   Math.round(Number(formState.gross_income || 0) * Number(formState.dpp_percent || 0) / 100)
 )
 
-const calculatedIncomeTax = computed(() =>
-  Math.round(dppAmount.value * Number(formState.rate_percent) / 100)
-)
+const calculatedIncomeTax = computed(() => {
+  if (formState.tax_facility === 'skb' || formState.tax_facility === 'rate_0') return 0
+  const dpp = Math.round(Number(formState.gross_income || 0) * Number(formState.dpp_percent || 0) / 100)
+  const rate = Number(formState.rate_percent || 0)
+  let finalRate = rate
+  if (!formState.recipient_identity_number || formState.recipient_identity_number.startsWith('0000000000000000')) {
+    finalRate *= 2
+  }
+  return Math.round(dpp * finalRate / 100)
+})
 
 function buildPayload(): BppuCreate {
   return {
     class_id: formState.class_id,
     tax_month: Number(formState.tax_month),
     tax_year: Number(formState.tax_year),
+    withholder_npwp: formState.withholder_npwp || null,
+    withholder_name: formState.withholder_name || null,
+    withholder_nitku: formState.withholder_nitku || null,
     recipient_identity_number: formState.recipient_identity_number,
     recipient_name: formState.recipient_name,
+    recipient_address: formState.recipient_address || null,
+    recipient_nitku: formState.recipient_nitku || null,
     tax_type: formState.tax_type,
     tax_object_code: formState.tax_object_code,
     tax_object_name: formState.tax_object_name,
+    income_type: formState.income_type,
     tax_nature: formState.tax_nature,
-    tax_facility: 'none',
+    tax_facility: formState.tax_facility,
+    previous_gross_income: Number(formState.previous_gross_income || 0),
     gross_income: Number(formState.gross_income),
     dpp_percent: Number(formState.dpp_percent),
     rate_percent: Number(formState.rate_percent),
@@ -297,16 +360,20 @@ async function onSubmit() {
             <UInput v-model="formState.status" disabled class="w-full" />
           </UFormField>
 
-          <UFormField name="tax_facility_label" label="Nama Fasilitas">
-            <UInput v-model="formState.tax_facility_label" disabled class="w-full" />
-          </UFormField>
-
           <UFormField name="recipient_identity_number" label="Nomor Identitas WP" required>
             <UInput v-model="formState.recipient_identity_number" class="w-full" />
           </UFormField>
 
           <UFormField name="recipient_name" label="Nama" required>
             <UInput v-model="formState.recipient_name" class="w-full" />
+          </UFormField>
+
+          <UFormField name="recipient_nitku" label="NITKU / Nomor Identitas Subunit Organisasi">
+            <UInput v-model="formState.recipient_nitku" class="w-full" />
+          </UFormField>
+
+          <UFormField name="recipient_address" label="Alamat">
+            <UTextarea v-model="formState.recipient_address" autoresize class="w-full" />
           </UFormField>
         </div>
       </section>
@@ -317,6 +384,10 @@ async function onSubmit() {
           <UButton icon="i-lucide-chevron-down" color="neutral" variant="ghost" size="xs" />
         </header>
         <div class="bupot-grid">
+          <UFormField name="tax_facility" label="Fasilitas Pajak Penerima Penghasilan" required>
+            <USelect v-model="formState.tax_facility" :items="facilityOptions" class="w-full" />
+          </UFormField>
+
           <UFormField name="tax_object_code" label="Nama Objek Pajak" required>
             <USelect v-model="formState.tax_object_code" :items="taxObjectOptions" class="w-full" />
           </UFormField>
@@ -325,12 +396,27 @@ async function onSubmit() {
             <UInput v-model="formState.tax_type" disabled class="w-full" />
           </UFormField>
 
+          <UFormField name="income_type" label="Jenis Penghasilan" required>
+            <UInput v-model="formState.income_type" disabled class="w-full" />
+          </UFormField>
+
           <UFormField name="tax_object_code_readonly" label="Kode Objek Pajak" required>
             <UInput v-model="formState.tax_object_code" disabled class="w-full" />
           </UFormField>
 
           <UFormField name="tax_nature" label="Sifat Pajak Penghasilan" required>
             <USelect v-model="formState.tax_nature" :items="taxNatureOptions" class="w-full" />
+          </UFormField>
+        </div>
+
+        <div class="bupot-note">
+          Pendapatan Bruto yang Telah Dibayar Sebelumnya, khusus untuk kode objek tertentu jika
+          terdapat pembayaran lebih dari sekali dalam periode dua tahun.
+        </div>
+
+        <div class="bupot-grid">
+          <UFormField name="previous_gross_income" label="Jumlah">
+            <UInput v-model="formState.previous_gross_income" type="number" disabled class="w-full" />
           </UFormField>
 
           <UFormField name="gross_income" label="Penghasilan Bruto (Rp)" required>
@@ -349,7 +435,7 @@ async function onSubmit() {
             <UInput :model-value="formatCurrency(calculatedIncomeTax)" disabled class="w-full" />
           </UFormField>
 
-          <UFormField name="kap_kjs" label="KAP" required>
+          <UFormField name="kap_kjs" label="KAP-KJS" required>
             <UInput v-model="formState.kap_kjs" disabled class="w-full" />
           </UFormField>
         </div>
@@ -381,4 +467,3 @@ async function onSubmit() {
     </UForm>
   </div>
 </template>
-

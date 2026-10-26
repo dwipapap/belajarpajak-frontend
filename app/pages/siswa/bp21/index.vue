@@ -75,6 +75,8 @@ const columns: TableColumn<Bp21Read>[] = [
   { accessorKey: 'recipient_identity_number', header: 'Nomor Identitas WP' },
   { accessorKey: 'recipient_name', header: 'Nama' },
   { accessorKey: 'ptkp_status', header: 'PTKP' },
+  { accessorKey: 'ter_category', header: 'TER' },
+  { accessorKey: 'calculation_method', header: 'Metode' },
   { accessorKey: 'tax_object_code', header: 'Kode Objek Pajak' },
   { accessorKey: 'dpp', header: 'DPP (Rp)' },
   { accessorKey: 'income_tax', header: 'PPh (Rp)' },
@@ -83,14 +85,28 @@ const columns: TableColumn<Bp21Read>[] = [
 ]
 
 async function issueSlip(slip: Bp21Read) {
+  pendingSlip.value = slip
+  signerName.value = auth.user.value?.full_name || ''
+  kodeOtorisasi.value = ''
+  showIssueModal.value = true
+}
+
+async function confirmIssue() {
+  if (!pendingSlip.value) return
+  issuing.value = true
   try {
-    await apiFetch<Bp21Read>(`/api/v1/bp21/${slip.id}/issue`, { method: 'POST' })
+    await apiFetch<Bp21Read>(`/api/v1/bp21/${pendingSlip.value.id}/issue`, {
+      method: 'POST',
+      body: { signer_name: signerName.value || undefined, kode_otorisasi: kodeOtorisasi.value || undefined }
+    })
     toast.add({
       title: 'BP21 diterbitkan',
-      description: `Nomor pemotongan dibuat untuk ${slip.recipient_name}.`,
+      description: `BPE-SIM dibuat untuk ${pendingSlip.value.recipient_name}.`,
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
+    showIssueModal.value = false
+    pendingSlip.value = null
     await Promise.all([refreshList(), refreshSummary()])
   } catch (error) {
     toast.add({
@@ -99,8 +115,31 @@ async function issueSlip(slip: Bp21Read) {
       color: 'error',
       icon: 'i-lucide-circle-alert'
     })
+  } finally {
+    issuing.value = false
   }
 }
+
+async function downloadPdf(slip: Bp21Read) {
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/bp21/${slip.id}/pdf`, { responseType: 'blob' } as never)
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+  } catch (error) {
+    toast.add({
+      title: 'Gagal mengunduh BPE',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  }
+}
+
+const showIssueModal = ref(false)
+const issuing = ref(false)
+const pendingSlip = ref<Bp21Read | null>(null)
+const signerName = ref('')
+const kodeOtorisasi = ref('')
 
 async function refreshAll() {
   await Promise.all([refreshList(), refreshSummary()])
@@ -402,6 +441,18 @@ function closeImport() {
               </UBadge>
             </template>
 
+            <template #ter_category-cell="{ row }">
+              <UBadge color="neutral" variant="subtle">
+                {{ row.original.ter_category ? terCategoryLabel[row.original.ter_category] || row.original.ter_category : '-' }}
+              </UBadge>
+            </template>
+
+            <template #calculation_method-cell="{ row }">
+              <UBadge color="info" variant="subtle">
+                {{ row.original.calculation_method ? calculationMethodLabel[row.original.calculation_method] || row.original.calculation_method : '-' }}
+              </UBadge>
+            </template>
+
             <template #income_tax-cell="{ row }">
               Rp {{ formatCurrency(row.original.income_tax) }}
             </template>
@@ -422,8 +473,17 @@ function closeImport() {
                   size="xs"
                   @click="issueSlip(row.original)"
                 />
+                <UButton
+                  v-else-if="row.original.status === 'issued'"
+                  icon="i-lucide-file-down"
+                  label="BPE"
+                  size="xs"
+                  color="neutral"
+                  variant="soft"
+                  @click="downloadPdf(row.original)"
+                />
                 <UBadge
-                  v-else-if="row.original.score !== null"
+                  v-if="row.original.status !== 'draft' && row.original.score !== null"
                   color="success"
                   variant="subtle"
                 >
@@ -512,6 +572,24 @@ function closeImport() {
             </ul>
           </div>
         </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="showIssueModal" title="Terbitkan BP21 (simulasi TTE)">
+      <template #body>
+        <p class="text-sm text-muted mb-3">
+          Penandatangan simulasi + Kode Otorisasi simulasi (min 6 karakter). Bukan TTE resmi.
+        </p>
+        <UFormField name="signer_name" label="Nama penandatangan" required>
+          <UInput v-model="signerName" class="w-full" />
+        </UFormField>
+        <UFormField name="kode_otorisasi" label="Kode Otorisasi (simulasi)" required class="mt-3">
+          <UInput v-model="kodeOtorisasi" type="password" placeholder="min 6 karakter" class="w-full" />
+        </UFormField>
+      </template>
+      <template #footer>
+        <UButton color="neutral" variant="ghost" label="Batal" @click="() => { showIssueModal = false }" />
+        <UButton label="Terbitkan + Tanda tangani" icon="i-lucide-pen-line" :loading="issuing" @click="confirmIssue" />
       </template>
     </UModal>
   </div>

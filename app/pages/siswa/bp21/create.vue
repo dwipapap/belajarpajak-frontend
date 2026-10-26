@@ -31,6 +31,22 @@ const taxObjectOptions: {
   kapKjs: string
 }[] = [
   {
+    label: '21-100-01 - Gaji pegawai tetap',
+    value: '21-100-01',
+    incomeType: 'Gaji pegawai tetap',
+    taxNature: 'non_final',
+    ratePercent: 5,
+    kapKjs: '411121-100'
+  },
+  {
+    label: '21-100-02 - Pensiun berkala',
+    value: '21-100-02',
+    incomeType: 'Pensiun berkala',
+    taxNature: 'non_final',
+    ratePercent: 5,
+    kapKjs: '411121-100'
+  },
+  {
     label: '21-100-09 - Honorarium tenaga ahli',
     value: '21-100-09',
     incomeType: 'Honorarium tenaga ahli',
@@ -42,6 +58,14 @@ const taxObjectOptions: {
     label: '21-401-01 - Imbalan pegawai tidak tetap',
     value: '21-401-01',
     incomeType: 'Imbalan pegawai tidak tetap',
+    taxNature: 'non_final',
+    ratePercent: 5,
+    kapKjs: '411121-100'
+  },
+  {
+    label: '21-401-02 - Upah harian / mingguan',
+    value: '21-401-02',
+    incomeType: 'Upah harian / mingguan',
     taxNature: 'non_final',
     ratePercent: 5,
     kapKjs: '411121-100'
@@ -61,6 +85,13 @@ const documentTypeOptions = [
   'Kontrak',
   'Kuitansi',
   'Dokumen yang dipersamakan'
+]
+
+const terCategoryOptions: { label: string, value: string | undefined }[] = [
+  { label: 'Tanpa TER (progresif / Desember)', value: undefined },
+  { label: 'TER A — TK/0, TK/1, K/0 (SIM-TER)', value: 'A' },
+  { label: 'TER B — TK/2, TK/3, K/1, K/2 (SIM-TER)', value: 'B' },
+  { label: 'TER C — K/3 (SIM-TER)', value: 'C' }
 ]
 
 const { data: classes } = useAsyncData(
@@ -89,6 +120,7 @@ const formState = reactive({
   recipient_address: '',
   recipient_nitku: '',
   ptkp_status: 'TK/0',
+  ter_category: undefined as string | undefined,
   tax_facility: 'none' as Bp21TaxFacility,
   tax_object_code: '21-100-09',
   income_type: 'Honorarium tenaga ahli',
@@ -172,8 +204,34 @@ function progressiveBp21Preview() {
   return Math.floor(annualTax / 12)
 }
 
+function terPreview(): number | null {
+  if (!formState.ter_category || formState.tax_nature !== 'non_final') return null
+  if (Number(formState.tax_month) === 12) return null
+  const gross = Number(formState.gross_income || 0)
+  const table: Record<string, [number | null, number][]> = {
+    A: [[5000000, 0], [10000000, 100], [20000000, 200], [null, 300]],
+    B: [[5000000, 0], [10000000, 50], [20000000, 150], [null, 250]],
+    C: [[5000000, 0], [10000000, 0], [20000000, 100], [null, 200]]
+  }
+  const rows = table[formState.ter_category]
+  if (!rows) return null
+  for (const [upper, bp] of rows) {
+    if (upper === null || gross <= upper) return Math.round(gross * bp / 10000)
+  }
+  return null
+}
+
+const calculationMethodLabel = computed(() => {
+  if (formState.tax_facility === 'skb' || formState.tax_facility === 'rate_0') return 'Nol (SKB / Tarif 0%)'
+  if (terPreview() !== null) return 'SIM-TER Jan–Nov (disederhanakan)'
+  if (progressiveBp21Preview() !== null) return Number(formState.tax_month) === 12 ? 'Progresif Desember' : 'Progresif'
+  return 'Tarif flat objek'
+})
+
 const calculatedIncomeTax = computed(() => {
   if (formState.tax_facility === 'skb' || formState.tax_facility === 'rate_0') return 0
+  const ter = terPreview()
+  if (ter !== null) return ter
   const progressiveTax = progressiveBp21Preview()
   if (progressiveTax !== null) return progressiveTax
   return Math.round(dppAmount.value * Number(formState.rate_percent || 0) / 100)
@@ -192,6 +250,7 @@ function buildPayload(): Bp21Create {
     recipient_address: formState.recipient_address || null,
     recipient_nitku: formState.recipient_nitku || null,
     ptkp_status: formState.ptkp_status || null,
+    ter_category: formState.ter_category || null,
     tax_object_code: formState.tax_object_code,
     income_type: formState.income_type,
     tax_nature: formState.tax_nature,
@@ -351,6 +410,10 @@ async function onSubmit() {
             <USelect v-model="formState.ptkp_status" :items="ptkpOptions" class="w-full" />
           </UFormField>
 
+          <UFormField name="ter_category" label="Kategori SIM-TER (Jan–Nov)">
+            <USelect v-model="formState.ter_category" :items="terCategoryOptions" placeholder="Tanpa TER" class="w-full" />
+          </UFormField>
+
           <UFormField name="tax_facility" label="Fasilitas Pajak Penerima Penghasilan" required>
             <USelect v-model="formState.tax_facility" :items="facilityOptions" class="w-full" />
           </UFormField>
@@ -400,6 +463,10 @@ async function onSubmit() {
 
           <UFormField name="income_tax" label="Pajak Penghasilan (Rp)" required>
             <UInput :model-value="formatCurrency(calculatedIncomeTax)" disabled class="w-full" />
+          </UFormField>
+
+          <UFormField name="calculation_method" label="Metode Hitung">
+            <UInput :model-value="calculationMethodLabel" disabled class="w-full" />
           </UFormField>
 
           <UFormField name="kap_kjs" label="KAP-KJS" required>

@@ -28,7 +28,8 @@ export const sptStatusTabs: { label: string, value: TaxReturnStatus }[] = Object
 export const sptTypeLabel = {
   ppn: 'SPT Masa PPN',
   pph_unifikasi: 'SPT Masa PPh Unifikasi',
-  pph_21_26: 'SPT Masa PPh 21/26'
+  pph_21_26: 'SPT Masa PPh 21/26',
+  pph21_26: 'SPT Masa PPh 21/26'
 } satisfies Record<TaxReturnType, string>
 
 export const sptKindLabel = {
@@ -62,6 +63,31 @@ export const billingStatusTabs: { label: string, value: BillingStatus }[] = [
 ]
 
 /** Pasal section codes of the SPT PPh Unifikasi and PPh 21/26 Induk, in display order. */
+
+/** Masa berlaku billing simulasi (PENG-4/PJ/2025: 14×24 jam). Tanpa cron — murni label. */
+export const BILLING_EXPIRY_DAYS = 14
+
+export function billingExpiresAt(createdAt: string | null): Date | null {
+  if (!createdAt) return null
+  const d = new Date(createdAt)
+  d.setDate(d.getDate() + BILLING_EXPIRY_DAYS)
+  return d
+}
+
+export function isBillingExpired(createdAt: string | null, status: BillingStatus): boolean {
+  if (status !== 'unpaid') return false
+  const exp = billingExpiresAt(createdAt)
+  return exp !== null && new Date() > exp
+}
+
+/** KAP-KJS whitelist Layanan Mandiri (mirror backend MANDIRI_KJS; label manusia). */
+export const mandiriKjsOptions: { label: string, value: string }[] = [
+  { label: '411121-100 — PPN Masa / PPh 21 Setor Sendiri', value: '411121-100' },
+  { label: '411124-100 — PPh 23', value: '411124-100' },
+  { label: '411127-100 — PPh 26', value: '411127-100' },
+  { label: '411128-100 — PPh Final 4(2)', value: '411128-100' },
+  { label: '411122-100 — PPh 22', value: '411122-100' }
+]
 export const pasalSections = [
   'pasal_4_2',
   'pasal_15',
