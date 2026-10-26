@@ -339,6 +339,11 @@ export interface Bp26BulkIssueResult {
   results: Bp26ImportRowResult[]
 }
 
+export type Bp21ImportResult = Bp26ImportResult
+export type Bp21BulkIssueResult = Bp26BulkIssueResult
+export type Bp23ImportResult = Bp26ImportResult
+export type Bp23BulkIssueResult = Bp26BulkIssueResult
+
 export interface TierPtkp {
   id: number
   status_kode: string
