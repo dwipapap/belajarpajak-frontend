@@ -1,5 +1,5 @@
 // Shared labels/formatters for the e-Bupot modules (BP21, BP26, ...).
-import type { Bp21Status, Bp21TaxFacility } from '~/types/api'
+import type { Bp21Status, Bp21TaxFacility, Bp26SptFlag } from '~/types/api'
 
 export const monthLabels = [
   '',
@@ -55,6 +55,24 @@ export const facilityFilterOptions: { label: string, value: Bp21TaxFacility | un
   { label: 'Ditanggung Pemerintah', value: 'dtp' },
   { label: 'Surat Keterangan Bebas', value: 'skb' },
   { label: 'Tarif 0%', value: 'rate_0' }
+]
+
+export const sptFlagLabel = {
+  reported_in_spt: 'Sudah Masuk SPT',
+  objection_in_progress: 'Keberatan Berjalan',
+  objection_completed: 'Keberatan Selesai',
+  objection_rejected_formal: 'Keberatan Ditolak Formal',
+  objection_withdrawal_review: 'Peninjauan Pencabutan Keberatan',
+  objection_withdrawal_accepted: 'Pencabutan Keberatan Diterima',
+  spt_audited: 'SPT Diaudit',
+  spt_legal_process: 'SPT Proses Hukum'
+} satisfies Record<Bp26SptFlag, string>
+
+export const sptFlagFilterOptions: { label: string, value: Bp26SptFlag | undefined }[] = [
+  { label: 'Semua Flag SPT', value: undefined },
+  ...(Object.entries(sptFlagLabel) as [Bp26SptFlag, string][]).map(
+    ([value, label]) => ({ label, value })
+  )
 ]
 
 export function formatCurrency(value: number) {

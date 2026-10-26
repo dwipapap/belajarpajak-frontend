@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { Bp21Status, Bp21Summary, Paginated, SchoolClass } from '~/types/api'
+import type { Bp21Status, Bp21Summary, Bp26SptFlag, Paginated, SchoolClass } from '~/types/api'
 
 /**
  * Every document module (bupot, faktur, ...) has the same monitor shape —
@@ -13,6 +13,7 @@ interface DocumentRow {
   tax_month: number
   tax_year: number
   status: Bp21Status
+  spt_flag: Bp26SptFlag | null
   score: number | null
   teacher_feedback: string | null
   [key: string]: unknown
@@ -134,6 +135,7 @@ const columns = computed<TableColumn<DocumentRow>[]>(() => [
   { accessorKey: 'tax_month', header: 'Masa Pajak' },
   { id: 'number', header: props.numberHeader },
   { accessorKey: 'status', header: 'Status' },
+  { accessorKey: 'spt_flag', header: 'Flag SPT' },
   { id: 'name', header: 'Nama' },
   { id: 'code', header: props.codeHeader },
   { id: 'base', header: props.baseHeader },
@@ -228,6 +230,63 @@ async function invalidateSlip(slip: DocumentRow) {
 async function refreshAll() {
   await Promise.all([refreshList(), refreshSummary()])
 }
+
+// --- SPT flag (issued-only; server enforces 409 for other statuses) -------------
+
+const flagSlip = ref<DocumentRow | null>(null)
+const flagOpen = ref(false)
+const flagValue = ref<Bp26SptFlag | undefined>(undefined)
+const savingFlag = ref(false)
+
+const sptFlagModalOptions: { label: string, value: Bp26SptFlag }[] = (
+  Object.entries(sptFlagLabel) as [Bp26SptFlag, string][]
+).map(([value, label]) => ({ label, value }))
+
+function openFlagModal(slip: DocumentRow) {
+  if (slip.status !== 'issued') {
+    toast.add({
+      title: 'Flag SPT hanya untuk dokumen yang telah terbit',
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+    return
+  }
+  flagSlip.value = slip
+  flagValue.value = slip.spt_flag ?? undefined
+  flagOpen.value = true
+}
+
+function closeFlagModal() {
+  flagOpen.value = false
+}
+
+async function saveFlag() {
+  if (!flagSlip.value) return
+  savingFlag.value = true
+  try {
+    await apiFetch(`${apiBase.value}/${flagSlip.value.id}/spt-flag`, {
+      method: 'PATCH',
+      body: { spt_flag: flagValue.value ?? null }
+    })
+    toast.add({
+      title: 'Flag SPT tersimpan',
+      description: text(flagSlip.value, props.fields.name),
+      color: 'success',
+      icon: 'i-lucide-check-circle'
+    })
+    flagOpen.value = false
+    await refreshList()
+  } catch (error) {
+    toast.add({
+      title: 'Gagal menyimpan flag SPT',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  } finally {
+    savingFlag.value = false
+  }
+}
 </script>
 
 <template>
@@ -299,6 +358,13 @@ async function refreshAll() {
             </UBadge>
           </template>
 
+          <template #spt_flag-cell="{ row }">
+            <UBadge v-if="row.original.spt_flag" color="info" variant="subtle">
+              {{ sptFlagLabel[row.original.spt_flag] }}
+            </UBadge>
+            <span v-else>-</span>
+          </template>
+
           <template #name-cell="{ row }">
             {{ text(row.original, fields.name) }}
           </template>
@@ -328,6 +394,15 @@ async function refreshAll() {
                 label="Review"
                 size="xs"
                 @click="openReview(row.original)"
+              />
+              <UButton
+                v-if="row.original.status === 'issued'"
+                icon="i-lucide-flag"
+                label="Flag SPT"
+                color="neutral"
+                variant="soft"
+                size="xs"
+                @click="openFlagModal(row.original)"
               />
               <UButton
                 v-if="invalidate"
@@ -413,6 +488,36 @@ async function refreshAll() {
               <UButton type="submit" label="Simpan Review" :loading="savingReview" />
             </div>
           </UForm>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal
+      v-model:open="flagOpen"
+      :title="`Flag SPT ${label}`"
+      description="Tandai status SPT/keberatan untuk dokumen yang telah terbit."
+    >
+      <template #body>
+        <div v-if="flagSlip" class="space-y-4">
+          <div class="guru-bupot__detail">
+            <div>
+              <span>Nama</span>
+              <strong>{{ text(flagSlip, fields.name) }}</strong>
+            </div>
+            <div>
+              <span>Masa Pajak</span>
+              <strong>{{ formatPeriod(flagSlip) }}</strong>
+            </div>
+          </div>
+
+          <UFormField name="spt_flag" label="Flag SPT">
+            <USelect v-model="flagValue" :items="sptFlagModalOptions" class="w-full" />
+          </UFormField>
+
+          <div class="flex justify-end gap-2">
+            <UButton label="Batal" color="neutral" variant="ghost" @click="closeFlagModal" />
+            <UButton label="Simpan Flag" :loading="savingFlag" @click="saveFlag" />
+          </div>
         </div>
       </template>
     </UModal>
