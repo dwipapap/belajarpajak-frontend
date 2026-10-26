@@ -28,6 +28,12 @@ const typeOptions: { label: string, value: TaxReturnType, description: string, i
     value: 'pph_unifikasi',
     description: 'SPT Masa PPh Unifikasi — agregasi bukti potong Pasal 4(2), 15, 22, 23, dan 26.',
     icon: 'i-lucide-scroll-text'
+  },
+  {
+    label: 'PPh 21/26',
+    value: 'pph_21_26',
+    description: 'SPT Masa PPh 21/26 — agregasi bukti potong bulanan pegawai tetap (BPMP), BP21, dan BP26.',
+    icon: 'i-lucide-file-stack'
   }
 ]
 

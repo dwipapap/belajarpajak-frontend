@@ -43,7 +43,7 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
   {
     label: 'eBUPOT',
     icon: 'i-lucide-scroll-text',
-    active: route.path.includes('/bp21') || route.path.includes('/bp23') || route.path.includes('/bp26') || route.path.includes('/bppu'),
+    active: route.path.includes('/bp21') || route.path.includes('/bp23') || route.path.includes('/bp26') || route.path.includes('/bppu') || route.path.includes('/bpmp') || route.path.includes('/a1') || route.path.includes('/a2'),
     children: [
       { label: 'Bukti Potong Saya', icon: 'i-lucide-file-user', disabled: true },
       { label: 'BPPU', icon: 'i-lucide-files', to: modulePath('bppu') },
@@ -54,9 +54,9 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
       { label: 'BP 21 - Bukti Pemotongan Selain Pegawai Tetap', icon: 'i-lucide-file-text', to: modulePath('bp21') },
       { label: 'BP 23 - Bukti Pemotongan PPh Pasal 23', icon: 'i-lucide-file-signature', to: modulePath('bp23') },
       { label: 'BP 26 - Bukti Pemotongan Wajib Pajak Luar Negeri', icon: 'i-lucide-globe', to: modulePath('bp26') },
-      { label: 'BP A1 - Bukti Pemotongan A1 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', disabled: true },
-      { label: 'BP A2 - Bukti Pemotongan A2 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', disabled: true },
-      { label: 'Bukti Pemotongan Bulanan Pegawai Tetap', icon: 'i-lucide-file-stack', disabled: true }
+      { label: 'BP A1 - Bukti Pemotongan A1 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', to: modulePath('a1') },
+      { label: 'BP A2 - Bukti Pemotongan A2 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', to: modulePath('a2') },
+      { label: 'Bukti Pemotongan Bulanan Pegawai Tetap', icon: 'i-lucide-file-stack', to: modulePath('bpmp') }
     ]
   },
   {
