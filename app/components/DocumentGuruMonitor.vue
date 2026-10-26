@@ -45,6 +45,12 @@ const props = withDefaults(
      * cancels an issued document instead; null hides the action.
      */
     invalidate?: { path: string, body: Record<string, unknown> } | null
+    /**
+     * Whether this module supports the issued-only PATCH .../spt-flag endpoint.
+     * Bupot does; faktur does not — pass false (like :invalidate="null") to hide
+     * the column and the set-flag action.
+     */
+    sptFlag?: boolean | null
   }>(),
   {
     apiBase: undefined,
@@ -64,7 +70,8 @@ const props = withDefaults(
     invalidate: () => ({
       path: 'invalidate',
       body: { invalid_reason: 'Ditandai tidak valid oleh guru saat review.' }
-    })
+    }),
+    sptFlag: true
   }
 )
 
@@ -135,7 +142,7 @@ const columns = computed<TableColumn<DocumentRow>[]>(() => [
   { accessorKey: 'tax_month', header: 'Masa Pajak' },
   { id: 'number', header: props.numberHeader },
   { accessorKey: 'status', header: 'Status' },
-  { accessorKey: 'spt_flag', header: 'Flag SPT' },
+  ...(props.sptFlag ? [{ accessorKey: 'spt_flag', header: 'Flag SPT' } as const] : []),
   { id: 'name', header: 'Nama' },
   { id: 'code', header: props.codeHeader },
   { id: 'base', header: props.baseHeader },
@@ -243,6 +250,7 @@ const sptFlagModalOptions: { label: string, value: Bp26SptFlag }[] = (
 ).map(([value, label]) => ({ label, value }))
 
 function openFlagModal(slip: DocumentRow) {
+  if (!props.sptFlag) return
   if (slip.status !== 'issued') {
     toast.add({
       title: 'Flag SPT hanya untuk dokumen yang telah terbit',
@@ -396,7 +404,7 @@ async function saveFlag() {
                 @click="openReview(row.original)"
               />
               <UButton
-                v-if="row.original.status === 'issued'"
+                v-if="sptFlag && row.original.status === 'issued'"
                 icon="i-lucide-flag"
                 label="Flag SPT"
                 color="neutral"
