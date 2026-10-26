@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui'
-import type { Bp21ListResponse, Bp21Read, Bp21Status, Bp21Summary } from '~/types/api'
+import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
+import type {
+  Bp21BulkIssueResult,
+  Bp21ImportResult,
+  Bp21ListResponse,
+  Bp21Read,
+  Bp21Status,
+  Bp21Summary,
+  Bp21TaxFacility
+} from '~/types/api'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -11,6 +19,10 @@ const toast = useToast()
 const activeStatus = ref<Bp21Status>('draft')
 const page = ref(1)
 const pageSize = 10
+
+const filterMonth = ref<number | undefined>(undefined)
+const filterYear = ref<number | undefined>(undefined)
+const filterFacility = ref<Bp21TaxFacility | undefined>(undefined)
 
 const { data: summary, refresh: refreshSummary } = useAsyncData(
   'siswa-bp21-summary',
@@ -26,16 +38,34 @@ const { data: bp21List, status: listStatus, refresh: refreshList } = useAsyncDat
       page: String(page.value),
       size: String(pageSize)
     })
+    if (filterMonth.value !== undefined) query.set('tax_month', String(filterMonth.value))
+    if (filterYear.value) query.set('tax_year', String(filterYear.value))
+    if (filterFacility.value !== undefined) query.set('tax_facility', filterFacility.value)
     return apiFetch<Bp21ListResponse>(`/api/v1/bp21?${query.toString()}`)
   },
-  { watch: [activeStatus, page] }
+  { watch: [activeStatus, page, filterMonth, filterYear, filterFacility] }
 )
 
-watch(activeStatus, () => {
+const selectedIds = ref(new Set<number>())
+
+watch([activeStatus, filterMonth, filterYear, filterFacility], () => {
   page.value = 1
+  selectedIds.value = new Set()
 })
 
+watch(bp21List, () => {
+  selectedIds.value = new Set()
+})
+
+function toggleSelected(id: number) {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
+
 const columns: TableColumn<Bp21Read>[] = [
+  { id: 'select' },
   { accessorKey: 'tax_month', header: 'Masa Pajak' },
   { accessorKey: 'withholding_number', header: 'Nomor Pemotongan' },
   { accessorKey: 'status', header: 'Status' },
@@ -70,6 +100,167 @@ async function issueSlip(slip: Bp21Read) {
 
 async function refreshAll() {
   await Promise.all([refreshList(), refreshSummary()])
+}
+
+function clearFilters() {
+  filterMonth.value = undefined
+  filterYear.value = undefined
+  filterFacility.value = undefined
+}
+
+// --- Toolbar actions ---------------------------------------------------------
+
+async function deleteSelected() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  let deleted = 0
+  for (const id of ids) {
+    try {
+      await apiFetch(`/api/v1/bp21/${id}`, { method: 'DELETE' })
+      deleted += 1
+    } catch {
+      // keep going; report the aggregate below
+    }
+  }
+  toast.add({
+    title: `${deleted} dari ${ids.length} BP21 dihapus`,
+    color: deleted === ids.length ? 'success' : 'warning',
+    icon: 'i-lucide-trash-2'
+  })
+  await refreshAll()
+}
+
+async function issueSelected() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  try {
+    const result = await apiFetch<Bp21BulkIssueResult>('/api/v1/bp21/bulk-issue', {
+      method: 'POST',
+      body: { ids }
+    })
+    toast.add({
+      title: `${result.issued} BP21 diterbitkan`,
+      description: result.failed ? `${result.failed} gagal diterbitkan.` : undefined,
+      color: result.failed ? 'warning' : 'success',
+      icon: 'i-lucide-send'
+    })
+    await refreshAll()
+  } catch (error) {
+    toast.add({
+      title: 'Bulk terbitkan gagal',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  }
+}
+
+// --- Downloads (Monitoring / Bulk Process / template) ------------------------
+
+async function downloadFile(path: string, filename: string) {
+  try {
+    const blob = await apiFetch<Blob>(path, { responseType: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    toast.add({
+      title: 'Unduhan gagal',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  }
+}
+
+function exportQuery(withStatus?: Bp21Status) {
+  const query = new URLSearchParams()
+  if (withStatus) query.set('status', withStatus)
+  if (filterMonth.value !== undefined) query.set('tax_month', String(filterMonth.value))
+  if (filterYear.value) query.set('tax_year', String(filterYear.value))
+  const text = query.toString()
+  return text ? `?${text}` : ''
+}
+
+const monitoringItems = computed<DropdownMenuItem[]>(() => [
+  {
+    label: 'XML',
+    icon: 'i-lucide-file-code',
+    onSelect: () => downloadFile(`/api/v1/bp21/export-xml${exportQuery(activeStatus.value)}`, 'bp21_export.xml')
+  },
+  {
+    label: 'Diterbitkan Masa Pajak',
+    icon: 'i-lucide-calendar-check',
+    onSelect: () => downloadFile(`/api/v1/bp21/export-xml${exportQuery('issued')}`, 'bp21_issued.xml')
+  },
+  {
+    label: 'Download CSV by Period',
+    icon: 'i-lucide-file-spreadsheet',
+    onSelect: () => downloadFile(`/api/v1/bp21/export-csv${exportQuery(activeStatus.value)}`, 'bp21_export.csv')
+  }
+])
+
+const bulkProcessItems = computed<DropdownMenuItem[]>(() => [
+  {
+    label: 'Diterbitkan Masa Pajak',
+    icon: 'i-lucide-send',
+    disabled: activeStatus.value !== 'draft' || selectedIds.value.size === 0,
+    onSelect: () => issueSelected()
+  },
+  {
+    label: 'Download CSV by Period',
+    icon: 'i-lucide-file-spreadsheet',
+    onSelect: () => downloadFile(`/api/v1/bp21/export-csv${exportQuery(activeStatus.value)}`, 'bp21_export.csv')
+  }
+])
+
+// --- Import modal -------------------------------------------------------------
+
+const importOpen = ref(false)
+const importFile = ref<File | null>(null)
+const importing = ref(false)
+const importResult = ref<Bp21ImportResult | null>(null)
+const importError = ref<string | null>(null)
+
+function openImport() {
+  importOpen.value = true
+}
+
+function onImportFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  importFile.value = input.files?.[0] ?? null
+  importResult.value = null
+  importError.value = null
+}
+
+async function submitImport() {
+  if (!importFile.value) return
+  importing.value = true
+  importError.value = null
+  importResult.value = null
+  try {
+    const body = new FormData()
+    body.append('file', importFile.value)
+    importResult.value = await apiFetch<Bp21ImportResult>('/api/v1/bp21/import-xml', {
+      method: 'POST',
+      body
+    })
+    await refreshAll()
+  } catch (error) {
+    importError.value = apiErrorMessage(error, 'Impor gagal. Periksa format file.')
+  } finally {
+    importing.value = false
+  }
+}
+
+function closeImport() {
+  importOpen.value = false
+  importFile.value = null
+  importResult.value = null
+  importError.value = null
 }
 </script>
 
@@ -118,18 +309,52 @@ async function refreshAll() {
               label="Create eBupot BP21"
               class="bupot-primary-button"
             />
-            <UButton icon="i-lucide-trash-2" label="Hapus" color="neutral" disabled />
-            <UButton icon="i-lucide-send" label="Terbitkan" color="neutral" disabled />
+            <UButton
+              icon="i-lucide-trash-2"
+              label="Hapus"
+              color="neutral"
+              :disabled="activeStatus !== 'draft' || selectedIds.size === 0"
+              @click="deleteSelected"
+            />
+            <UButton
+              icon="i-lucide-send"
+              label="Terbitkan"
+              color="neutral"
+              :disabled="activeStatus !== 'draft' || selectedIds.size === 0"
+              @click="issueSelected"
+            />
+            <UDropdownMenu :items="monitoringItems">
+              <UButton icon="i-lucide-monitor" label="Monitoring" color="neutral" variant="soft" />
+            </UDropdownMenu>
+            <UButton
+              icon="i-lucide-upload"
+              label="Impor data"
+              color="neutral"
+              variant="soft"
+              @click="openImport"
+            />
+            <UDropdownMenu :items="bulkProcessItems">
+              <UButton icon="i-lucide-layers" label="Bulk Process" color="neutral" variant="soft" />
+            </UDropdownMenu>
             <UButton icon="i-lucide-refresh-cw" color="neutral" variant="soft" @click="refreshAll" />
           </div>
         </div>
 
         <div class="bupot-toolbar">
-          <UButton icon="i-lucide-refresh-cw" color="info" variant="soft" @click="refreshAll" />
-          <UButton icon="i-lucide-file" color="neutral" variant="solid" disabled />
-          <UButton icon="i-lucide-file-spreadsheet" color="success" variant="solid" disabled />
-          <UButton icon="i-lucide-file-text" color="error" variant="solid" disabled />
-          <UButton icon="i-lucide-filter-x" color="neutral" variant="soft" disabled />
+          <USelect v-model="filterMonth" :items="monthFilterOptions" class="w-40" />
+          <UInput
+            v-model="filterYear"
+            type="number"
+            placeholder="Tahun Pajak"
+            class="w-32"
+          />
+          <USelect v-model="filterFacility" :items="facilityFilterOptions" class="w-48" />
+          <UButton
+            icon="i-lucide-filter-x"
+            color="neutral"
+            variant="soft"
+            @click="clearFilters"
+          />
         </div>
 
         <div class="bupot-table">
@@ -138,6 +363,13 @@ async function refreshAll() {
             :columns="columns"
             :loading="listStatus === 'pending'"
           >
+            <template #select-cell="{ row }">
+              <UCheckbox
+                :model-value="selectedIds.has(row.original.id)"
+                @update:model-value="toggleSelected(row.original.id)"
+              />
+            </template>
+
             <template #tax_month-cell="{ row }">
               <span class="font-medium">{{ formatPeriod(row.original) }}</span>
             </template>
@@ -203,5 +435,94 @@ async function refreshAll() {
         </div>
       </section>
     </div>
+
+    <UModal
+      v-model:open="importOpen"
+      title="Impor data BP21"
+      description="Unggah file XML sesuai format template."
+    >
+      <template #body>
+        <div class="space-y-4">
+          <UAlert
+            v-if="importError"
+            color="error"
+            variant="subtle"
+            icon="i-lucide-circle-alert"
+            :title="importError"
+          />
+
+          <UFormField label="Pilih File" name="import_file" required>
+            <input
+              type="file"
+              accept=".xml"
+              class="bp21-file-input"
+              @change="onImportFileChange"
+            >
+          </UFormField>
+
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              icon="i-lucide-download"
+              label="Unduh Format Data"
+              color="neutral"
+              variant="soft"
+              @click="downloadFile('/api/v1/bp21/import-template', 'bp21_import_template.xml')"
+            />
+            <UButton
+              icon="i-lucide-upload"
+              label="Impor"
+              :disabled="!importFile"
+              :loading="importing"
+              @click="submitImport"
+            />
+            <UButton label="Tutup" color="neutral" variant="ghost" @click="closeImport" />
+          </div>
+
+          <div v-if="importResult" class="space-y-2">
+            <UAlert
+              :color="importResult.failed === 0 ? 'success' : 'warning'"
+              variant="subtle"
+              :icon="importResult.failed === 0 ? 'i-lucide-check-circle' : 'i-lucide-triangle-alert'"
+              :title="`${importResult.imported} baris berhasil, ${importResult.failed} gagal dari ${importResult.total_rows} baris.`"
+            />
+            <ul class="bp21-import-results">
+              <li v-for="item in importResult.results" :key="item.row">
+                <UIcon
+                  :name="item.success ? 'i-lucide-check' : 'i-lucide-x'"
+                  :class="item.success ? 'text-success' : 'text-error'"
+                  class="size-4"
+                />
+                <span>Baris {{ item.row }}: {{ item.success ? `tersimpan (ID ${item.id})` : item.error }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
+
+<style scoped>
+.bp21-file-input {
+  display: block;
+  width: 100%;
+  border: 1px solid oklch(0.89 0.014 255);
+  border-radius: 0.35rem;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+}
+
+.bp21-import-results {
+  display: grid;
+  gap: 0.3rem;
+  max-height: 12rem;
+  overflow-y: auto;
+  font-size: 0.83rem;
+}
+
+.bp21-import-results li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+</style>
