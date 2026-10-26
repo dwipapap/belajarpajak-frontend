@@ -5,6 +5,7 @@ import type {
   Bp21ImportResult,
   Bp21ListResponse,
   Bp21Read,
+  Bp21SptFlag,
   Bp21Status,
   Bp21Summary,
   Bp21TaxFacility
@@ -23,6 +24,7 @@ const pageSize = 10
 const filterMonth = ref<number | undefined>(undefined)
 const filterYear = ref<number | undefined>(undefined)
 const filterFacility = ref<Bp21TaxFacility | undefined>(undefined)
+const filterSptFlag = ref<Bp21SptFlag | undefined>(undefined)
 
 const { data: summary, refresh: refreshSummary } = useAsyncData(
   'siswa-bp21-summary',
@@ -41,14 +43,15 @@ const { data: bp21List, status: listStatus, refresh: refreshList } = useAsyncDat
     if (filterMonth.value !== undefined) query.set('tax_month', String(filterMonth.value))
     if (filterYear.value) query.set('tax_year', String(filterYear.value))
     if (filterFacility.value !== undefined) query.set('tax_facility', filterFacility.value)
+    if (filterSptFlag.value !== undefined) query.set('spt_flag', filterSptFlag.value)
     return apiFetch<Bp21ListResponse>(`/api/v1/bp21?${query.toString()}`)
   },
-  { watch: [activeStatus, page, filterMonth, filterYear, filterFacility] }
+  { watch: [activeStatus, page, filterMonth, filterYear, filterFacility, filterSptFlag] }
 )
 
 const selectedIds = ref(new Set<number>())
 
-watch([activeStatus, filterMonth, filterYear, filterFacility], () => {
+watch([activeStatus, filterMonth, filterYear, filterFacility, filterSptFlag], () => {
   page.value = 1
   selectedIds.value = new Set()
 })
@@ -75,6 +78,7 @@ const columns: TableColumn<Bp21Read>[] = [
   { accessorKey: 'tax_object_code', header: 'Kode Objek Pajak' },
   { accessorKey: 'dpp', header: 'DPP (Rp)' },
   { accessorKey: 'income_tax', header: 'PPh (Rp)' },
+  { accessorKey: 'spt_flag', header: 'Flag SPT' },
   { id: 'actions' }
 ]
 
@@ -106,6 +110,7 @@ function clearFilters() {
   filterMonth.value = undefined
   filterYear.value = undefined
   filterFacility.value = undefined
+  filterSptFlag.value = undefined
 }
 
 // --- Toolbar actions ---------------------------------------------------------
@@ -351,6 +356,7 @@ function closeImport() {
             class="w-32"
           />
           <USelect v-model="filterFacility" :items="facilityFilterOptions" class="w-48" />
+          <USelect v-model="filterSptFlag" :items="sptFlagFilterOptions" class="w-48" />
           <UButton
             icon="i-lucide-filter-x"
             color="neutral"
@@ -398,6 +404,13 @@ function closeImport() {
 
             <template #income_tax-cell="{ row }">
               Rp {{ formatCurrency(row.original.income_tax) }}
+            </template>
+
+            <template #spt_flag-cell="{ row }">
+              <UBadge v-if="row.original.spt_flag" color="info" variant="subtle">
+                {{ sptFlagLabel[row.original.spt_flag] }}
+              </UBadge>
+              <span v-else>-</span>
             </template>
 
             <template #actions-cell="{ row }">

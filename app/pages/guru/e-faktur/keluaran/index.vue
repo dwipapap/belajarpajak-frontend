@@ -20,5 +20,6 @@ definePageMeta({ middleware: 'role', roles: ['guru'] })
       tax: 'total_ppn'
     }"
     :invalidate="null"
+    :spt-flag="false"
   />
 </template>

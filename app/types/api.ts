@@ -151,6 +151,7 @@ export interface Bp21Read {
   withholding_number: string | null
   issued_at: string | null
   invalid_reason: string | null
+  spt_flag: Bp21SptFlag | null
   tax_month: number
   tax_year: number
   electronic_signature_status: string
@@ -248,6 +249,9 @@ export type Bp26SptFlag =
   | 'objection_withdrawal_accepted'
   | 'spt_audited'
   | 'spt_legal_process'
+
+export type Bp21SptFlag = Bp26SptFlag
+export type Bp23SptFlag = Bp26SptFlag
 
 export interface Bp26Read {
   id: number
