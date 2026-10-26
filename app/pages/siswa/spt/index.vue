@@ -61,7 +61,8 @@ const yearFilterOptions = [
 const typeFilterOptions = [
   { label: 'Semua Jenis', value: undefined as TaxReturnType | undefined },
   { label: 'SPT Masa PPN', value: 'ppn' as TaxReturnType | undefined },
-  { label: 'SPT Masa PPh Unifikasi', value: 'pph_unifikasi' as TaxReturnType | undefined }
+  { label: 'SPT Masa PPh Unifikasi', value: 'pph_unifikasi' as TaxReturnType | undefined },
+  { label: 'SPT Masa PPh 21/26', value: 'pph_21_26' as TaxReturnType | undefined }
 ]
 
 const columns: TableColumn<TaxReturnRead>[] = [

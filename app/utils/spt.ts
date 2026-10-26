@@ -27,7 +27,8 @@ export const sptStatusTabs: { label: string, value: TaxReturnStatus }[] = Object
 
 export const sptTypeLabel = {
   ppn: 'SPT Masa PPN',
-  pph_unifikasi: 'SPT Masa PPh Unifikasi'
+  pph_unifikasi: 'SPT Masa PPh Unifikasi',
+  pph_21_26: 'SPT Masa PPh 21/26'
 } satisfies Record<TaxReturnType, string>
 
 export const sptKindLabel = {
@@ -60,10 +61,11 @@ export const billingStatusTabs: { label: string, value: BillingStatus }[] = [
   { label: 'Sudah Dibayar', value: 'paid' }
 ]
 
-/** Pasal section codes of the SPT PPh Unifikasi Induk, in display order. */
+/** Pasal section codes of the SPT PPh Unifikasi and PPh 21/26 Induk, in display order. */
 export const pasalSections = [
   'pasal_4_2',
   'pasal_15',
+  'pasal_21',
   'pasal_22',
   'pasal_23',
   'pasal_26'
@@ -72,6 +74,7 @@ export const pasalSections = [
 export const pasalLabel: Record<string, string> = {
   pasal_4_2: 'Pasal 4 Ayat 2',
   pasal_15: 'Pasal 15',
+  pasal_21: 'Pasal 21',
   pasal_22: 'Pasal 22',
   pasal_23: 'Pasal 23',
   pasal_26: 'Pasal 26'

@@ -436,6 +436,49 @@ export interface BppuCreate {
 export type BppuListResponse = Paginated<BppuRead>
 export type BppuSummary = Bp21Summary
 
+/* --- BPMP: Bukti Pemotongan Bulanan Pegawai Tetap (PPh 21 TER) --- */
+
+export type BpmpStatus = Bp21Status
+export type BpmpTaxNature = Bp21TaxNature
+export type BpmpTaxFacility = Bp21TaxFacility
+export type BpmpSptFlag = Bp26SptFlag
+export type BpmpRead = Omit<BppuRead, never>
+export type BpmpCreate = Omit<BppuCreate, never> & { ptkp_status?: string | null }
+export type BpmpListResponse = Paginated<BpmpRead>
+export type BpmpSummary = Bp21Summary
+export type BpmpImportResult = BppuImportResult
+export type BpmpBulkIssueResult = BppuBulkIssueResult
+
+/* --- 1721-A1 / 1721-A2: read-only annual aggregates of issued BPMP slips --- */
+
+export interface A1A2MonthlyRow {
+  tax_month: number
+  gross_income: number
+  income_tax: number
+  withholding_number: string | null
+}
+
+export interface A1A2Summary {
+  form: string
+  recipient_identity_number: string
+  recipient_name: string
+  tax_year: number
+  annual_gross: number
+  annual_tax: number
+  months_covered: number[]
+  slips_count: number
+  ter_category: string | null
+}
+
+export interface A1A2Detail extends A1A2Summary {
+  rows: A1A2MonthlyRow[]
+}
+
+export interface A1A2ListResponse {
+  items: A1A2Summary[]
+  total: number
+}
+
 export interface BppuImportRowResult {
   row: number
   success: boolean
@@ -760,7 +803,7 @@ export interface TaxInputBulkDeleteResult {
 
 /* --- SPT Masa --- */
 
-export type TaxReturnType = 'ppn' | 'pph_unifikasi'
+export type TaxReturnType = 'ppn' | 'pph_unifikasi' | 'pph_21_26'
 export type TaxReturnKind = 'normal' | 'pembetulan'
 export type TaxReturnStatus = 'draft' | 'awaiting_payment' | 'reported'
 export type SignerCapacity = 'wajib_pajak' | 'kuasa_wajib_pajak'
