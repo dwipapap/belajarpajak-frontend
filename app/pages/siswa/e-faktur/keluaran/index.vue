@@ -94,24 +94,68 @@ async function refreshAll() {
   await Promise.all([refreshList(), refreshSummary()])
 }
 
-/** Upload Faktur — bulk-issues every selected draft. */
-async function uploadSelected() {
-  const ids = [...selectedIds.value]
-  if (!ids.length) return
-  busy.value = true
+/** Upload Faktur — bulk-issues every selected draft after signing. */
+const signOpen = ref(false)
+const signing = ref(false)
+const pendingBulk = ref(false)
+const pendingInvoice = ref<TaxInvoiceRead | null>(null)
+
+function requestUploadSelected() {
+  if (!selectedIds.value.size) return
+  pendingBulk.value = true
+  pendingInvoice.value = null
+  signOpen.value = true
+}
+
+function requestIssueOne(invoice: TaxInvoiceRead) {
+  pendingBulk.value = false
+  pendingInvoice.value = invoice
+  signOpen.value = true
+}
+
+async function confirmSign(payload: { signer_name?: string; kode_otorisasi: string }) {
+  signing.value = true
   try {
-    const result = await apiFetch<TaxInvoiceBulkIssueResult>(
-      '/api/v1/faktur-keluaran/bulk-issue',
-      { method: 'POST', body: { ids } }
-    )
-    toast.add({
-      title: `${result.issued} faktur diterbitkan`,
-      description: result.skipped
-        ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}`
-        : 'Dokumen masuk ke tab Telah Terbit.',
-      color: result.issued ? 'success' : 'warning',
-      icon: 'i-lucide-send'
-    })
+    if (pendingBulk.value) {
+      const result = await apiFetch<TaxInvoiceBulkIssueResult>(
+        '/api/v1/faktur-keluaran/bulk-issue',
+        {
+          method: 'POST',
+          body: {
+            ids: [...selectedIds.value],
+            signer_name: payload.signer_name,
+            kode_otorisasi: payload.kode_otorisasi
+          }
+        }
+      )
+      toast.add({
+        title: `${result.issued} faktur diterbitkan`,
+        description: result.skipped
+          ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}`
+          : 'Dokumen masuk ke tab Telah Terbit.',
+        color: result.issued ? 'success' : 'warning',
+        icon: 'i-lucide-send'
+      })
+    } else if (pendingInvoice.value) {
+      await apiFetch<TaxInvoiceRead>(
+        `/api/v1/faktur-keluaran/${pendingInvoice.value.id}/issue`,
+        {
+          method: 'POST',
+          body: {
+            signer_name: payload.signer_name,
+            kode_otorisasi: payload.kode_otorisasi
+          }
+        }
+      )
+      toast.add({
+        title: 'Faktur diterbitkan',
+        description: `Nomor faktur dibuat untuk ${pendingInvoice.value.buyer_name}. Dokumen masuk ke tab Telah Terbit.`,
+        color: 'success',
+        icon: 'i-lucide-check-circle'
+      })
+    }
+    signOpen.value = false
+    pendingInvoice.value = null
     activeStatus.value = 'issued'
     await refreshAll()
   } catch (error) {
@@ -122,7 +166,7 @@ async function uploadSelected() {
       icon: 'i-lucide-circle-alert'
     })
   } finally {
-    busy.value = false
+    signing.value = false
   }
 }
 
@@ -152,29 +196,6 @@ async function deleteSelected() {
     busy.value = false
     confirmDeleteOpen.value = false
     await refreshAll()
-  }
-}
-
-async function issueOne(invoice: TaxInvoiceRead) {
-  try {
-    await apiFetch<TaxInvoiceRead>(`/api/v1/faktur-keluaran/${invoice.id}/issue`, {
-      method: 'POST'
-    })
-    toast.add({
-      title: 'Faktur diterbitkan',
-      description: `Nomor faktur dibuat untuk ${invoice.buyer_name}. Dokumen masuk ke tab Telah Terbit.`,
-      color: 'success',
-      icon: 'i-lucide-check-circle'
-    })
-    activeStatus.value = 'issued'
-    await refreshAll()
-  } catch (error) {
-    toast.add({
-      title: 'Gagal menerbitkan faktur',
-      description: apiErrorMessage(error),
-      color: 'error',
-      icon: 'i-lucide-circle-alert'
-    })
   }
 }
 
@@ -256,9 +277,9 @@ const canActOnSelection = computed(
             icon="i-lucide-send"
             label="Upload Faktur"
             class="bupot-primary-button"
-            :loading="busy"
+            :loading="signing"
             :disabled="!canActOnSelection"
-            @click="uploadSelected"
+            @click="requestUploadSelected"
           />
           <UButton
             icon="i-lucide-trash-2"
@@ -377,7 +398,7 @@ const canActOnSelection = computed(
                   icon="i-lucide-send"
                   label="Terbitkan"
                   size="xs"
-                  @click="issueOne(row.original)"
+                  @click="requestIssueOne(row.original)"
                 />
                 <UBadge
                   v-else-if="row.original.score !== null"
@@ -430,5 +451,7 @@ const canActOnSelection = computed(
         </div>
       </template>
     </UModal>
+
+    <DocumentSignModal v-model:open="signOpen" :loading="signing" @confirm="confirmSign" />
   </div>
 </template>

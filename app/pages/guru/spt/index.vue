@@ -118,6 +118,7 @@ const columns: TableColumn<TaxReturnRead>[] = [
   { accessorKey: 'kind', header: 'Jenis SPT' },
   { accessorKey: 'status', header: 'Status' },
   { id: 'amount', header: 'Jumlah (Rp)' },
+  { accessorKey: 'bpe_number', header: 'Nomor BPE' },
   { accessorKey: 'score', header: 'Nilai' },
   { id: 'actions' }
 ]
@@ -171,6 +172,10 @@ const columns: TableColumn<TaxReturnRead>[] = [
               </UBadge>
             </template>
             <template #amount-cell="{ row }">Rp {{ formatCurrency(row.original.amount_due) }}</template>
+            <template #bpe_number-cell="{ row }">
+              <span v-if="row.original.bpe_number" class="font-mono text-xs">{{ row.original.bpe_number }}</span>
+              <span v-else>—</span>
+            </template>
             <template #score-cell="{ row }">{{ row.original.score ?? '—' }}</template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">

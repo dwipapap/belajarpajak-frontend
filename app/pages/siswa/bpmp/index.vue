@@ -103,25 +103,69 @@ function clearFilters() {
   filterSptFlag.value = undefined
 }
 
-// --- Toolbar actions ---------------------------------------------------------
+// --- Toolbar actions (signing modal fixes B1: kode_otorisasi is required) --------
 
-async function issueSlip(slip: BpmpRead) {
+const signOpen = ref(false)
+const signing = ref(false)
+const pendingSlip = ref<BpmpRead | null>(null)
+const pendingBulk = ref(false)
+
+function requestIssueSlip(slip: BpmpRead) {
+  pendingSlip.value = slip
+  pendingBulk.value = false
+  signOpen.value = true
+}
+
+function requestIssueSelected() {
+  if (!selectedIds.value.size) return
+  pendingSlip.value = null
+  pendingBulk.value = true
+  signOpen.value = true
+}
+
+async function confirmSign(payload: { signer_name?: string; kode_otorisasi: string }) {
+  signing.value = true
   try {
-    await apiFetch<BpmpRead>(`/api/v1/bpmp/${slip.id}/issue`, { method: 'POST' })
-    toast.add({
-      title: 'BPMP diterbitkan',
-      description: `Nomor pemotongan dibuat untuk ${slip.recipient_name}.`,
-      color: 'success',
-      icon: 'i-lucide-check-circle'
-    })
+    if (pendingBulk.value) {
+      const result = await apiFetch<BpmpBulkIssueResult>('/api/v1/bpmp/bulk-issue', {
+        method: 'POST',
+        body: {
+          ids: [...selectedIds.value],
+          signer_name: payload.signer_name,
+          kode_otorisasi: payload.kode_otorisasi
+        }
+      })
+      toast.add({
+        title: `${result.issued} BPMP diterbitkan`,
+        description: result.failed ? `${result.failed} gagal diterbitkan.` : undefined,
+        color: result.failed ? 'warning' : 'success',
+        icon: 'i-lucide-send'
+      })
+    } else if (pendingSlip.value) {
+      await apiFetch<BpmpRead>(`/api/v1/bpmp/${pendingSlip.value.id}/issue`, {
+        method: 'POST',
+        body: { signer_name: payload.signer_name, kode_otorisasi: payload.kode_otorisasi }
+      })
+      toast.add({
+        title: 'BPMP diterbitkan',
+        description: `Nomor pemotongan dibuat untuk ${pendingSlip.value.recipient_name}.`,
+        color: 'success',
+        icon: 'i-lucide-check-circle'
+      })
+    }
+    signOpen.value = false
+    pendingSlip.value = null
+    activeStatus.value = 'issued' as typeof activeStatus.value
     await refreshAll()
   } catch (error) {
     toast.add({
-      title: 'Gagal menerbitkan BPMP',
+      title: pendingBulk.value ? 'Terbitkan massal gagal' : 'Gagal menerbitkan BPMP',
       description: apiErrorMessage(error),
       color: 'error',
       icon: 'i-lucide-circle-alert'
     })
+  } finally {
+    signing.value = false
   }
 }
 
@@ -166,32 +210,6 @@ async function deleteSelected() {
     icon: 'i-lucide-trash-2'
   })
   await refreshAll()
-}
-
-async function issueSelected() {
-  const ids = [...selectedIds.value]
-  if (!ids.length) return
-  try {
-    const result = await apiFetch<BpmpBulkIssueResult>('/api/v1/bpmp/bulk-issue', {
-      method: 'POST',
-      body: { ids }
-    })
-    toast.add({
-      title: `${result.issued} BPMP diterbitkan`,
-      description: result.failed ? `${result.failed} gagal diterbitkan.` : undefined,
-      color: result.failed ? 'warning' : 'success',
-      icon: 'i-lucide-send'
-    })
-    activeStatus.value = 'issued' as typeof activeStatus.value
-    await refreshAll()
-  } catch (error) {
-    toast.add({
-      title: 'Terbitkan massal gagal',
-      description: apiErrorMessage(error),
-      color: 'error',
-      icon: 'i-lucide-circle-alert'
-    })
-  }
 }
 
 // --- Downloads (Monitoring / Bulk Process / template) ------------------------
@@ -249,7 +267,7 @@ const bulkProcessItems = computed<DropdownMenuItem[]>(() => [
     label: 'Diterbitkan Masa Pajak',
     icon: 'i-lucide-send',
     disabled: activeStatus.value !== 'draft' || selectedIds.value.size === 0,
-    onSelect: () => issueSelected()
+    onSelect: () => requestIssueSelected()
   },
   {
     label: 'Unduh CSV per Masa',
@@ -362,7 +380,7 @@ function closeImport() {
               label="Terbitkan"
               color="neutral"
               :disabled="activeStatus !== 'draft' || selectedIds.size === 0"
-              @click="issueSelected"
+              @click="requestIssueSelected"
             />
             <UDropdownMenu :items="monitoringItems">
               <UButton icon="i-lucide-monitor" label="Pemantauan" color="neutral" variant="soft" />
@@ -473,7 +491,7 @@ function closeImport() {
                   icon="i-lucide-send"
                   label="Terbitkan"
                   size="xs"
-                  @click="issueSlip(row.original)"
+                  @click="requestIssueSlip(row.original)"
                 />
                 <UButton
                   v-if="row.original.status === 'issued'"
@@ -576,6 +594,8 @@ function closeImport() {
         </div>
       </template>
     </UModal>
+
+    <DocumentSignModal v-model:open="signOpen" :loading="signing" @confirm="confirmSign" />
   </div>
 </template>
 

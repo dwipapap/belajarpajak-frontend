@@ -73,13 +73,29 @@ const columns: TableColumn<TaxReturnRead>[] = [
   { accessorKey: 'kind', header: 'Jenis SPT' },
   { accessorKey: 'status', header: 'Status' },
   { id: 'amount', header: 'Jumlah Tagihan (Rp)' },
-  { accessorKey: 'submitted_at', header: 'Tanggal Lapor' },
+  { accessorKey: 'submitted_at', header: 'Tanggal Submit SPT' },
+  { accessorKey: 'received_at', header: 'Tanggal Penerimaan' },
+  { accessorKey: 'bpe_number', header: 'Nomor Bukti Terima' },
   { id: 'actions' }
 ]
 
 function sptRowLabel(row: TaxReturnRead) {
   const base = sptTypeLabel[row.return_type]
   return row.correction_no > 0 ? `${base} Pembetulan ${row.correction_no}` : base
+}
+
+async function downloadBpe(row: TaxReturnRead) {
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/spt/${row.id}/bpe`, { responseType: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `BPE-${(row.bpe_number ?? String(row.id)).replace('/', '-')}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    toast.add({ title: 'Gagal mengunduh BPE', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
 }
 
 async function deleteDraft(row: TaxReturnRead) {
@@ -154,9 +170,25 @@ async function deleteDraft(row: TaxReturnRead) {
               <span v-if="row.original.submitted_at">{{ new Date(row.original.submitted_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}</span>
               <span v-else>—</span>
             </template>
+            <template #received_at-cell="{ row }">
+              <span v-if="row.original.received_at">{{ new Date(row.original.received_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}</span>
+              <span v-else>—</span>
+            </template>
+            <template #bpe_number-cell="{ row }">
+              <span v-if="row.original.bpe_number" class="font-mono text-xs">{{ row.original.bpe_number }}</span>
+              <span v-else>—</span>
+            </template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">
                 <UButton :to="`/siswa/spt/${row.original.id}`" icon="i-lucide-eye" size="xs" label="Buka" />
+                <UButton
+                  v-if="row.original.status === 'reported'"
+                  icon="i-lucide-file-down"
+                  size="xs"
+                  variant="soft"
+                  label="BPE"
+                  @click="downloadBpe(row.original)"
+                />
                 <UButton
                   v-if="row.original.status === 'draft'"
                   icon="i-lucide-trash-2"

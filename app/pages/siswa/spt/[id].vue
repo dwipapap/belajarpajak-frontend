@@ -202,7 +202,12 @@ async function submitSpt() {
         icon: 'i-lucide-receipt'
       })
     } else {
-      toast.add({ title: 'SPT berhasil dilaporkan', color: 'success', icon: 'i-lucide-check-circle' })
+      toast.add({
+        title: 'SPT dilaporkan',
+        description: `${result.bpe_number ?? 'BPE'} tersedia di Portal Saya → Dokumen Saya.`,
+        color: 'success',
+        icon: 'i-lucide-check-circle'
+      })
     }
     submitOpen.value = false
     passphrase.value = ''
