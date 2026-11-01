@@ -1,6 +1,7 @@
 // Shared labels/options/formatters for the SPT Masa + kode billing modules.
 import type {
   BillingStatus,
+  LbTreatment,
   SignerCapacity,
   TaxReturnKind,
   TaxReturnLineRead,
@@ -49,20 +50,70 @@ export const signerCapacityOptions: { label: string, value: SignerCapacity }[] =
 
 export const billingStatusLabel = {
   unpaid: 'Belum Dibayar',
-  paid: 'Sudah Dibayar'
+  paid: 'Sudah Dibayar',
+  cancelled: 'Dibatalkan'
 } satisfies Record<BillingStatus, string>
 
 export const billingStatusColor = {
   unpaid: 'warning',
-  paid: 'success'
-} as const satisfies Record<BillingStatus, 'warning' | 'success'>
+  paid: 'success',
+  cancelled: 'neutral'
+} as const satisfies Record<BillingStatus, 'warning' | 'success' | 'neutral'>
 
 export const billingStatusTabs: { label: string, value: BillingStatus }[] = [
   { label: 'Belum Dibayar', value: 'unpaid' },
-  { label: 'Sudah Dibayar', value: 'paid' }
+  { label: 'Sudah Dibayar', value: 'paid' },
+  { label: 'Dibatalkan', value: 'cancelled' }
 ]
 
-/** Pasal section codes of the SPT PPh Unifikasi and PPh 21/26 Induk, in display order. */
+/** Perlakuan lebih bayar PPN (Bagian III Induk). */
+export const lbTreatmentLabel = {
+  kompensasi: 'Dikompensasikan ke masa berikutnya',
+  restitusi: 'Dikembalikan (restitusi)'
+} satisfies Record<LbTreatment, string>
+
+export const lbTreatmentOptions: { label: string, value: LbTreatment }[] = [
+  { label: 'Dikompensasikan ke masa berikutnya', value: 'kompensasi' },
+  { label: 'Dikembalikan (restitusi)', value: 'restitusi' }
+]
+
+/** SPT lampiran tabs per return type, mirroring the reference portal. */
+export const sptPpnTabs = [
+  { label: 'INDUK', value: 'induk' },
+  { label: 'A-1', value: 'a1' },
+  { label: 'A-2', value: 'a2' },
+  { label: 'B-1', value: 'b1' },
+  { label: 'B-2', value: 'b2' },
+  { label: 'B-3', value: 'b3' },
+  { label: 'C', value: 'c' }
+] as const
+
+export const sptPphTabs = [
+  { label: 'INDUK', value: 'induk' },
+  { label: 'DAFTAR-I', value: 'daftar1' },
+  { label: 'DAFTAR-II', value: 'daftar2' },
+  { label: 'LAMPIRAN-I', value: 'lampiran1' }
+] as const
+
+export const sptLampiranTitle: Record<string, string> = {
+  a1: 'A-1 — Daftar Ekspor BKP Tidak Berwujud / JKP',
+  a2: 'A-2 — Daftar Pajak Keluaran',
+  b1: 'B-1 — Daftar Impor (PIB)',
+  b2: 'B-2 — Daftar Pajak Masukan Dalam Negeri',
+  b3: 'B-3 — Pajak Masukan Tidak Dapat Dikreditkan / Fasilitas',
+  c: 'C — Retur / Pembatalan',
+  daftar1: 'DAFTAR-I — PPh Disetor Sendiri',
+  daftar2: 'DAFTAR-II — Dokumen yang Dipersamakan dengan Bukti Potong',
+  lampiran1: 'LAMPIRAN-I — Daftar Bukti Potong'
+}
+
+/** Reference document titles per SPT type (D1: keep the English titles). */
+export const sptDocumentTitle = {
+  ppn: 'SURAT PEMBERITAHUAN MASA PAJAK PERTAMBAHAN NILAI (SPT MASA PPN)',
+  pph_unifikasi: 'SPT MASA PPH UNIFIKASI',
+  pph_21_26: 'SPT MASA PPH 21/26',
+  pph21_26: 'SPT MASA PPH 21/26'
+} satisfies Record<TaxReturnType, string>
 
 /** Masa berlaku billing simulasi (PENG-4/PJ/2025: 14×24 jam). Tanpa cron — murni label. */
 export const BILLING_EXPIRY_DAYS = 14
@@ -111,6 +162,7 @@ export function kanalLabel(kanal: string | null | undefined) {
   if (!kanal) return '—'
   return KANAL_LABELS[kanal] ?? kanal
 }
+/** Pasal section codes of the SPT PPh Unifikasi and PPh 21/26 Induk, in display order. */
 export const pasalSections = [
   'pasal_4_2',
   'pasal_15',

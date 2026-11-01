@@ -890,7 +890,8 @@ export type TaxReturnType = 'ppn' | 'pph_unifikasi' | 'pph_21_26' | 'pph21_26'
 export type TaxReturnKind = 'normal' | 'pembetulan'
 export type TaxReturnStatus = 'draft' | 'awaiting_payment' | 'reported'
 export type SignerCapacity = 'wajib_pajak' | 'kuasa_wajib_pajak'
-export type BillingStatus = 'unpaid' | 'paid'
+export type BillingStatus = 'unpaid' | 'paid' | 'cancelled'
+export type LbTreatment = 'kompensasi' | 'restitusi'
 
 export interface TaxReturnLineRead {
   id: number
@@ -941,6 +942,7 @@ export interface TaxReturnRead {
   kompensasi_lebih_bayar: number
   ppn_kurang_bayar: number
   ppn_lebih_bayar: number
+  lb_treatment: LbTreatment | null
   total_income_tax: number
   amount_due: number
 
@@ -975,6 +977,27 @@ export interface TaxReturnPernyataan {
   signer_npwp?: string | null
   signer_capacity: SignerCapacity
 }
+
+export interface TaxReturnSubmit {
+  passphrase: string
+  lb_treatment?: LbTreatment | null
+}
+
+export interface SptLampiranRow {
+  nama: string
+  identitas: string | null
+  nomor_dokumen: string | null
+  tanggal_dokumen: string | null
+  dpp: number
+  ppn: number
+  ppnbm: number
+  kjs: string | null
+  pph: number
+  source_type: string
+  source_id: number
+}
+
+export type SptLampiranListResponse = Paginated<SptLampiranRow>
 
 export interface BillingLineRead {
   id: number
