@@ -25,28 +25,6 @@ const classOptions = computed(() =>
   }))
 )
 
-/** Classmates of the chosen class (excluding self) for the buyer select (opsi A). */
-const classmates = ref<ClassDetail['students']>([])
-watch(() => formState.class_id, async (classId) => {
-  classmates.value = []
-  if (!classId) return
-  try {
-    const detail = await apiFetch<ClassDetail>(`/api/v1/classes/${classId}`)
-    const selfId = auth.user.value?.id
-    classmates.value = (detail.students ?? []).filter(student => student.id !== selfId)
-  } catch {
-    classmates.value = []
-  }
-}, { immediate: true })
-
-const buyerSiswaOptions = computed(() => [
-  { label: 'Bukan peserta kelas (isi manual)', value: undefined as number | undefined },
-  ...classmates.value.map(student => ({
-    label: `${student.full_name} (${student.username ?? student.email})`,
-    value: student.id
-  }))
-])
-
 const today = new Date().toISOString().slice(0, 10)
 
 const formState = reactive({
@@ -74,6 +52,29 @@ const formState = reactive({
   buyer_email: '',
   buyer_siswa_id: undefined as number | undefined
 })
+
+/** Classmates of the chosen class (excluding self) for the buyer select (opsi A).
+ * Declared after formState: the immediate watcher reads formState.class_id. */
+const classmates = ref<ClassDetail['students']>([])
+watch(() => formState.class_id, async (classId) => {
+  classmates.value = []
+  if (!classId) return
+  try {
+    const detail = await apiFetch<ClassDetail>(`/api/v1/classes/${classId}`)
+    const selfId = auth.user.value?.id
+    classmates.value = (detail.students ?? []).filter(student => student.id !== selfId)
+  } catch {
+    classmates.value = []
+  }
+}, { immediate: true })
+
+const buyerSiswaOptions = computed(() => [
+  { label: 'Bukan peserta kelas (isi manual)', value: undefined as number | undefined },
+  ...classmates.value.map(student => ({
+    label: `${student.full_name} (${student.username ?? student.email})`,
+    value: student.id
+  }))
+])
 
 const lines = ref<TaxInvoiceLineCreate[]>([])
 const selectedLines = ref(new Set<number>())
