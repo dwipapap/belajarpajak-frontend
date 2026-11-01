@@ -58,6 +58,9 @@ const selectedLines = ref(new Set<number>())
 const saving = ref(false)
 const submitIntent = ref<'draft' | 'issue'>('draft')
 const submitError = ref<string | null>(null)
+const signOpen = ref(false)
+const signing = ref(false)
+const pendingIssueId = ref<number | null>(null)
 
 const openSections = reactive({ document: true, buyer: true, detail: true })
 
@@ -231,31 +234,50 @@ async function onSubmit() {
         })
 
     if (submitIntent.value === 'issue') {
-      await apiFetch<TaxInvoiceRead>(`/api/v1/faktur-keluaran/${saved.id}/issue`, {
-        method: 'POST'
-      })
-      toast.add({
-        title: 'Faktur Pajak Keluaran diterbitkan',
-        description: 'Dokumen masuk ke tab Telah Terbit.',
-        color: 'success',
-        icon: 'i-lucide-send'
-      })
-    } else {
-      toast.add({
-        title: isEdit.value
-          ? 'Perubahan Faktur Pajak Keluaran tersimpan'
-          : 'Berhasil membuat Faktur Pajak Keluaran baru',
-        description: 'Dokumen masuk ke tab Belum Terbit.',
-        color: 'success',
-        icon: 'i-lucide-check-circle'
-      })
+      pendingIssueId.value = saved.id
+      signOpen.value = true
+      saving.value = false
+      return
     }
+    toast.add({
+      title: isEdit.value
+        ? 'Perubahan Faktur Pajak Keluaran tersimpan'
+        : 'Berhasil membuat Faktur Pajak Keluaran baru',
+      description: 'Dokumen masuk ke tab Belum Terbit.',
+      color: 'success',
+      icon: 'i-lucide-check-circle'
+    })
 
     await navigateTo('/siswa/e-faktur/keluaran')
   } catch (error) {
     submitError.value = apiErrorMessage(error, 'Gagal menyimpan Faktur Pajak Keluaran.')
   } finally {
     saving.value = false
+  }
+}
+
+async function confirmSign(payload: { signer_name?: string; kode_otorisasi: string }) {
+  if (pendingIssueId.value === null) return
+  signing.value = true
+  submitError.value = null
+  try {
+    await apiFetch<TaxInvoiceRead>(`/api/v1/faktur-keluaran/${pendingIssueId.value}/issue`, {
+      method: 'POST',
+      body: { signer_name: payload.signer_name, kode_otorisasi: payload.kode_otorisasi }
+    })
+    toast.add({
+      title: 'Faktur Pajak Keluaran diterbitkan',
+      description: 'Dokumen masuk ke tab Telah Terbit.',
+      color: 'success',
+      icon: 'i-lucide-send'
+    })
+    signOpen.value = false
+    pendingIssueId.value = null
+    await navigateTo('/siswa/e-faktur/keluaran')
+  } catch (error) {
+    submitError.value = apiErrorMessage(error, 'Gagal menerbitkan Faktur Pajak Keluaran.')
+  } finally {
+    signing.value = false
   }
 }
 </script>
@@ -590,5 +612,7 @@ async function onSubmit() {
       :transaction-code="formState.transaction_code"
       @save="saveLine"
     />
+
+    <DocumentSignModal v-model:open="signOpen" :loading="signing" @confirm="confirmSign" />
   </div>
 </template>

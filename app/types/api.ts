@@ -682,6 +682,8 @@ export interface TaxInvoiceRead {
   issued_at: string | null
   invalid_reason: string | null
   electronic_signature_status: string
+  signer_id: number | null
+  signer_name: string | null
 
   is_advance_payment: boolean
   is_settlement: boolean
@@ -729,6 +731,17 @@ export interface TaxInvoiceSummary {
   issued: number
   invalid: number
   total: number
+}
+
+export interface TaxInvoiceIssue {
+  signer_name?: string | null
+  kode_otorisasi: string
+}
+
+export interface TaxInvoiceBulkIssue {
+  ids: number[]
+  signer_name?: string | null
+  kode_otorisasi: string
 }
 
 export interface TaxInvoiceBulkIssueResult {
@@ -816,6 +829,7 @@ export interface TaxInputRead {
   tax_month: number
   tax_year: number
   reference: string | null
+
   seller_npwp: string | null
   seller_name: string | null
   seller_address: string | null
