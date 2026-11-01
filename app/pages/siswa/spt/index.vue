@@ -107,6 +107,16 @@ async function deleteDraft(row: TaxReturnRead) {
     toast.add({ title: 'Gagal menghapus', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
   }
 }
+
+async function batalSpt(row: TaxReturnRead) {
+  try {
+    await apiFetch(`/api/v1/spt/${row.id}/batal`, { method: 'POST' })
+    toast.add({ title: 'SPT dibatalkan ke konsep', color: 'success', icon: 'i-lucide-undo-2' })
+    await refreshAll()
+  } catch (error) {
+    toast.add({ title: 'Gagal membatalkan SPT', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+}
 </script>
 
 <template>
@@ -140,6 +150,7 @@ async function deleteDraft(row: TaxReturnRead) {
 
       <section class="bupot-main">
         <div class="bupot-main__header"><h1>SPT Masa</h1></div>
+        <p v-if="activeStatus === 'awaiting_payment'" class="mb-3 text-sm text-muted">Gunakan tombol BATAL untuk mengubah status SPT dari MENUNGGU PEMBAYARAN ke KONSEP.</p>
 
         <div class="faktur-toolbar">
           <UButton to="/siswa/spt/create" icon="i-lucide-plus" label="Buat Konsep SPT" class="bupot-primary-button" />
@@ -197,6 +208,16 @@ async function deleteDraft(row: TaxReturnRead) {
                   variant="soft"
                   label="Hapus"
                   @click="deleteDraft(row.original)"
+                />
+                <UButton
+                  v-if="row.original.status === 'awaiting_payment'"
+                  icon="i-lucide-undo-2"
+                  size="xs"
+                  color="neutral"
+                  variant="soft"
+                  label="Batal"
+                  title="Kembalikan SPT ke konsep"
+                  @click="batalSpt(row.original)"
                 />
               </div>
             </template>

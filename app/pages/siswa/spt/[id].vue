@@ -2,37 +2,20 @@
 import type {
   BillingRead,
   DepositRead,
+  LbTreatment,
   SignerCapacity,
   TaxReturnRead
 } from '~/types/api'
 import {
-  groupPphLines,
   isBillingExpired,
-  pasalLabel,
-  pasalSections,
+  signerCapacityLabel,
+  sptDocumentTitle,
   sptKindLabel,
+  sptPphTabs,
+  sptPpnTabs,
   sptStatusLabel,
   sptTypeLabel
 } from '~/utils/spt'
-
-/** Peta label manusiawi KJS — lokal untuk file ini (jangkan buat file utils baru). */
-const kjsHumanLabel: Record<string, string> = {
-  '411211-100': 'PPN Masa',
-  '411121-100': 'PPh 21 Setor Sendiri',
-  '411122-100': 'PPh 22',
-  '411124-100': 'PPh 23',
-  '411124-101': 'PPh 23 Dividen',
-  '411124-102': 'PPh 23 Bunga',
-  '411124-103': 'PPh 23 Royalti',
-  '411124-104': 'PPh 23 Jasa/Sewa',
-  '411127-110': 'PPh 26',
-  '411128-100': 'PPh Final 4(2)'
-}
-
-function humanKjsLabel(code: string) {
-  const human = kjsHumanLabel[code]
-  return human ? `${human} — ${code}` : `KJS:${code}`
-}
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -61,6 +44,46 @@ const { data: deposit, refresh: refreshDeposit } = useAsyncData(
 
 const busy = ref(false)
 const pdfBusy = ref(false)
+const activeTab = ref('induk')
+
+// --- Pernyataan inline (bagian C Induk) ---
+const signerName = ref('')
+const signerNpwp = ref('')
+const signerCapacity = ref<SignerCapacity>('wajib_pajak')
+const lbTreatment = ref<LbTreatment | undefined>(undefined)
+const agreed = ref(false)
+
+watch(spt, (value) => {
+  signerName.value = value?.signer_name ?? ''
+  signerNpwp.value = value?.signer_npwp ?? ''
+  signerCapacity.value = value?.signer_capacity ?? 'wajib_pajak'
+  lbTreatment.value = value?.lb_treatment ?? undefined
+  if (value?.signer_name) agreed.value = true
+}, { immediate: true })
+
+// --- Bayar dan Lapor ---
+const signOpen = ref(false)
+const signing = ref(false)
+const metodeBayar = ref<'deposit' | 'billing'>('billing')
+
+const isPpn = computed(() => spt.value?.return_type === 'ppn')
+const isDraft = computed(() => spt.value?.status === 'draft')
+const isAwaiting = computed(() => spt.value?.status === 'awaiting_payment')
+const isReported = computed(() => spt.value?.status === 'reported')
+const tabs = computed(() => (isPpn.value ? sptPpnTabs : sptPphTabs))
+
+function validatePernyataan() {
+  const errors: { name: string, message: string }[] = []
+  if (!agreed.value) errors.push({ name: 'agreed', message: 'Centang pernyataan kebenaran SPT' })
+  if (!signerName.value) errors.push({ name: 'signer_name', message: 'Nama penanda tangan wajib diisi' })
+  if (signerCapacity.value === 'kuasa_wajib_pajak' && !signerNpwp.value) {
+    errors.push({ name: 'signer_npwp', message: 'Kuasa wajib pajak wajib mencantumkan NPWP' })
+  }
+  if (isPpn.value && (spt.value?.ppn_lebih_bayar ?? 0) > 0 && !lbTreatment.value) {
+    errors.push({ name: 'lb_treatment', message: 'Pilih perlakuan lebih bayar' })
+  }
+  return errors
+}
 
 async function downloadBillingPdf() {
   if (!billing.value) return
@@ -82,59 +105,21 @@ async function downloadBillingPdf() {
   }
 }
 
-// --- Pernyataan ---
-const pernyataanOpen = ref(false)
-const signerName = ref('')
-const signerNpwp = ref('')
-const signerCapacity = ref<SignerCapacity>('wajib_pajak')
-
-const submitOpen = ref(false)
-const passphrase = ref('')
-const metodeBayar = ref<'deposit' | 'billing'>('billing')
-
-function openPernyataan() {
-  // Prefill from whatever is already stored on the return.
-  signerName.value = spt.value?.signer_name ?? ''
-  signerNpwp.value = spt.value?.signer_npwp ?? ''
-  signerCapacity.value = spt.value?.signer_capacity ?? 'wajib_pajak'
-  pernyataanOpen.value = true
-}
-
-function openSubmit() {
-  metodeBayar.value = 'billing'
-  refreshDeposit()
-  submitOpen.value = true
-}
-
-const isPpn = computed(() => spt.value?.return_type === 'ppn')
-const isDraft = computed(() => spt.value?.status === 'draft')
-const isAwaiting = computed(() => spt.value?.status === 'awaiting_payment')
-const isReported = computed(() => spt.value?.status === 'reported')
-
-const ppnKeluaranLines = computed(() =>
-  (spt.value?.lines ?? []).filter(line => line.section.startsWith('I_')))
-const ppnMasukanLines = computed(() =>
-  (spt.value?.lines ?? []).filter(line => line.section.startsWith('II_')))
-const pphGroups = computed(() => groupPphLines(spt.value?.lines ?? []))
-
-function validatePernyataan() {
-  const errors: { name: string, message: string }[] = []
-  if (!signerName.value) errors.push({ name: 'signer_name', message: 'Nama penanda tangan wajib diisi' })
-  if (signerCapacity.value === 'kuasa_wajib_pajak' && !signerNpwp.value) {
-    errors.push({ name: 'signer_npwp', message: 'Kuasa wajib pajak wajib mencantumkan NPWP' })
+async function posting() {
+  busy.value = true
+  try {
+    await apiFetch(`/api/v1/spt/${sptId.value}/posting`, { method: 'POST' })
+    toast.add({ title: 'Posting SPT berhasil', description: 'Data faktur dan bukti potong sudah terkumpul.', color: 'success', icon: 'i-lucide-check-circle' })
+    await refreshSpt()
+  } catch (error) {
+    toast.add({ title: 'Gagal posting SPT', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  } finally {
+    busy.value = false
   }
-  return errors
 }
 
-function closePernyataan() {
-  pernyataanOpen.value = false
-}
-
-function closeSubmit() {
-  submitOpen.value = false
-}
-
-async function savePernyataan() {
+/** Simpan Konsep: menyimpan pernyataan (bagian C Induk) sebagai draf. */
+async function saveKonsep() {
   const errors = validatePernyataan()
   const first = errors.at(0)
   if (first) {
@@ -151,34 +136,32 @@ async function savePernyataan() {
         signer_capacity: signerCapacity.value
       }
     })
-    toast.add({ title: 'Pernyataan disimpan', color: 'success', icon: 'i-lucide-check-circle' })
-    pernyataanOpen.value = false
+    toast.add({ title: 'Konsep disimpan', description: 'Pernyataan penanda tangan tersimpan sebagai konsep.', color: 'success', icon: 'i-lucide-check-circle' })
     await refreshSpt()
   } catch (error) {
-    toast.add({ title: 'Gagal menyimpan pernyataan', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+    toast.add({ title: 'Gagal menyimpan konsep', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
   } finally {
     busy.value = false
   }
 }
 
-async function posting() {
-  busy.value = true
-  try {
-    await apiFetch(`/api/v1/spt/${sptId.value}/posting`, { method: 'POST' })
-    toast.add({ title: 'Posting SPT berhasil', description: 'Data faktur dan bukti potong sudah terkumpul.', color: 'success', icon: 'i-lucide-check-circle' })
-    await refreshSpt()
-  } catch (error) {
-    toast.add({ title: 'Gagal posting SPT', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
-  } finally {
-    busy.value = false
-  }
-}
-
-async function submitSpt() {
-  if (!passphrase.value) {
-    toast.add({ title: 'Masukkan passphrase', color: 'error', icon: 'i-lucide-circle-alert' })
+function requestSubmit() {
+  if (!spt.value?.signer_name) {
+    toast.add({ title: 'Simpan Konsep dulu', description: 'Isi bagian C. Pernyataan lalu tekan Simpan Konsep sebelum Bayar dan Lapor.', color: 'warning', icon: 'i-lucide-circle-alert' })
+    activeTab.value = 'induk'
     return
   }
+  if (isPpn.value && (spt.value?.ppn_lebih_bayar ?? 0) > 0 && !spt.value?.lb_treatment && !lbTreatment.value) {
+    toast.add({ title: 'Pilih perlakuan lebih bayar', description: 'Buka tab INDUK bagian III, lalu tekan Simpan Konsep.', color: 'warning', icon: 'i-lucide-circle-alert' })
+    activeTab.value = 'induk'
+    return
+  }
+  metodeBayar.value = 'billing'
+  refreshDeposit()
+  signOpen.value = true
+}
+
+async function confirmSign(payload: { signer_name?: string, kode_otorisasi: string }) {
   if (metodeBayar.value === 'deposit' && (spt.value?.amount_due ?? 0) > (deposit.value?.saldo ?? 0)) {
     toast.add({
       title: 'Saldo deposit tidak cukup',
@@ -188,11 +171,15 @@ async function submitSpt() {
     })
     return
   }
-  busy.value = true
+  signing.value = true
   try {
+    const body: Record<string, string | null> = { passphrase: payload.kode_otorisasi }
+    if (isPpn.value && (lbTreatment.value || spt.value?.lb_treatment)) {
+      body.lb_treatment = lbTreatment.value ?? spt.value?.lb_treatment ?? null
+    }
     const result = await apiFetch<TaxReturnRead>(`/api/v1/spt/${sptId.value}/submit?metode=${metodeBayar.value}`, {
       method: 'POST',
-      body: { passphrase: passphrase.value }
+      body
     })
     if (result.status === 'awaiting_payment') {
       toast.add({
@@ -209,8 +196,7 @@ async function submitSpt() {
         icon: 'i-lucide-check-circle'
       })
     }
-    submitOpen.value = false
-    passphrase.value = ''
+    signOpen.value = false
     await Promise.all([refreshSpt(), refreshBilling(), refreshDeposit()])
   } catch (error) {
     const msg = apiErrorMessage(error)
@@ -219,6 +205,19 @@ async function submitSpt() {
     } else {
       toast.add({ title: 'Gagal bayar dan lapor', description: msg, color: 'error', icon: 'i-lucide-circle-alert' })
     }
+  } finally {
+    signing.value = false
+  }
+}
+
+async function batalSpt() {
+  busy.value = true
+  try {
+    await apiFetch(`/api/v1/spt/${sptId.value}/batal`, { method: 'POST' })
+    toast.add({ title: 'SPT dibatalkan ke konsep', description: 'Gunakan tombol Posting SPT untuk menghitung ulang bila ada dokumen berubah.', color: 'success', icon: 'i-lucide-undo-2' })
+    await Promise.all([refreshSpt(), refreshBilling()])
+  } catch (error) {
+    toast.add({ title: 'Gagal membatalkan SPT', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
   } finally {
     busy.value = false
   }
@@ -240,23 +239,6 @@ async function pembetulan() {
 function money(value: number) {
   return formatCurrency(value)
 }
-
-function headerLabel(section: string) {
-  switch (section) {
-    case 'I_A1': return 'A.1 Ekspor BKP/BKP Tidak Berwujud/JKP'
-    case 'I_A2': return 'A.2 Penyerahan dengan DPP Nilai Lain (FP Kode 04 dan 05)'
-    case 'I_A3': return 'A.3 Penyerahan kepada Turis (FP Kode 06)'
-    case 'I_A4': return 'A.4 Penyerahan lainnya (FP Kode 01)'
-    case 'I_A6': return 'A.6 Dipungut oleh Pemungut PPN (FP Kode 02 dan 03)'
-    case 'I_A7': return 'A.7 Fasilitas Tidak Dipungut (FP Kode 07)'
-    case 'I_A8': return 'A.8 Fasilitas Dibebaskan (FP Kode 08)'
-    case 'II_B': return 'B. Perolehan dengan DPP Nilai Lain (FP Kode 04 dan 05)'
-    case 'II_C': return 'C. Perolehan lainnya (FP Kode 01, 09 dan 10)'
-    case 'II_D': return 'D. Perolehan sebagai Pemungut PPN (FP Kode 02 dan 03)'
-    case 'II_E': return 'E. Kompensasi kelebihan Pajak Masukan'
-    default: return section
-  }
-}
 </script>
 
 <template>
@@ -273,13 +255,14 @@ function headerLabel(section: string) {
       <!-- Header card -->
       <div class="spt-detail__header">
         <div>
-          <h1>{{ sptTypeLabel[spt.return_type] }} — Masa {{ monthLabels[spt.tax_month] }} {{ spt.tax_year }}</h1>
+          <h1>{{ sptDocumentTitle[spt.return_type] }}</h1>
           <p class="spt-detail__meta">
+            <span>{{ sptTypeLabel[spt.return_type] }} — Masa {{ monthLabels[spt.tax_month] }} {{ spt.tax_year }}</span>
             <UBadge color="neutral" variant="subtle">{{ sptKindLabel[spt.kind] }}{{ spt.correction_no > 0 ? ` ${spt.correction_no}` : '' }}</UBadge>
             <UBadge variant="subtle" :color="spt.status === 'reported' ? 'success' : spt.status === 'awaiting_payment' ? 'info' : 'warning'">
               {{ sptStatusLabel[spt.status] }}
             </UBadge>
-            <span v-if="spt.signer_name">Penanda tangan: {{ spt.signer_name }}</span>
+            <span v-if="spt.signer_name">Penanda tangan: {{ spt.signer_name }} ({{ signerCapacityLabel[spt.signer_capacity] }})</span>
           </p>
           <!-- Indikator urutan: 1 Posting → 2 Pernyataan → 3 Bayar dan Lapor -->
           <ol class="spt-detail__steps" aria-label="Tahapan pelaporan SPT">
@@ -290,7 +273,7 @@ function headerLabel(section: string) {
         </div>
         <div class="flex gap-2">
           <UButton
-            v-if="isDraft"
+            v-if="isDraft && activeTab === 'induk'"
             icon="i-lucide-upload-cloud"
             label="Posting SPT"
             class="bupot-primary-button"
@@ -298,24 +281,15 @@ function headerLabel(section: string) {
             @click="posting"
           />
           <UButton
-            v-if="isDraft"
-            icon="i-lucide-file-signature"
-            label="Pernyataan"
+            v-if="isAwaiting"
+            icon="i-lucide-undo-2"
+            label="Batal"
             color="neutral"
             variant="soft"
-            title="Isi pernyataan setelah posting agar tombol Bayar dan Lapor aktif"
-            @click="openPernyataan"
+            title="Kembalikan SPT ke konsep"
+            :loading="busy"
+            @click="batalSpt"
           />
-          <UTooltip text="Lakukan posting dulu, lalu isi pernyataan">
-            <UButton
-              v-if="isDraft"
-              icon="i-lucide-send"
-              label="Bayar dan Lapor"
-              color="success"
-              :disabled="!spt.signer_name"
-              @click="openSubmit"
-            />
-          </UTooltip>
           <UButton
             v-if="isReported"
             icon="i-lucide-pen-line"
@@ -333,152 +307,78 @@ function headerLabel(section: string) {
         <div>
           <strong>Kode Billing: {{ billing.code }}</strong>
           <span>{{ billing.kap_kjs }} · Masa {{ formatMasaPajak(billing.masa_pajak) }}</span>
+          <span v-if="isAwaiting" class="text-xs">Gunakan tombol BATAL untuk mengubah status SPT dari MENUNGGU PEMBAYARAN ke KONSEP.</span>
         </div>
         <div class="spt-detail__billing-amount">
           <strong>Rp {{ money(billing.amount) }}</strong>
           <UBadge v-if="billing.status === 'paid'" color="success" variant="subtle">Sudah Dibayar</UBadge>
-          <UBadge v-else-if="isBillingExpired(billing.created_at, billing.status)" color="error" variant="subtle" title="Masa berlaku simulasi 14 hari habis — buat kode billing baru dari menu Pembayaran bila masih kurang bayar">Kedaluwarsa — buat billing baru</UBadge>
+          <UBadge v-else-if="billing.status === 'cancelled'" color="neutral" variant="subtle">Dibatalkan</UBadge>
+          <UBadge v-else-if="isBillingExpired(billing.created_at, billing.status)" color="error" variant="soft" title="Masa berlaku simulasi 14 hari habis — buat kode billing baru dari menu Pembayaran bila masih kurang bayar">Kedaluwarsa — buat billing baru</UBadge>
           <UBadge v-else color="warning" variant="subtle">Belum Dibayar — Menunggu Pembayaran</UBadge>
           <UButton v-if="billing.status === 'unpaid'" to="/siswa/pembayaran" icon="i-lucide-badge-dollar-sign" size="xs" label="Bayar di menu Pembayaran" />
           <UButton icon="i-lucide-file-down" size="xs" color="neutral" variant="soft" label="Unduh PDF" :loading="pdfBusy" @click="downloadBillingPdf" />
         </div>
       </div>
 
-      <!-- PPN form -->
-      <template v-if="isPpn">
-        <section class="spt-detail__section">
-          <h2>I. Penyerahan Barang dan Jasa</h2>
-          <table class="spt-table">
-            <thead>
-              <tr>
-                <th class="w-1/2">Uraian</th>
-                <th>Harga Jual/DPP (Rp)</th>
-                <th>DPP Nilai Lain (Rp)</th>
-                <th>PPN (Rp)</th>
-                <th>PPnBM (Rp)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="line in ppnKeluaranLines" :key="line.id">
-                <td>{{ headerLabel(line.section) }} — FP Kode {{ line.code }}</td>
-                <td>{{ money(line.dpp) }}</td>
-                <td>{{ money(line.dpp_nilai_lain) }}</td>
-                <td>{{ money(line.ppn) }}</td>
-                <td>{{ money(line.ppnbm) }}</td>
-              </tr>
-              <tr v-if="!ppnKeluaranLines.length">
-                <td colspan="5" class="text-center text-sm text-muted">Belum ada data penyerahan.</td>
-              </tr>
-            </tbody>
-            <tfoot v-if="ppnKeluaranLines.length">
-              <tr>
-                <td><strong>Jumlah</strong></td>
-                <td><strong>{{ money(spt.penyerahan_dpp) }}</strong></td>
-                <td><strong>{{ money(spt.penyerahan_dpp_nilai_lain) }}</strong></td>
-                <td><strong>{{ money(spt.penyerahan_ppn) }}</strong></td>
-                <td><strong>{{ money(spt.penyerahan_ppnbm) }}</strong></td>
-              </tr>
-            </tfoot>
-          </table>
-        </section>
+      <!-- Tabs -->
+      <nav class="spt-tabs" aria-label="Tab SPT">
+        <button
+          v-for="tab in tabs"
+          :key="tab.value"
+          type="button"
+          :class="{ active: activeTab === tab.value }"
+          @click="activeTab = tab.value"
+        >
+          {{ tab.label }}
+        </button>
+      </nav>
 
-        <section class="spt-detail__section">
-          <h2>II. Pajak Masukan</h2>
-          <table class="spt-table">
-            <thead>
-              <tr>
-                <th class="w-1/2">Uraian</th>
-                <th>Harga Perolehan/DPP (Rp)</th>
-                <th>DPP Nilai Lain (Rp)</th>
-                <th>PPN (Rp)</th>
-                <th>PPnBM (Rp)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="line in ppnMasukanLines" :key="line.id">
-                <td>{{ headerLabel(line.section) }}<template v-if="line.code !== '-'"> — FP Kode {{ line.code }}</template></td>
-                <td>{{ money(line.dpp) }}</td>
-                <td>{{ money(line.dpp_nilai_lain) }}</td>
-                <td>{{ money(line.ppn) }}</td>
-                <td>{{ money(line.ppnbm) }}</td>
-              </tr>
-              <tr v-if="!ppnMasukanLines.length">
-                <td colspan="5" class="text-center text-sm text-muted">Belum ada pajak masukan yang dikreditkan.</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td><strong>Jumlah Pajak Masukan (G)</strong></td>
-                <td><strong>{{ money(spt.masukan_dpp) }}</strong></td>
-                <td><strong>{{ money(spt.masukan_dpp_nilai_lain) }}</strong></td>
-                <td colspan="2"><strong>{{ money(spt.masukan_ppn + spt.kompensasi_lebih_bayar) }}</strong></td>
-              </tr>
-            </tfoot>
-          </table>
-        </section>
-
-        <section class="spt-detail__section">
-          <h2>III. Penghitungan PPN Kurang Bayar / Lebih Bayar</h2>
-          <dl class="spt-detail__figures">
-            <div><dt>PPN Keluaran</dt><dd>Rp {{ money(spt.penyerahan_ppn) }}</dd></div>
-            <div><dt>PPN Masukan yang Diperhitungkan</dt><dd>Rp {{ money(spt.masukan_ppn) }}</dd></div>
-            <div><dt>Kompensasi Kelebihan Pajak Masukan</dt><dd>Rp {{ money(spt.kompensasi_lebih_bayar) }}</dd></div>
-            <div class="spt-detail__figures--highlight">
-              <dt>PPN Kurang Bayar</dt><dd>Rp {{ money(spt.ppn_kurang_bayar) }}</dd>
-            </div>
-            <div class="spt-detail__figures--highlight">
-              <dt>PPN Lebih Bayar</dt><dd>Rp {{ money(spt.ppn_lebih_bayar) }}</dd>
-            </div>
-          </dl>
-        </section>
+      <!-- Tab content -->
+      <template v-if="activeTab === 'induk'">
+        <SptIndukPpn
+          v-if="isPpn"
+          :spt="spt"
+          v-model:signer-name="signerName"
+          v-model:signer-npwp="signerNpwp"
+          v-model:signer-capacity="signerCapacity"
+          v-model:lb-treatment="lbTreatment"
+          v-model:agreed="agreed"
+        />
+        <SptIndukPph
+          v-else
+          :spt="spt"
+          v-model:signer-name="signerName"
+          v-model:signer-npwp="signerNpwp"
+          v-model:signer-capacity="signerCapacity"
+          v-model:agreed="agreed"
+        />
       </template>
+      <SptLampiranTable v-else :key="`${spt.id}-${activeTab}`" :spt-id="spt.id" :kode="activeTab" />
 
-      <!-- PPh Unifikasi Induk -->
-      <template v-else>
-        <section class="spt-detail__section">
-          <h2>B. Pajak Penghasilan</h2>
-          <table class="spt-table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th class="w-1/3">Detil</th>
-                <th>Setor Sendiri</th>
-                <th>Pemotongan / Pemungutan</th>
-                <th>PPh Ditanggung Pemerintah</th>
-                <th>Jumlah PPh Dibayar</th>
-                <th>PPh Kurang/Lebih Bayar Karena Pembetulan</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="(pasal, index) in pasalSections" :key="pasal">
-                <tr class="spt-table__pasal">
-                  <td>{{ index + 1 }}</td>
-                  <td colspan="6"><strong>{{ pasalLabel[pasal] }}</strong></td>
-                </tr>
-                <tr v-for="line in pphGroups.get(pasal) ?? []" :key="line.id">
-                  <td />
-                  <td>{{ humanKjsLabel(line.code) }}</td>
-                  <td>{{ money(line.setor_sendiri) }}</td>
-                  <td>{{ money(line.pemotongan) }}</td>
-                  <td>{{ money(line.ditanggung_pemerintah) }}</td>
-                  <td>{{ money(line.setor_sendiri + line.pemotongan + line.ditanggung_pemerintah) }}</td>
-                  <td>{{ money(line.dibayar_dari_spt_dibetulkan) }}</td>
-                </tr>
-                <tr v-if="!(pphGroups.get(pasal) ?? []).length">
-                  <td />
-                  <td colspan="6" class="text-center text-sm text-muted">Belum ada bukti potong.</td>
-                </tr>
-              </template>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="5"><strong>Jumlah PPh (Induk)</strong></td>
-                <td colspan="2"><strong>{{ money(spt.total_income_tax) }}</strong></td>
-              </tr>
-            </tfoot>
-          </table>
-        </section>
-      </template>
+      <!-- Footer setiap tab -->
+      <div v-if="isDraft" class="spt-detail__footer">
+        <URadioGroup
+          v-model="metodeBayar"
+          :items="[
+            { label: `Buat billing (kode billing dilunasi di menu Pembayaran)`, value: 'billing' },
+            { label: `Pakai deposit (saldo Rp ${money(deposit?.saldo ?? 0)})`, value: 'deposit' }
+          ]"
+          orientation="horizontal"
+        />
+        <div class="flex gap-2">
+          <UButton icon="i-lucide-save" label="Simpan Konsep" color="neutral" variant="soft" :loading="busy" @click="saveKonsep" />
+          <UTooltip text="Lakukan posting dulu, lalu simpan konsep pernyataan">
+            <UButton
+              icon="i-lucide-send"
+              label="Bayar dan Lapor"
+              color="success"
+              :disabled="!spt.signer_name"
+              @click="requestSubmit"
+            />
+          </UTooltip>
+        </div>
+      </div>
+      <p v-if="isAwaiting" class="text-sm text-muted">Gunakan tombol BATAL untuk mengubah status SPT dari MENUNGGU PEMBAYARAN ke KONSEP.</p>
 
       <!-- Guru review -->
       <div v-if="spt.score !== null" class="spt-detail__review">
@@ -489,69 +389,7 @@ function headerLabel(section: string) {
 
     <div v-else-if="sptStatus === 'pending'" class="py-16 text-center text-sm text-muted">Memuat...</div>
 
-    <!-- Pernyataan modal -->
-    <UModal v-model:open="pernyataanOpen" title="Pernyataan SPT">
-      <template #body>
-        <div class="flex flex-col gap-3">
-          <UFormField label="Nama Penanda Tangan" required>
-            <UInput v-model="signerName" placeholder="Nama lengkap" class="w-full" />
-          </UFormField>
-          <UFormField label="Kapasitas">
-            <USelect v-model="signerCapacity" :items="signerCapacityOptions" class="w-full" />
-          </UFormField>
-          <UFormField
-            label="NPWP Kuasa Wajib Pajak"
-            :hint="signerCapacity === 'kuasa_wajib_pajak' ? 'Wajib diisi untuk kuasa wajib pajak' : 'Opsional'"
-          >
-            <UInput v-model="signerNpwp" placeholder="Nomor NPWP" class="w-full" :disabled="signerCapacity === 'wajib_pajak'" />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton label="Batal" color="neutral" variant="ghost" @click="closePernyataan" />
-          <UButton label="Simpan" :loading="busy" @click="savePernyataan" />
-        </div>
-      </template>
-    </UModal>
-
-    <!-- Submit modal -->
-    <UModal v-model:open="submitOpen" title="Bayar dan Lapor">
-      <template #body>
-        <div class="flex flex-col gap-3">
-          <p class="text-sm">
-            Lapor SPT dengan tanda tangan elektronik. Masukkan passphrase akun Anda sebagai verifikasi.
-          </p>
-          <UFormField label="Passphrase" required>
-            <UInput v-model="passphrase" type="password" placeholder="Passphrase" class="w-full" />
-          </UFormField>
-          <UFormField label="Metode Pembayaran" required>
-            <URadioGroup
-              v-model="metodeBayar"
-              :items="[
-                { label: `Buat billing (kode billing dilunasi di menu Pembayaran)`, value: 'billing' },
-                { label: `Pakai deposit (saldo Rp ${money(deposit?.saldo ?? 0)})`, value: 'deposit' }
-              ]"
-            />
-          </UFormField>
-          <p v-if="metodeBayar === 'deposit' && spt && spt.amount_due > (deposit?.saldo ?? 0)" class="text-sm text-error">
-            Saldo deposit tidak cukup untuk kurang bayar Rp {{ money(spt.amount_due) }}. Top-up via Billing Mandiri KAP 411618 lalu sinkronkan di menu Deposit.
-          </p>
-          <p v-if="spt && spt.amount_due > 0" class="text-sm text-warning">
-            SPT ini memiliki kurang bayar Rp {{ money(spt.amount_due) }} — kode billing akan diterbitkan.
-          </p>
-          <p v-else class="text-sm text-success">
-            Tidak ada kurang bayar — SPT langsung dilaporkan setelah verifikasi.
-          </p>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton label="Batal" color="neutral" variant="ghost" @click="closeSubmit" />
-          <UButton label="Bayar dan Lapor" color="success" :loading="busy" @click="submitSpt" />
-        </div>
-      </template>
-    </UModal>
+    <DocumentSignModal v-model:open="signOpen" :loading="signing" @confirm="confirmSign" />
   </div>
 </template>
 
@@ -581,6 +419,7 @@ function headerLabel(section: string) {
 
 .spt-detail__meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
   margin-top: 0.4rem;
@@ -655,6 +494,28 @@ function headerLabel(section: string) {
   gap: 0.7rem;
 }
 
+.spt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.spt-tabs button {
+  border: 1px solid oklch(0.9 0.013 255);
+  border-radius: 0.45rem;
+  background: oklch(0.99 0.004 250);
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: oklch(0.45 0.045 260);
+}
+
+.spt-tabs button.active {
+  border-color: oklch(0.55 0.15 250);
+  background: oklch(0.55 0.15 250);
+  color: #fff;
+}
+
 .spt-detail__section {
   border: 1px solid oklch(0.9 0.013 255);
   border-radius: 0.55rem;
@@ -692,6 +553,18 @@ function headerLabel(section: string) {
 
 .spt-detail__figures--highlight dd {
   color: oklch(0.42 0.12 60);
+}
+
+.spt-detail__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid oklch(0.9 0.013 255);
+  border-radius: 0.55rem;
+  background: oklch(0.99 0.004 250);
+  padding: 0.9rem 1.3rem;
 }
 
 .spt-detail__review {
