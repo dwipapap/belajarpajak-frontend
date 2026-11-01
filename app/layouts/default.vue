@@ -50,12 +50,27 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
   }
 
   return [
-  {
-    label: 'Portal Saya',
-    icon: 'i-lucide-shield-user',
-    to: homePath.value,
-    active: route.path === homePath.value
-  },
+  ...(auth.user.value?.role === 'siswa'
+    ? [
+        {
+          label: 'Portal Saya',
+          icon: 'i-lucide-shield-user',
+          active: route.path === homePath.value || route.path.includes('/dokumen-saya'),
+          children: [
+            { label: 'Dasbor', icon: 'i-lucide-layout-dashboard', to: homePath.value, active: route.path === homePath.value },
+            { label: 'Dokumen Saya', icon: 'i-lucide-folder-open', to: '/siswa/dokumen-saya', active: route.path.includes('/dokumen-saya') },
+            { label: 'Profil Saya', icon: 'i-lucide-id-card', disabled: true, badge: 'Segera hadir' }
+          ]
+        }
+      ]
+    : [
+        {
+          label: 'Portal Saya',
+          icon: 'i-lucide-shield-user',
+          to: homePath.value,
+          active: route.path === homePath.value
+        }
+      ]),
   ...(auth.user.value?.role === 'admin'
     ? [
         {

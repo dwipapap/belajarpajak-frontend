@@ -928,6 +928,9 @@ export interface TaxReturnRead {
   submitted_at: string | null
   submitted_by_id: number | null
 
+  bpe_number: string | null
+  received_at: string | null
+
   penyerahan_dpp: number
   penyerahan_dpp_nilai_lain: number
   penyerahan_ppn: number
@@ -1005,6 +1008,22 @@ export interface BillingRead {
 }
 
 export type BillingChannel = 'teller' | 'atm' | 'mbanking' | 'ibanking' | 'pos'
+
+export type DokumenSayaJenis = 'bpe_spt' | 'bukti_potong' | 'kode_billing'
+
+export interface DokumenSayaRow {
+  jenis: DokumenSayaJenis
+  nomor: string
+  tanggal: string | null
+  uraian: string
+  masa: string
+  download_path: string
+}
+
+export interface DokumenSayaListResponse {
+  items: DokumenSayaRow[]
+  total: number
+}
 
 export interface BillingPay {
   kanal?: BillingChannel | null
