@@ -5,7 +5,9 @@ Strategic/design context lives in [PRODUCT.md](PRODUCT.md) and [DESIGN.md](DESIG
 
 ## 1. What this project is
 
-**PajakSim** (display name: **"Sistem Pembelajaran Pajak Online"**, operated by *Konsultan Bisnis Sudarno*) is a multi-tenant **tax administration learning simulator** for Indonesian schools (SMK), universities, and training institutions. Students (siswa) practice creating simulated tax documents — e-Bupot BP21/BP23/BP26/BPPU/BPNR/SP/CY, Bukti Potong Saya, e-Faktur Keluaran/Masukan, SPT Masa PPN + PPh Unifikasi + PPh 21/26, kode billing/pembayaran — with dummy data. Teachers (guru) monitor and grade. Admins manage users and classes per institution (tenant).
+**PajakSim** (display name: **"Sistem Pembelajaran Pajak Online"**, operated by *Konsultan Bisnis Sudarno*) is a multi-tenant **tax administration learning simulator** for Indonesian schools (SMK), universities, and training institutions. Students (siswa) practice creating simulated tax documents with dummy data: e-Bupot BP21/BP23/BP26/BPPU/BPNR/SP/CY, BPMP (Bulanan Pegawai Tetap) → BP A1/A2, Bukti Potong Saya, e-Faktur Keluaran/Masukan, SPT Masa PPN + PPh Unifikasi + PPh 21/26, and Pembayaran (kode billing with NTPN/kanal, Layanan Mandiri, Deposit Pajak, Pemindahbukuan, Tagihan SKP/STP, Angsuran). Teachers (guru) monitor, grade, and decide Pbk/Tagihan. Admins manage users and classes per institution (tenant). The superadmin manages institutions (period, quotas, first admin) and tax tariffs.
+
+Roadmap and fidelity gaps vs the reference portal: `../docs/AUDIT_FIDELITAS_ALUR.md` and `../plans/README.md` (workspace root, outside this repo).
 
 ### The key design idea
 
@@ -26,19 +28,19 @@ Generic tax terms that also exist in the real system (BP21, BP23, BP26, BPPU, BP
 
 - **Nuxt 4** (`app/` directory convention) + **Nuxt UI 4** + Tailwind CSS 4, TypeScript.
 - **SPA mode** (`ssr: false` in `nuxt.config.ts`): auth is fully client-side, nothing useful to render on the server. Do not re-enable SSR casually — `localStorage` access and in-memory tokens assume client.
-- Backend is a **separate sibling repository**: `../pajak-simulator-backend` (FastAPI + PostgreSQL). This repo never talks to the database; everything goes through the REST API.
+- Backend is a **separate sibling repository**: `../backend` in the workspace (GitHub `belajarpajak-backend`; older docs call it `pajak-simulator-backend`), FastAPI + PostgreSQL. This repo never talks to the database; everything goes through the REST API.
 - Icons: Lucide via `@iconify-json/lucide` (`i-lucide-*`).
 
-## 3. Commands (Windows / PowerShell)
+## 3. Commands (Linux/macOS bash or Windows PowerShell — same npm scripts)
 
-```powershell
+```bash
 npm install               # deps (postinstall runs `nuxt prepare`)
 npm run dev               # dev server on http://localhost:3000
 npm run typecheck         # vue-tsc — run before finishing any task
 npm run build             # production build
 ```
 
-- Backend must run on port 8000 first (see backend repo README). Repo-root `../dev.ps1` starts both.
+- Backend must run on port 8000 first (see `../backend/README.md`). There is no combined launcher script in the workspace; start the backend, then `npm run dev`.
 - Config: only one env var, `NUXT_PUBLIC_API_BASE` (default `http://localhost:8000`), read via `useRuntimeConfig().public.apiBase`. Never hardcode the API origin.
 - There is no test runner or linter configured in this repo yet; `npm run typecheck` is the quality gate.
 - Seed logins (password `Password123!`): `super@pajaksim.local`, `admin@smkn1-pku.local`, `guru1@smkn1-pku.local`, `siswa1@smkn1-pku.local`.
@@ -55,7 +57,8 @@ app/
 │   ├── FakturKeluaranForm.vue  # Siswa e-Faktur Keluaran create/edit form
 │   ├── FakturMasukanForm.vue   # Siswa e-Faktur Masukan create/edit form
 │   ├── FakturTransactionModal.vue # Line-item editor shared by faktur forms
-│   ├── AdminInstanceManager.vue # Superadmin tenant/instance manager
+│   ├── A1A2List.vue / A1A2Detail.vue # Shared read-only BP A1/A2 views (siswa + guru)
+│   ├── AdminInstanceManager.vue # Superadmin tenant manager: dossier (quota, countdown, admin reset, history) + period calendar
 │   └── AdminBulkCreateUsers.vue # Admin bulk user creation
 ├── composables/
 │   ├── useAuth.ts              # login/refresh/logout, token state, roleHome() helper
@@ -68,13 +71,18 @@ app/
 │   ├── login.vue               # layout:false, full custom login screen
 │   ├── index.vue               # Redirects to roleHome()
 │   ├── ganti-password.vue      # Change-password for all roles
-│   ├── admin/index.vue         # Admin dashboard: stats, users table, create-user form
+│   ├── admin/index.vue         # Admin dashboard (users, bulk create); superadmin dashboard (AdminInstanceManager)
+│   ├── admin/kelas.vue         # Admin Kelola Kelas: create, enroll, archive
 │   ├── admin/tarif-pajak.vue   # Superadmin-only PTKP + progresif management
 │   ├── admin/audit.vue         # Admin/superadmin audit-log viewer
-│   ├── guru/index.vue          # Guru dashboard; guru/bp21|bp23|bp26|bppu|bpnr|sp|cy|e-faktur|spt use DocumentGuruMonitor
+│   ├── guru/index.vue          # Guru dashboard: Perlu dinilai + Perlu Perhatian (Pbk/tagihan/angsuran/deposit)
+│   ├── guru/bp21|bp23|bp26|bppu|bpnr|sp|cy|bpmp/ # DocumentGuruMonitor thin pages
+│   ├── guru/a1|a2/             # Read-only A1/A2 per identity
 │   ├── guru/e-faktur/          # Guru e-Faktur monitor (index + keluaran + masukan)
 │   ├── guru/spt/index.vue      # Guru SPT monitor
-│   └── siswa/                  # Siswa dashboard + bp21/bp23/bp26/bppu/bpnr/sp/cy + bukti-potong-saya + e-faktur keluaran/masukan + spt + pembayaran
+│   ├── guru/pbk|tagihan|angsuran|deposit.vue # Guru payment-side review (decide Pbk, issue tagihan, class deposit recap)
+│   └── siswa/                  # Siswa dashboard + bp21/bp23/bp26/bppu/bpnr/sp/cy/bpmp + a1/a2 + bukti-potong-saya
+│                               #   + e-faktur keluaran/masukan + spt + pembayaran (index, mandiri, deposit, pbk, tagihan, angsuran)
 ├── types/
 │   ├── api.ts                  # ALL API contract types — mirrors backend Pydantic schemas
 │   └── page-meta.d.ts          # Types the custom `roles` field on definePageMeta
@@ -106,16 +114,21 @@ Data fetching in pages uses `useAsyncData` with a unique string key per role/pag
 
 | Area | Endpoints |
 |---|---|
-| auth | `POST /auth/login` (`{email, password, tenant_slug?}`), `POST /auth/refresh`, `GET /auth/me`, `POST /auth/change-password` |
-| tenants | `GET/POST /tenants`, `PATCH /tenants/{id}` — superadmin only |
-| users | `GET /users?role=&page=&size=`, `POST /users`, `PATCH /users/{id}` — admin scoped to own tenant |
-| classes | `GET /classes`, `GET /classes/{id}`, `POST /classes`, `POST /classes/{id}/enrollments` |
+| auth | `POST /auth/login` (`{identifier, password}` — email for admin/guru/superadmin, NIK/NISN username for siswa; expired/inactive tenant → 403), `POST /auth/refresh`, `GET /auth/me`, `POST /auth/change-password` |
+| tenants | `GET/POST /tenants`, `PATCH /tenants/{id}`, `POST /tenants/{id}/deactivate\|activate`, `GET /tenants/{id}/summary` (dossier), `GET /tenants/{id}/export`, `DELETE /tenants/{id}` — superadmin only. Create also mints the first admin; period = `berlaku_dari`/`berlaku_sampai` |
+| users | `GET /users?role=&page=&size=`, `POST /users`, `POST /users/bulk`, `PATCH /users/{id}` — admin scoped to own tenant |
+| classes | `GET /classes`, `GET /classes/{id}`, `POST /classes`, `POST /classes/{id}/enrollments`, `DELETE /classes/{id}/enrollments/{siswa_id}`, `PATCH /classes/{id}/archive` (superadmin may read across tenants) |
+| a1 / a2 | `GET /a1`, `GET /a1/{identity}` (same for `/a2`) — read-only yearly aggregate of issued BPMP |
 | dashboard | `GET /dashboard/summary` — role-shaped counts |
-| bp21 / bp23 / bp26 / bppu / bpnr / sp / cy | Same 17-endpoint set via `make_slip_router` + `GET /{t}/{id}/pdf` (BPE-SIM): `GET /{t}`, `GET /{t}/summary`, `GET/PATCH /{t}/{id}`, `POST /{t}`, `DELETE /{t}/{id}`, `POST /{t}/{id}/issue` (signer + Kode Otorisasi simulasi, `SIM-` number), `POST /{t}/{id}/cancel`, `POST /{t}/{id}/invalidate`, `PATCH /{t}/{id}/spt-flag`, `PATCH /{t}/{id}/review` (guru grading), `POST /{t}/import-xml` (plus converter aliases) + `GET /{t}/import-template`, `POST /{t}/bulk-issue`, `GET /{t}/export-csv`, `GET /{t}/export-xml`. BP21 adds `ter_category` A/B/C + `calculation_method` |
+| bp21 / bp23 / bp26 / bppu / bpmp / bpnr / sp / cy | Same 17-endpoint set via `make_slip_router` + `GET /{t}/{id}/pdf` (BPE-SIM): `GET /{t}`, `GET /{t}/summary`, `GET/PATCH /{t}/{id}`, `POST /{t}`, `DELETE /{t}/{id}`, `POST /{t}/{id}/issue` (signer + Kode Otorisasi simulasi, required for **every** slip type incl. BPMP, min 6 chars; same for `bulk-issue`; `SIM-` number), `POST /{t}/{id}/cancel`, `POST /{t}/{id}/invalidate`, `PATCH /{t}/{id}/spt-flag`, `PATCH /{t}/{id}/review` (guru grading), `POST /{t}/import-xml` (plus converter aliases) + `GET /{t}/import-template`, `POST /{t}/bulk-issue`, `GET /{t}/export-csv`, `GET /{t}/export-xml`. BP21 adds `ter_category` A/B/C + `calculation_method` |
 | faktur-keluaran | `GET /faktur-keluaran`, `GET /faktur-keluaran/summary`, `POST /faktur-keluaran`, `GET/PATCH/DELETE /faktur-keluaran/{id}`, `POST /faktur-keluaran/{id}/issue`, `POST /faktur-keluaran/{id}/cancel`, `PATCH /faktur-keluaran/{id}/review`, line CRUD `/{id}/lines` |
-| faktur-masukan | `GET /faktur-masukan`, `POST /faktur-masukan`, `POST /faktur-masukan/{id}/credit|uncredit`, `POST /faktur-masukan/bulk-credit|bulk-uncredit|bulk-delete`, `POST /faktur-masukan/{id}/cancel` (admin-only), `PATCH /faktur-masukan/{id}/review` |
-| spt | `GET /spt`, `POST /spt`, `GET /spt/{id}`, `POST /spt/{id}/posting`, `POST /spt/{id}/pernyataan`, `POST /spt/{id}/submit`, `POST /spt/{id}/pembetulan`, `GET /spt/{id}/billing`, `PATCH /spt/{id}/review` — types `ppn` / `pph_unifikasi` / `pph21_26` |
-| billings | `GET /billings`, `GET /billings/{id}`, `GET /billings/{id}/pdf`, `POST /billings/{id}/pay`, `POST /billings` (mandiri: KAP whitelist + MMYYYY + amount + uraian, `spt_id=NULL`) |
+| faktur-masukan | `GET /faktur-masukan`, `POST /faktur-masukan`, `POST /faktur-masukan/{id}/credit\|uncredit`, `POST /faktur-masukan/bulk-credit\|bulk-uncredit\|bulk-delete`, `POST /faktur-masukan/{id}/cancel` (admin-only), `PATCH /faktur-masukan/{id}/review` |
+| spt | `GET /spt`, `GET /spt/summary`, `POST /spt`, `GET /spt/{id}`, `POST /spt/{id}/posting`, `POST /spt/{id}/pernyataan`, `POST /spt/{id}/submit?metode=billing\|deposit` (body `{passphrase}`), `POST /spt/{id}/pembetulan`, `GET /spt/{id}/billing`, `PATCH /spt/{id}/review` — types `ppn` / `pph_unifikasi` / `pph_21_26` (BPMP aggregate) / `pph21_26` (SIM-TER/progresif) |
+| billings | `GET /billings`, `GET /billings/{id}`, `GET /billings/{id}/pdf`, `POST /billings/{id}/pay` (kanal → NTPN + No BPN), `POST /billings` (mandiri: KAP whitelist incl. 411618 deposit top-up + MMYYYY + amount + uraian, `spt_id=NULL`). Multi-detail via `BillingLine` per KJS |
+| deposit | `GET /deposit` (own saldo + mutasi, syncs paid top-ups first), `POST /deposit/sinkron`, `GET /deposit/tenant` (guru/admin recap) |
+| pbk | `POST /pbk`, `GET /pbk`, `POST /pbk/{id}/setujui`, `POST /pbk/{id}/tolak` (guru/admin/superadmin decide) |
+| tagihan | `POST /tagihan` (guru/admin issue SKP/STP), `GET /tagihan`, `GET /tagihan/{id}`, `POST /tagihan/{id}/buat-billing`, `POST /tagihan/{id}/lunaskan-dari-billing` |
+| angsuran | `POST /angsuran` (siswa, 2–12 cicilan), `GET /angsuran`, `GET /angsuran/{id}`, `POST /angsuran/{id}/batal`, `POST /angsuran/cicilan/{cicilan_id}/pay` |
 | audit-logs | `GET /audit-logs` — admin/superadmin only |
 | tarif-pajak | `GET/POST /tarif-pajak/ptkp`, `PATCH/DELETE /tarif-pajak/ptkp/{id}`, `GET/POST /tarif-pajak/progresif`, `PATCH/DELETE /tarif-pajak/progresif/{id}` — write superadmin only |
 
@@ -148,10 +161,11 @@ Follow the BP21/BP23/BP26 pattern exactly — the reference implementation is `p
 
 - `pages/login.vue` uses `definePageMeta({ layout: false })` and builds its own full-screen layout — there is no `layouts/auth.vue`.
 - The `roles` key on `definePageMeta` is a custom field typed in `types/page-meta.d.ts`; keep that declaration in sync if the meta shape changes.
-- Placeholder nav items in `layouts/default.vue` (Retur, Dokumen Lain, Prepopulated, BPPU/BPNR, Penyetoran Sendiri, Digunggung, BP A1/A2, Bulanan, Buku Besar, Layanan WP, Manajemen Akses, plus SPT/Pembayaran sub-items like Pemindahbukuan/Restitusi) intentionally have `disabled: true` — they mirror the reference system's menu for realism and become real as phases ship. SPT, Pembayaran/Daftar Kode Billing, e-Faktur Keluaran/Masukan, and BP21/BP23/BP26 are already wired — don't delete the remaining placeholders; wire them up when their module lands.
-- Some UI labels intentionally mix English ("Create eBupot BP21", "NOT ISSUED") because the reference system does — match the reference, not style purity, on document-module screens.
+- Placeholder nav items in `layouts/default.vue` intentionally have `disabled: true` + `badge: 'Segera hadir'`. They mirror the reference system's menu for realism and become real as phases ship. Still placeholders (as of 2026-11-01): e-Faktur Retur / Dokumen Lain / Prepopulated; eBUPOT Dokumen yang Dipersamakan; SPT Formulir Pajak / Pencatatan / Dasbor Kompensasi / Pengungkapan Ketidakbenaran; Pembayaran Restitusi / Imbalan Bunga / PPh DTP PDAM; Buku Besar; Layanan WP (Profil WP, Permohonan); Manajemen Akses (hidden for siswa). Everything else is wired, so don't delete the remaining placeholders; wire them up when their module lands.
+- The superadmin sees a separate platform menu (Dasbor, Tarif Pajak, Log Audit) instead of the tax-module menubar; admin gets an extra **Kelas** entry.
+- Some UI labels intentionally mix English ("Create eBupot BP21", "NOT ISSUED") because the reference system does. Match the reference, not style purity, on document-module screens. Note: the 2026-11-01 UX pass (`bdcda8e`) translated several of these headings; whether to restore them is open decision D1 in `../docs/AUDIT_FIDELITAS_ALUR.md`.
 - `useAsyncData` keys must be unique app-wide; prefix with the role and module (`guru-bp26-list`, `siswa-faktur-keluaran-list`, `siswa-spt-list`).
-- Windows dev environment: PowerShell commands, CRLF-tolerant tooling; don't write POSIX-only npm scripts.
+- Developers use both Linux and Windows. Keep npm scripts cross-platform (no POSIX-only or PowerShell-only syntax) and tooling CRLF-tolerant.
 - Never commit `.env`; `.env.example` documents every variable.
 
 ## 10. Design & docs pointers
@@ -159,4 +173,5 @@ Follow the BP21/BP23/BP26 pattern exactly — the reference implementation is `p
 - [PRODUCT.md](PRODUCT.md) — register, users, brand personality, anti-references, design principles.
 - [DESIGN.md](DESIGN.md) — visual system: OKLCH palette, typography, elevation, component specs, do's/don'ts. Machine-readable tokens in its YAML frontmatter; extended tokens in `.impeccable/design.json`.
 - [README.md](README.md) — human-facing setup/runbook.
-- Historical spec: `KICKSTART_SPEC.md` (Phase 1 scope) if present at repo root; later phases already shipped (faktur, BP23, kode billing, SPT, PDF, grading) — see current coverage above.
+- Historical spec: `KICKSTART_SPEC.md` (Phase 1 scope) if present at repo root; later phases already shipped (faktur, BP23, kode billing, SPT, PDF, grading, BPMP/A1/A2, pembayaran lanjutan). See current coverage above.
+- Next work: `../plans/README.md` (plans 007–011) and `../docs/AUDIT_FIDELITAS_ALUR.md`.
