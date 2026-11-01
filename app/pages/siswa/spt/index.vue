@@ -139,7 +139,7 @@ async function deleteDraft(row: TaxReturnRead) {
           <USelect v-model="filterYear" :items="yearFilterOptions" placeholder="Semua Tahun" size="xs" class="min-w-36" />
         </div>
 
-        <div class="faktur-table">
+        <div class="faktur-table table-sticky-actions" tabindex="0" role="region" aria-label="Tabel SPT, geser ke kanan untuk melihat semua kolom">
           <UTable :data="sptList?.items ?? []" :columns="columns" :loading="listStatus === 'pending'">
             <template #return_type-cell="{ row }">{{ sptRowLabel(row.original) }}</template>
             <template #tax_month-cell="{ row }">{{ monthLabels[row.original.tax_month] }}</template>

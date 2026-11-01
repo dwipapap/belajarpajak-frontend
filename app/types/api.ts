@@ -959,6 +959,14 @@ export interface TaxReturnPernyataan {
   signer_capacity: SignerCapacity
 }
 
+export interface BillingLineRead {
+  id: number
+  billing_id: number
+  kap_kjs: string
+  masa_pajak: string
+  amount: number
+}
+
 export interface BillingRead {
   id: number
   tenant_id: number
@@ -970,9 +978,22 @@ export interface BillingRead {
   kap_kjs: string
   masa_pajak: string
   uraian: string | null
+  ntpn: string | null
+  no_bpn: string | null
+  kanal: string | null
+  kanal_label: string | null
+  tagihan_id: number | null
+  metode: string | null
   paid_at: string | null
   created_at: string | null
   updated_at: string | null
+  lines: BillingLineRead[]
+}
+
+export type BillingChannel = 'teller' | 'atm' | 'mbanking' | 'ibanking' | 'pos'
+
+export interface BillingPay {
+  kanal?: BillingChannel | null
 }
 
 export interface BillingCreate {
@@ -984,3 +1005,93 @@ export interface BillingCreate {
 }
 
 export type BillingListResponse = Paginated<BillingRead>
+
+/* --- Deposit / Saldo Pajak --- */
+
+export interface DepositMutation {
+  id: number
+  jenis: string
+  amount: number
+  ref_type: string | null
+  ref_id: number | null
+  note: string | null
+  created_at: string | null
+}
+
+export interface DepositRead {
+  saldo: number
+  mutasi: DepositMutation[]
+}
+
+/* --- Pemindahbukuan (PbK) --- */
+
+export type PbkStatus = 'diajukan' | 'disetujui' | 'ditolak'
+
+export interface PbkRead {
+  id: number
+  tenant_id: number
+  user_id: number
+  dari_kap: string
+  ke_kap: string
+  amount: number
+  masa: string
+  alasan: string
+  status: PbkStatus
+  decided_by_id: number | null
+  created_at: string | null
+}
+
+export interface PbkCreate {
+  dari_kap: string
+  ke_kap: string
+  amount: number
+  masa: string
+  alasan: string
+}
+
+export type PbkListResponse = Paginated<PbkRead>
+
+/* --- Tagihan Pajak --- */
+
+export interface TagihanRead {
+  id: number
+  tenant_id: number
+  user_id: number
+  jenis: string
+  kap_kjs: string
+  masa: string
+  amount: number
+  status: string
+  billing_id: number | null
+}
+
+export type TagihanListResponse = Paginated<TagihanRead>
+
+/* --- Angsuran / Cicilan --- */
+
+export type CicilanStatus = 'belum_bayar' | 'dibayar' | string
+
+export interface CicilanRead {
+  id: number
+  ke: number
+  jatuh_tempo: string
+  amount: number
+  status: CicilanStatus
+  paid_at: string | null
+  kanal: string | null
+}
+
+export interface AngsuranRead {
+  id: number
+  billing_id: number
+  n_cicilan: number
+  status: string
+  cicilan: CicilanRead[]
+}
+
+export type AngsuranListResponse = Paginated<AngsuranRead>
+
+export interface AngsuranCreate {
+  billing_id: number
+  n: number
+}

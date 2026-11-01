@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   BillingRead,
+  DepositRead,
   SignerCapacity,
   TaxReturnRead
 } from '~/types/api'
@@ -52,6 +53,12 @@ const { data: billing, refresh: refreshBilling } = useAsyncData(
   { default: () => null }
 )
 
+const { data: deposit, refresh: refreshDeposit } = useAsyncData(
+  `siswa-spt-deposit-${sptId.value}`,
+  () => apiFetch<DepositRead>('/api/v1/deposit').catch(() => ({ saldo: 0, mutasi: [] })),
+  { default: () => ({ saldo: 0, mutasi: [] }) }
+)
+
 const busy = ref(false)
 const pdfBusy = ref(false)
 
@@ -83,6 +90,7 @@ const signerCapacity = ref<SignerCapacity>('wajib_pajak')
 
 const submitOpen = ref(false)
 const passphrase = ref('')
+const metodeBayar = ref<'deposit' | 'billing'>('billing')
 
 function openPernyataan() {
   // Prefill from whatever is already stored on the return.
@@ -93,6 +101,8 @@ function openPernyataan() {
 }
 
 function openSubmit() {
+  metodeBayar.value = 'billing'
+  refreshDeposit()
   submitOpen.value = true
 }
 
@@ -169,9 +179,18 @@ async function submitSpt() {
     toast.add({ title: 'Masukkan passphrase', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
+  if (metodeBayar.value === 'deposit' && (spt.value?.amount_due ?? 0) > (deposit.value?.saldo ?? 0)) {
+    toast.add({
+      title: 'Saldo deposit tidak cukup',
+      description: `Kurang bayar Rp ${money(spt.value?.amount_due ?? 0)}, saldo Rp ${money(deposit.value?.saldo ?? 0)}. Top-up via Billing Mandiri KAP 411618 lalu sinkronkan di menu Deposit.`,
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+    return
+  }
   busy.value = true
   try {
-    const result = await apiFetch<TaxReturnRead>(`/api/v1/spt/${sptId.value}/submit`, {
+    const result = await apiFetch<TaxReturnRead>(`/api/v1/spt/${sptId.value}/submit?metode=${metodeBayar.value}`, {
       method: 'POST',
       body: { passphrase: passphrase.value }
     })
@@ -187,9 +206,14 @@ async function submitSpt() {
     }
     submitOpen.value = false
     passphrase.value = ''
-    await Promise.all([refreshSpt(), refreshBilling()])
+    await Promise.all([refreshSpt(), refreshBilling(), refreshDeposit()])
   } catch (error) {
-    toast.add({ title: 'Gagal bayar dan lapor', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+    const msg = apiErrorMessage(error)
+    if (msg.toLowerCase().includes('deposit') || msg.toLowerCase().includes('saldo')) {
+      toast.add({ title: 'Saldo deposit tidak cukup', description: `${msg} Top-up via Billing Mandiri KAP 411618 lalu sinkronkan di menu Deposit, atau pilih "Buat billing".`, color: 'error', icon: 'i-lucide-circle-alert' })
+    } else {
+      toast.add({ title: 'Gagal bayar dan lapor', description: msg, color: 'error', icon: 'i-lucide-circle-alert' })
+    }
   } finally {
     busy.value = false
   }
@@ -496,6 +520,18 @@ function headerLabel(section: string) {
           <UFormField label="Passphrase" required>
             <UInput v-model="passphrase" type="password" placeholder="Passphrase" class="w-full" />
           </UFormField>
+          <UFormField label="Metode Pembayaran" required>
+            <URadioGroup
+              v-model="metodeBayar"
+              :items="[
+                { label: `Buat billing (kode billing dilunasi di menu Pembayaran)`, value: 'billing' },
+                { label: `Pakai deposit (saldo Rp ${money(deposit?.saldo ?? 0)})`, value: 'deposit' }
+              ]"
+            />
+          </UFormField>
+          <p v-if="metodeBayar === 'deposit' && spt && spt.amount_due > (deposit?.saldo ?? 0)" class="text-sm text-error">
+            Saldo deposit tidak cukup untuk kurang bayar Rp {{ money(spt.amount_due) }}. Top-up via Billing Mandiri KAP 411618 lalu sinkronkan di menu Deposit.
+          </p>
           <p v-if="spt && spt.amount_due > 0" class="text-sm text-warning">
             SPT ini memiliki kurang bayar Rp {{ money(spt.amount_due) }} — kode billing akan diterbitkan.
           </p>

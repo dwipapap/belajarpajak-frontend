@@ -10,6 +10,29 @@ const { data: summary } = useAsyncData(
   () => apiFetch<DashboardSummary>('/api/v1/dashboard/summary')
 )
 
+/** Rekap pembayaran yang perlu perhatian — dihitung di client dari list tenant. */
+interface PbkMini { status: string }
+interface TagihanMini { status: string }
+interface AngsuranMini { status: string }
+const { data: pbkList } = useAsyncData(
+  'guru-dashboard-pbk',
+  () => apiFetch<{ items: PbkMini[]; total: number }>('/api/v1/pbk', { query: { page: 1, size: 100 } }),
+  { default: () => ({ items: [], total: 0 }) }
+)
+const { data: tagihanList } = useAsyncData(
+  'guru-dashboard-tagihan',
+  () => apiFetch<{ items: TagihanMini[]; total: number }>('/api/v1/tagihan', { query: { page: 1, size: 100 } }),
+  { default: () => ({ items: [], total: 0 }) }
+)
+const { data: angsuranList } = useAsyncData(
+  'guru-dashboard-angsuran',
+  () => apiFetch<{ items: AngsuranMini[]; total: number }>('/api/v1/angsuran', { query: { page: 1, size: 100 } }),
+  { default: () => ({ items: [], total: 0 }) }
+)
+const pbkMenunggu = computed(() => pbkList.value.items.filter(i => i.status === 'diajukan').length)
+const tagihanBelum = computed(() => tagihanList.value.items.filter(i => i.status === 'belum').length)
+const angsuranBerjalan = computed(() => angsuranList.value.items.filter(i => i.status === 'berjalan').length)
+
 /** SPT dilaporkan yang belum diberi nilai — antrean penilaian guru. */
 const { data: sptSummary } = useAsyncData(
   'guru-dashboard-spt-summary',
@@ -48,6 +71,39 @@ function selectClass(id: number) {
 <template>
   <div class="space-y-6">
     <h1 class="text-2xl font-semibold text-default">Dasbor Guru</h1>
+
+    <!-- Perlu perhatian: rekap pembayaran -->
+    <UCard>
+      <template #header>
+        <h2 class="font-semibold text-default">Perlu Perhatian</h2>
+      </template>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="flex items-center justify-between gap-2 rounded-lg bg-elevated/50 px-4 py-3">
+          <div>
+            <p class="text-sm text-muted">Pbk menunggu</p>
+            <p class="text-2xl font-semibold text-default">{{ pbkMenunggu }}</p>
+          </div>
+          <UButton to="/guru/pbk" size="sm" color="neutral" variant="ghost" icon="i-lucide-arrow-right" label="Pbk" />
+        </div>
+        <div class="flex items-center justify-between gap-2 rounded-lg bg-elevated/50 px-4 py-3">
+          <div>
+            <p class="text-sm text-muted">Tagihan belum dibilling</p>
+            <p class="text-2xl font-semibold text-default">{{ tagihanBelum }}</p>
+          </div>
+          <UButton to="/guru/tagihan" size="sm" color="neutral" variant="ghost" icon="i-lucide-arrow-right" label="Tagihan" />
+        </div>
+        <div class="flex items-center justify-between gap-2 rounded-lg bg-elevated/50 px-4 py-3">
+          <div>
+            <p class="text-sm text-muted">Angsuran berjalan</p>
+            <p class="text-2xl font-semibold text-default">{{ angsuranBerjalan }}</p>
+          </div>
+          <UButton to="/guru/angsuran" size="sm" color="neutral" variant="ghost" icon="i-lucide-arrow-right" label="Angsuran" />
+        </div>
+      </div>
+      <div class="mt-3">
+        <UButton to="/guru/deposit" size="sm" color="neutral" variant="outline" icon="i-lucide-wallet" label="Rekap Deposit" />
+      </div>
+    </UCard>
 
     <!-- Stat cards -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -81,7 +81,7 @@ function detailLink(identity: string) {
           />
         </div>
 
-        <div class="bupot-table">
+        <div class="bupot-table table-sticky-actions" tabindex="0" role="region" aria-label="Tabel agregat A1/A2, geser ke kanan untuk melihat semua kolom">
           <UTable :data="aggregate?.items ?? []" :columns="columns" :loading="listStatus === 'pending'">
             <template #annual_gross-cell="{ row }">Rp {{ formatCurrency(row.original.annual_gross) }}</template>
             <template #annual_tax-cell="{ row }">Rp {{ formatCurrency(row.original.annual_tax) }}</template>

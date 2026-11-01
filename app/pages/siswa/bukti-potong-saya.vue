@@ -111,7 +111,7 @@ async function refreshAll() {
     </div>
 
     <div class="bupot-shell">
-      <section class="bupot-main" style="width: 100%">
+      <section class="bupot-main">
         <div class="bupot-main__header">
           <h1>Bukti Potong Saya</h1>
           <div class="bupot-actions">
@@ -125,7 +125,7 @@ async function refreshAll() {
           Agregat dokumen Telah Terbit milik sendiri (BP21/BP23/BP26/BPPU/BPNR/SP/CY). Unduh BPE-SIM PDF per baris.
         </p>
 
-        <div class="bupot-table">
+        <div class="bupot-table table-sticky-actions" tabindex="0" role="region" aria-label="Tabel bukti potong, geser ke kanan untuk melihat semua kolom">
           <UTable :data="rows" :columns="[{ accessorKey: 'kind', header: 'Jenis' }, { accessorKey: 'period', header: 'Masa' }, { accessorKey: 'number', header: 'Nomor' }, { accessorKey: 'name', header: 'Nama' }, { accessorKey: 'tax', header: 'PPh (Rp)' }, { accessorKey: 'signer', header: 'Penandatangan' }, { id: 'actions' }]">
             <template #tax-cell="{ row }">Rp {{ formatCurrency(row.original.tax) }}</template>
             <template #actions-cell="{ row }">

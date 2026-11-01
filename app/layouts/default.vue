@@ -115,9 +115,11 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
     icon: 'i-lucide-badge-dollar-sign',
     active: route.path.includes('/siswa/pembayaran') || route.path.includes('/pembayaran/mandiri'),
     children: [
-      { label: 'Permohonan Pemindahbukuan', icon: 'i-lucide-arrow-left-right', disabled: true, badge: 'Segera hadir' },
+      { label: 'Permohonan Pemindahbukuan', icon: 'i-lucide-arrow-left-right', to: modulePath('pembayaran/pbk') },
       { label: 'Layanan Mandiri Kode Billing', icon: 'i-lucide-receipt', to: modulePath('pembayaran/mandiri') },
-      { label: 'Pembuatan Kode Billing atas Tagihan Pajak', icon: 'i-lucide-file-plus-2', disabled: true, badge: 'Segera hadir' },
+      { label: 'Tagihan Pajak', icon: 'i-lucide-file-plus-2', to: modulePath('pembayaran/tagihan') },
+      { label: 'Angsuran', icon: 'i-lucide-calendar-clock', to: modulePath('pembayaran/angsuran') },
+      { label: 'Deposit Pajak', icon: 'i-lucide-wallet', to: modulePath('pembayaran/deposit') },
       { label: 'Daftar Kode Billing', icon: 'i-lucide-list-checks', to: modulePath('pembayaran') },
       { label: 'Formulir Restitusi Pajak', icon: 'i-lucide-file-input', disabled: true, badge: 'Segera hadir' },
       { label: 'Permohonan Pemberian Imbalan Bunga', icon: 'i-lucide-circle-dollar-sign', disabled: true, badge: 'Segera hadir' },
@@ -138,14 +140,18 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
       { label: 'Permohonan', icon: 'i-lucide-inbox', disabled: true, badge: 'Segera hadir' }
     ]
   },
-  {
-    label: 'Manajemen Akses',
-    icon: 'i-lucide-key-round',
-    children: [
-      { label: 'Role Akses', icon: 'i-lucide-key-round', disabled: true, badge: 'Segera hadir' },
-      { label: 'Pengguna', icon: 'i-lucide-users', disabled: true, badge: 'Segera hadir' }
-    ]
-  }
+  ...(auth.user.value?.role === 'siswa'
+    ? []
+    : [
+        {
+          label: 'Manajemen Akses',
+          icon: 'i-lucide-key-round',
+          children: [
+            { label: 'Role Akses', icon: 'i-lucide-key-round', disabled: true, badge: 'Segera hadir' },
+            { label: 'Pengguna', icon: 'i-lucide-users', disabled: true, badge: 'Segera hadir' }
+          ]
+        }
+      ])
   ]
 })
 

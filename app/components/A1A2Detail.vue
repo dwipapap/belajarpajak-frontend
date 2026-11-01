@@ -56,7 +56,7 @@ const columns: TableColumn<A1A2MonthlyRow>[] = [
           </div>
         </div>
 
-        <div class="bupot-table">
+        <div class="bupot-table bupot-table--compact" tabindex="0" role="region" aria-label="Tabel rincian bulanan, geser ke kanan untuk melihat semua kolom">
           <UTable :data="detail?.rows ?? []" :columns="columns">
             <template #tax_month-cell="{ row }">{{ monthLabels[row.original.tax_month] }}</template>
             <template #gross_income-cell="{ row }">Rp {{ formatCurrency(row.original.gross_income) }}</template>

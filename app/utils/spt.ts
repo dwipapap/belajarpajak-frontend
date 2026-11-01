@@ -89,6 +89,28 @@ export const mandiriKjsOptions: { label: string, value: string }[] = [
   { label: '411128-100 — PPh Final 4(2)', value: '411128-100' },
   { label: '411122-100 — PPh 22', value: '411122-100' }
 ]
+
+/** Kanal pembayaran billing simulasi (POST /billings/{id}/pay body {kanal}). */
+export const KANAL_LABELS: Record<string, string> = {
+  teller: 'Teller Bank/Pos',
+  atm: 'ATM',
+  mbanking: 'Mobile Banking',
+  ibanking: 'Internet Banking',
+  pos: 'Kantor Pos'
+}
+
+export const kanalOptions: { label: string, value: string }[] = [
+  { label: 'Teller Bank/Pos', value: 'teller' },
+  { label: 'ATM', value: 'atm' },
+  { label: 'Mobile Banking', value: 'mbanking' },
+  { label: 'Internet Banking', value: 'ibanking' },
+  { label: 'Kantor Pos', value: 'pos' }
+]
+
+export function kanalLabel(kanal: string | null | undefined) {
+  if (!kanal) return '—'
+  return KANAL_LABELS[kanal] ?? kanal
+}
 export const pasalSections = [
   'pasal_4_2',
   'pasal_15',
