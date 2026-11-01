@@ -21,5 +21,6 @@ definePageMeta({ middleware: 'role', roles: ['guru'] })
     }"
     :invalidate="null"
     :spt-flag="false"
+    :show-origin="true"
   />
 </template>

@@ -4,6 +4,7 @@
 import type {
   BuyerIdentityType,
   TaxInputCreditStatus,
+  TaxInputOrigin,
   TaxInvoiceKind,
   TaxInvoiceLineCreate,
   TaxInvoiceLineType
@@ -126,18 +127,26 @@ export const pageSizeOptions = [10, 25, 50, 100]
 
 export const creditStatusLabel: Record<TaxInputCreditStatus, string> = {
   not_credited: 'Belum Dikreditkan',
-  credited: 'Dikreditkan'
+  credited: 'Dikreditkan',
+  uncredited: 'Tidak Dikreditkan'
 }
 
-export const creditStatusColor: Record<TaxInputCreditStatus, 'warning' | 'success'> = {
+export const creditStatusColor: Record<TaxInputCreditStatus, 'warning' | 'success' | 'neutral'> = {
   not_credited: 'warning',
-  credited: 'success'
+  credited: 'success',
+  uncredited: 'neutral'
 }
 
 export const creditTabs: { label: string, value: TaxInputCreditStatus }[] = [
   { label: 'Belum Dikreditkan', value: 'not_credited' },
-  { label: 'Dikreditkan', value: 'credited' }
+  { label: 'Dikreditkan', value: 'credited' },
+  { label: 'Tidak Dikreditkan', value: 'uncredited' }
 ]
+
+export const taxInputOriginLabel: Record<TaxInputOrigin, string> = {
+  prepopulated: 'Prepopulated',
+  manual: 'Manual'
+}
 
 /** Display a stored 17-digit Nomor Faktur as 01.00-26.00000000001 (PER-11/PJ/2025). */
 export function formatInvoiceNumber(digits: string | null | undefined) {

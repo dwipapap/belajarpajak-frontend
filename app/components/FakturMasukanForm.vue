@@ -169,12 +169,12 @@ async function onSubmit() {
       <NuxtLink to="/siswa">Beranda</NuxtLink><UIcon name="i-lucide-chevron-right" class="size-3.5" />
       <NuxtLink to="/siswa/e-faktur">e-Faktur</NuxtLink><UIcon name="i-lucide-chevron-right" class="size-3.5" />
       <NuxtLink to="/siswa/e-faktur/masukan">Pajak Masukan</NuxtLink><UIcon name="i-lucide-chevron-right" class="size-3.5" />
-      <strong>Buat / Ubah Faktur Masukan</strong>
+      <strong>{{ isEdit ? 'Ubah Faktur Masukan' : 'Dokumen Lain — Pajak Masukan' }}</strong>
     </div>
 
     <UForm :state="formState" :validate="validate" class="bupot-form" @submit="onSubmit">
       <div class="bupot-form__header">
-        <div><p>{{ formState.seller_npwp || '-' }}</p><h1>{{ isEdit ? 'Ubah Faktur Masukan' : 'Buat Faktur Masukan' }}</h1></div>
+        <div><p>{{ formState.seller_npwp || '-' }}</p><h1>{{ isEdit ? 'Ubah Faktur Masukan' : 'Dokumen Lain — Pajak Masukan' }}</h1></div>
         <div class="bupot-form__actions">
           <UButton to="/siswa/e-faktur/masukan" icon="i-lucide-arrow-left" color="neutral" variant="ghost">Kembali</UButton>
           <UButton type="submit" icon="i-lucide-save" label="Simpan Konsep" color="neutral" :loading="saving" @click="submitIntent = 'draft';" />
@@ -183,6 +183,7 @@ async function onSubmit() {
 
       <UAlert v-if="submitError" color="error" variant="subtle" icon="i-lucide-circle-alert" :title="submitError" />
       <UAlert color="info" variant="subtle" icon="i-lucide-info" title="Simpan Konsep menyimpan draf yang masih bisa diubah; dokumen masuk ke Belum Dikreditkan." />
+      <UAlert v-if="!isEdit" color="neutral" variant="subtle" icon="i-lucide-files" title="Formulir ini untuk Dokumen Lain (mis. PIB atau dokumen yang dipersamakan). Faktur dari teman sekelas muncul otomatis di Pajak Masukan — tidak perlu dibuat manual." />
 
       <!-- Dokumen Transaksi -->
       <section class="faktur-section">

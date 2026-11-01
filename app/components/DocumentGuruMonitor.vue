@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { Bp21Status, Bp21Summary, Bp26SptFlag, Paginated, SchoolClass } from '~/types/api'
+import type { Bp21Status, Bp21Summary, Bp26SptFlag, Paginated, SchoolClass, TaxInputOrigin } from '~/types/api'
 
 /**
  * Every document module (bupot, faktur, ...) has the same monitor shape —
@@ -51,6 +51,11 @@ const props = withDefaults(
      * the column and the set-flag action.
      */
     sptFlag?: boolean | null
+    /**
+     * Show the origin column (prepopulated vs manual). Only faktur-masukan
+     * carries an origin — pass true there.
+     */
+    showOrigin?: boolean
   }>(),
   {
     apiBase: undefined,
@@ -71,7 +76,8 @@ const props = withDefaults(
       path: 'invalidate',
       body: { invalid_reason: 'Ditandai tidak valid oleh guru saat review.' }
     }),
-    sptFlag: true
+    sptFlag: true,
+    showOrigin: false
   }
 )
 
@@ -85,6 +91,12 @@ function text(row: DocumentRow, key: string) {
 
 function amount(row: DocumentRow, key: string) {
   return formatCurrency(Number(row[key] ?? 0))
+}
+
+function originText(value: unknown) {
+  return typeof value === 'string' && value in taxInputOriginLabel
+    ? taxInputOriginLabel[value as TaxInputOrigin]
+    : '-'
 }
 
 const { apiFetch } = useApi()
@@ -143,6 +155,7 @@ const columns = computed<TableColumn<DocumentRow>[]>(() => [
   { id: 'number', header: props.numberHeader },
   { accessorKey: 'status', header: 'Status' },
   ...(props.sptFlag ? [{ accessorKey: 'spt_flag', header: 'Flag SPT' } as const] : []),
+  ...(props.showOrigin ? [{ accessorKey: 'origin', header: 'Asal' } as const] : []),
   { id: 'name', header: 'Nama' },
   { id: 'code', header: props.codeHeader },
   { id: 'base', header: props.baseHeader },
@@ -376,6 +389,12 @@ async function saveFlag() {
 
           <template #name-cell="{ row }">
             {{ text(row.original, fields.name) }}
+          </template>
+
+          <template #origin-cell="{ row }">
+            <UBadge color="neutral" variant="subtle">
+              {{ originText(row.original.origin) }}
+            </UBadge>
           </template>
 
           <template #code-cell="{ row }">

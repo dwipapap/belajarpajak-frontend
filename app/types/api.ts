@@ -657,6 +657,7 @@ export interface TaxInvoiceCreate {
   seller_name?: string | null
   seller_address?: string | null
   seller_idtku?: string | null
+  buyer_siswa_id?: number | null
   buyer_identity_type: BuyerIdentityType
   buyer_identity_number: string
   buyer_country: string
@@ -708,6 +709,8 @@ export interface TaxInvoiceRead {
   buyer_idtku: string | null
   buyer_email: string | null
 
+  buyer_siswa_id: number | null
+
   /** All totals are computed by the backend from the lines. */
   total_price: number
   total_discount: number
@@ -752,7 +755,8 @@ export interface TaxInvoiceBulkIssueResult {
 
 /* --- e-Faktur: Pajak Masukan --- */
 
-export type TaxInputCreditStatus = 'not_credited' | 'credited'
+export type TaxInputCreditStatus = 'not_credited' | 'credited' | 'uncredited'
+export type TaxInputOrigin = 'prepopulated' | 'manual'
 
 export interface TaxInputLineCreate {
   line_type: TaxInvoiceLineType
@@ -821,6 +825,7 @@ export interface TaxInputRead {
   credit_status: TaxInputCreditStatus
   credited_at: string | null
   source_invoice_id: number | null
+  origin: TaxInputOrigin
   is_advance_payment: boolean
   is_settlement: boolean
   transaction_code: string
@@ -861,6 +866,7 @@ export interface TaxInputSummary {
   draft: number
   credited: number
   not_credited: number
+  uncredited: number
   invalid: number
   total: number
 }
@@ -873,6 +879,12 @@ export interface TaxInputBulkCreditResult {
 
 export interface TaxInputBulkUncreditResult {
   uncredited: number
+  skipped: number
+  errors: string[]
+}
+
+export interface TaxInputBulkDecisionResult {
+  updated: number
   skipped: number
   errors: string[]
 }
