@@ -5,7 +5,7 @@ import type {
   BillingRead,
   BillingStatus
 } from '~/types/api'
-import { billingStatusColor, billingStatusLabel, billingStatusTabs, isBillingExpired } from '~/utils/spt'
+import { billingStatusTabs, isBillingExpired } from '~/utils/spt'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -153,23 +153,22 @@ const columns: TableColumn<BillingRead>[] = [
             <template #amount-cell="{ row }">Rp {{ formatCurrency(row.original.amount) }}</template>
             <template #status-cell="{ row }">
               <div class="flex flex-col gap-1">
-                <UBadge :color="billingStatusColor[row.original.status]" variant="subtle">
-                  {{ billingStatusLabel[row.original.status] }}
+                <UBadge v-if="row.original.status === 'paid'" color="success" variant="subtle">Sudah Dibayar</UBadge>
+                <UBadge v-else-if="isBillingExpired(row.original.created_at, row.original.status)" color="error" variant="soft" title="Masa berlaku simulasi 14 hari habis — buat kode billing baru bila masih perlu membayar">
+                  Kedaluwarsa — buat billing baru
                 </UBadge>
-                <UBadge v-if="isBillingExpired(row.original.created_at, row.original.status)" color="error" variant="soft">
-                  Kedaluwarsa (simulasi)
-                </UBadge>
-                <UBadge v-else-if="!row.original.spt_id" color="neutral" variant="subtle">
+                <UBadge v-else color="warning" variant="subtle">Belum Dibayar</UBadge>
+                <UBadge v-if="!row.original.spt_id && row.original.status !== 'paid' && !isBillingExpired(row.original.created_at, row.original.status)" color="neutral" variant="subtle">
                   Mandiri
                 </UBadge>
               </div>
             </template>
             <template #uraian-cell="{ row }">
-              <span>{{ row.original.uraian || (row.original.spt_id ? '-' : 'Billing mandiri') }}</span>
+              <span>{{ row.original.uraian || (row.original.spt_id ? '—' : 'Billing mandiri') }}</span>
             </template>
             <template #paid_at-cell="{ row }">
-              <span v-if="row.original.paid_at">{{ new Date(row.original.paid_at).toLocaleDateString('id-ID') }}</span>
-              <span v-else>-</span>
+              <span v-if="row.original.paid_at">{{ new Date(row.original.paid_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}</span>
+              <span v-else>—</span>
             </template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">
@@ -217,7 +216,7 @@ const columns: TableColumn<BillingRead>[] = [
     <UModal v-model:open="payOpen" title="Bayar Kode Billing">
       <template #body>
         <p class="text-sm">
-          Set bayar kode billing
+          Bayar kode billing
           <span v-if="payTarget" class="font-mono font-semibold">{{ payTarget.code }}</span>
           sebesar
           <strong v-if="payTarget">Rp {{ formatCurrency(payTarget.amount) }}</strong>?

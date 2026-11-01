@@ -113,7 +113,7 @@ async function refreshAll() {
     <div class="bupot-shell">
       <section class="bupot-main" style="width: 100%">
         <div class="bupot-main__header">
-          <h1>BUKTI POTONG SAYA (SIMULASI)</h1>
+          <h1>Bukti Potong Saya</h1>
           <div class="bupot-actions">
             <USelect v-model="filterMonth" :items="monthFilterOptions" class="w-40" />
             <UInput v-model="filterYear" type="number" placeholder="Tahun" class="w-32" />

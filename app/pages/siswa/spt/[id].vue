@@ -6,13 +6,32 @@ import type {
 } from '~/types/api'
 import {
   groupPphLines,
-  kjsRowLabel,
+  isBillingExpired,
   pasalLabel,
   pasalSections,
   sptKindLabel,
   sptStatusLabel,
   sptTypeLabel
 } from '~/utils/spt'
+
+/** Peta label manusiawi KJS — lokal untuk file ini (jangkan buat file utils baru). */
+const kjsHumanLabel: Record<string, string> = {
+  '411211-100': 'PPN Masa',
+  '411121-100': 'PPh 21 Setor Sendiri',
+  '411122-100': 'PPh 22',
+  '411124-100': 'PPh 23',
+  '411124-101': 'PPh 23 Dividen',
+  '411124-102': 'PPh 23 Bunga',
+  '411124-103': 'PPh 23 Royalti',
+  '411124-104': 'PPh 23 Jasa/Sewa',
+  '411127-110': 'PPh 26',
+  '411128-100': 'PPh Final 4(2)'
+}
+
+function humanKjsLabel(code: string) {
+  const human = kjsHumanLabel[code]
+  return human ? `${human} — ${code}` : `KJS:${code}`
+}
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -233,6 +252,12 @@ function headerLabel(section: string) {
             </UBadge>
             <span v-if="spt.signer_name">Penanda tangan: {{ spt.signer_name }}</span>
           </p>
+          <!-- Indikator urutan: 1 Posting → 2 Pernyataan → 3 Bayar dan Lapor -->
+          <ol class="spt-detail__steps" aria-label="Tahapan pelaporan SPT">
+            <li :class="{ done: (spt.lines ?? []).length > 0 || spt.status !== 'draft' }"><strong>1</strong> Posting</li>
+            <li :class="{ done: !!spt.signer_name }"><strong>2</strong> Pernyataan</li>
+            <li :class="{ done: spt.status === 'reported' }"><strong>3</strong> Bayar dan Lapor</li>
+          </ol>
         </div>
         <div class="flex gap-2">
           <UButton
@@ -249,16 +274,19 @@ function headerLabel(section: string) {
             label="Pernyataan"
             color="neutral"
             variant="soft"
+            title="Isi pernyataan setelah posting agar tombol Bayar dan Lapor aktif"
             @click="openPernyataan"
           />
-          <UButton
-            v-if="isDraft"
-            icon="i-lucide-send"
-            label="Bayar dan Lapor"
-            color="success"
-            :disabled="!spt.signer_name"
-            @click="openSubmit"
-          />
+          <UTooltip text="Lakukan posting dulu, lalu isi pernyataan">
+            <UButton
+              v-if="isDraft"
+              icon="i-lucide-send"
+              label="Bayar dan Lapor"
+              color="success"
+              :disabled="!spt.signer_name"
+              @click="openSubmit"
+            />
+          </UTooltip>
           <UButton
             v-if="isReported"
             icon="i-lucide-pen-line"
@@ -279,9 +307,9 @@ function headerLabel(section: string) {
         </div>
         <div class="spt-detail__billing-amount">
           <strong>Rp {{ money(billing.amount) }}</strong>
-          <UBadge :color="billing.status === 'paid' ? 'success' : 'warning'" variant="subtle">
-            {{ billing.status === 'paid' ? 'Sudah Dibayar' : 'Belum Dibayar' }}
-          </UBadge>
+          <UBadge v-if="billing.status === 'paid'" color="success" variant="subtle">Sudah Dibayar</UBadge>
+          <UBadge v-else-if="isBillingExpired(billing.created_at, billing.status)" color="error" variant="subtle" title="Masa berlaku simulasi 14 hari habis — buat kode billing baru dari menu Pembayaran bila masih kurang bayar">Kedaluwarsa — buat billing baru</UBadge>
+          <UBadge v-else color="warning" variant="subtle">Belum Dibayar — Menunggu Pembayaran</UBadge>
           <UButton v-if="billing.status === 'unpaid'" to="/siswa/pembayaran" icon="i-lucide-badge-dollar-sign" size="xs" label="Bayar di menu Pembayaran" />
           <UButton icon="i-lucide-file-down" size="xs" color="neutral" variant="soft" label="Unduh PDF" :loading="pdfBusy" @click="downloadBillingPdf" />
         </div>
@@ -400,7 +428,7 @@ function headerLabel(section: string) {
                 </tr>
                 <tr v-for="line in pphGroups.get(pasal) ?? []" :key="line.id">
                   <td />
-                  <td>{{ kjsRowLabel(line.code) }}</td>
+                  <td>{{ humanKjsLabel(line.code) }}</td>
                   <td>{{ money(line.setor_sendiri) }}</td>
                   <td>{{ money(line.pemotongan) }}</td>
                   <td>{{ money(line.ditanggung_pemerintah) }}</td>
@@ -517,6 +545,45 @@ function headerLabel(section: string) {
   margin-top: 0.4rem;
   color: oklch(0.45 0.045 260);
   font-size: 0.85rem;
+}
+
+.spt-detail__steps {
+  display: flex;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.spt-detail__steps li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid oklch(0.9 0.013 255);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem 0.25rem 0.3rem;
+  color: oklch(0.45 0.045 260);
+}
+
+.spt-detail__steps li strong {
+  display: grid;
+  width: 1.3rem;
+  height: 1.3rem;
+  place-items: center;
+  border-radius: 999px;
+  background: oklch(0.9 0.013 255);
+  font-size: 0.72rem;
+}
+
+.spt-detail__steps li.done {
+  border-color: oklch(0.8 0.1 150);
+  color: oklch(0.35 0.1 150);
+}
+
+.spt-detail__steps li.done strong {
+  background: oklch(0.8 0.12 150);
+  color: #fff;
 }
 
 .spt-detail__billing {

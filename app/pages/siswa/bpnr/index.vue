@@ -70,6 +70,7 @@ async function confirmIssue() {
     })
     showIssueModal.value = false
     pendingSlip.value = null
+    activeStatus.value = 'issued' as typeof activeStatus.value
     await Promise.all([refreshList(), refreshSummary()])
   } catch (error) {
     toast.add({
@@ -145,12 +146,12 @@ async function refreshAll() {
 
       <section class="bupot-main">
         <div class="bupot-main__header">
-          <h1>EBUPOT bpnr {{ activeStatus === 'draft' ? 'NOT ISSUED' : statusLabel[activeStatus].toUpperCase() }}</h1>
+          <h1>e-Bupot BPNR</h1>
           <div class="bupot-actions">
             <UButton
               to="/siswa/bpnr/create"
               icon="i-lucide-plus"
-              label="Create eBupot bpnr"
+              label="Buat e-Bupot BPNR"
               class="bupot-primary-button"
             />
             <UButton icon="i-lucide-trash-2" label="Hapus" color="neutral" disabled />
@@ -198,7 +199,7 @@ async function refreshAll() {
             </template>
 
             <template #income_tax-cell="{ row }">
-              Rp {{ formatCurrency(row.original.income_tax) }}
+              <span :title="`Bruto Rp ${formatCurrency(row.original.gross_income ?? row.original.dpp)} • PPh Rp ${formatCurrency(row.original.income_tax)}`">Rp {{ formatCurrency(row.original.income_tax) }}</span>
             </template>
 
             <template #actions-cell="{ row }">

@@ -206,11 +206,11 @@ async function onSubmit() {
       <div class="bupot-form__header">
         <div>
           <p>{{ auth.user.value?.tenant_id ?? '1471110802000001' }}</p>
-          <h1>EBUPOT SP</h1>
+          <h1>e-Bupot SP</h1>
         </div>
         <div class="bupot-form__actions">
           <UButton to="/siswa/sp" icon="i-lucide-arrow-left" color="neutral" variant="ghost">
-            Go to search
+            Kembali
           </UButton>
           <UButton
             type="submit"
@@ -238,6 +238,13 @@ async function onSubmit() {
         icon="i-lucide-circle-alert"
         :title="submitError"
       />
+      <UAlert
+        color="info"
+        variant="subtle"
+        icon="i-lucide-info"
+        title="Simpan Konsep menyimpan draf yang masih bisa diubah di tab Belum Terbit; Submit menerbitkan dokumen ke tab Telah Terbit."
+        class="mb-1"
+      />
 
       <section class="bupot-section">
         <header>
@@ -249,7 +256,7 @@ async function onSubmit() {
             <USelect
               v-model="formState.class_id"
               :items="classOptions"
-              placeholder="Please select"
+              placeholder="Pilih..."
               class="w-full"
             />
           </UFormField>
@@ -258,7 +265,7 @@ async function onSubmit() {
             <USelect
               v-model="formState.tax_month"
               :items="monthOptions"
-              placeholder="Please select"
+              placeholder="Pilih..."
               class="w-full"
             />
           </UFormField>

@@ -113,8 +113,8 @@ async function onSubmit() {
           <UFormField name="uraian" label="Uraian (opsional, maks 200)">
             <UInput v-model="formState.uraian" maxlength="200" placeholder="cth. Setoran mandiri PPh 23" class="w-full" />
           </UFormField>
-          <UFormField name="masa_pajak" label="Masa Pajak (MMYYYY)">
-            <UInput :model-value="masaPreview" disabled class="w-full" />
+          <UFormField name="masa_pajak" label="Masa Pajak (MMYYYY)" help="Terisi otomatis dari Masa dan Tahun Pajak — tidak perlu diketik.">
+            <UInput :model-value="masaPreview" readonly disabled class="w-full" title="Terisi otomatis dari Masa dan Tahun Pajak" />
           </UFormField>
         </div>
       </section>

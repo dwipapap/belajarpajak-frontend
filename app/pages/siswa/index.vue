@@ -197,6 +197,18 @@ const isDocumentsLoading = computed(
       </div>
     </section>
 
+    <section class="bg-white border border-gray-200 rounded-xl p-5" aria-label="Langkah belajar">
+      <h2 class="font-bold text-gray-900">Langkah belajar</h2>
+      <p class="text-xs text-gray-500 mt-0.5 mb-3">Buat draf, terbitkan, lalu lanjut ke SPT, pembayaran, dan nilai dari guru.</p>
+      <ol class="flex flex-col sm:flex-row gap-2 sm:items-stretch">
+        <li class="flex-1 rounded-lg border border-gray-100 bg-gray-50/60 p-3"><p class="text-sm font-semibold text-gray-900">1. Buat</p><p class="text-xs text-gray-500">Buat e-Bupot / e-Faktur sebagai konsep.</p></li>
+        <li class="flex-1 rounded-lg border border-gray-100 bg-gray-50/60 p-3"><p class="text-sm font-semibold text-gray-900">2. Terbitkan</p><p class="text-xs text-gray-500">Terbitkan ke tab Telah Terbit.</p></li>
+        <li class="flex-1 rounded-lg border border-gray-100 bg-gray-50/60 p-3"><p class="text-sm font-semibold text-gray-900">3. SPT</p><p class="text-xs text-gray-500">Laporkan dalam SPT masa.</p></li>
+        <li class="flex-1 rounded-lg border border-gray-100 bg-gray-50/60 p-3"><p class="text-sm font-semibold text-gray-900">4. Bayar</p><p class="text-xs text-gray-500">Buat kode billing dan bayar.</p></li>
+        <li class="flex-1 rounded-lg border border-gray-100 bg-gray-50/60 p-3"><p class="text-sm font-semibold text-gray-900">5. Dinilai</p><p class="text-xs text-gray-500">Guru menilai dokumen terbit.</p></li>
+      </ol>
+    </section>
+
     <section class="grid grid-cols-1 md:grid-cols-4 gap-4" aria-label="Ringkasan siswa">
       <div v-for="card in statCards" :key="card.label" class="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
         <div :class="['size-12 rounded-full flex items-center justify-center flex-shrink-0', `bg-${card.tone}-50 text-${card.tone}-600`]">

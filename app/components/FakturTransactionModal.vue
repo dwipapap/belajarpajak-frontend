@@ -80,7 +80,7 @@ function onSubmit() {
             </UFormField>
             <UButton
               icon="i-lucide-download"
-              label="Unduh Kode"
+              label="Unduh Kode (segera hadir)" title="Segera hadir"
               color="neutral"
               variant="soft"
               size="xs"
@@ -110,7 +110,7 @@ function onSubmit() {
             <UInput v-model.number="formState.unit_price" type="number" min="0" class="w-full" />
           </UFormField>
 
-          <UFormField name="quantity" label="KUANTITAS" required>
+          <UFormField name="quantity" label="Kuantitas" required>
             <UInput
               v-model.number="formState.quantity"
               type="number"
@@ -138,8 +138,8 @@ function onSubmit() {
 
           <UFormField
             name="dpp_other"
-            label="DPP Nilai Lain/DPP"
-            :description="dppOtherLocked ? 'Wajib untuk kode transaksi 04 dan 05' : undefined"
+            label="DPP Nilai Lain"
+            :description="dppOtherLocked ? 'Wajib untuk kode transaksi 04 dan 05' : 'Centang untuk memakai dasar 11/12 dari DPP'"
           >
             <div class="flex items-center gap-2">
               <UCheckbox v-model="formState.use_dpp_other" :disabled="dppOtherLocked" />

@@ -319,7 +319,7 @@ async function onRunAction() {
             </UBadge>
           </template>
           <template #username-cell="{ row }">
-            <span class="font-mono text-xs">{{ row.original.username ?? '-' }}</span>
+            <span class="font-mono text-xs">{{ row.original.username ?? '—' }}</span>
           </template>
           <template #actions-cell="{ row }">
             <div class="flex justify-end gap-1">
@@ -361,7 +361,7 @@ async function onRunAction() {
     </UCard>
 
     <!-- Tambah User modal -->
-    <UModal v-model:open="modalOpen" title="Tambah User" description="Buat akun baru untuk institusi Anda.">
+    <UModal v-model:open="modalOpen" title="Tambah User" description="Buat satu akun baru untuk institusi Anda. Untuk banyak akun sekaligus, gunakan Tambah Akun Massal. Akun siswa tanpa email memakai NIK/NISN sebagai username (kolom Username menampilkan — bila belum diisi).">
       <template #body>
         <UForm :state="newUser" :validate="validateNewUser" class="space-y-4" @submit="onCreateUser">
           <UAlert

@@ -161,6 +161,15 @@ const ptkpOptions = computed(() => {
 
 const saving = ref(false)
 const submitIntent = ref<'draft' | 'issue'>('draft')
+const rincianPPh = computed(() => {
+  const bruto = Number(formState.gross_income || 0)
+  if (!bruto) return 'Isi penghasilan bruto untuk melihat rincian hitung.'
+  if (formState.tax_facility === 'skb' || formState.tax_facility === 'rate_0') return `Bruto Rp ${formatCurrency(bruto)} × fasilitas SKB/Tarif 0% = Rp 0`
+  const ter = terPreview()
+  if (ter !== null) return `Bruto Rp ${formatCurrency(bruto)} × TER ${formState.ter_category} = Rp ${formatCurrency(ter)}`
+  return `Bruto Rp ${formatCurrency(bruto)} → PPh Rp ${formatCurrency(calculatedIncomeTax.value)} (${calculationMethodLabel.value})`
+})
+
 const submitError = ref<string | null>(null)
 
 const selectedTaxObject = computed(() =>
@@ -317,11 +326,11 @@ async function onSubmit() {
       <div class="bupot-form__header">
         <div>
           <p>{{ auth.user.value?.tenant_id ?? '1471110802000001' }}</p>
-          <h1>EBUPOT BP21</h1>
+          <h1>e-Bupot BP21</h1>
         </div>
         <div class="bupot-form__actions">
           <UButton to="/siswa/bp21" icon="i-lucide-arrow-left" color="neutral" variant="ghost">
-            Go to search
+            Kembali
           </UButton>
           <UButton
             type="submit"
@@ -349,6 +358,13 @@ async function onSubmit() {
         icon="i-lucide-circle-alert"
         :title="submitError"
       />
+      <UAlert
+        color="info"
+        variant="subtle"
+        icon="i-lucide-info"
+        title="Simpan Konsep menyimpan draf yang masih bisa diubah di tab Belum Terbit; Submit menerbitkan dokumen ke tab Telah Terbit."
+        class="mb-1"
+      />
 
       <section class="bupot-section">
         <header>
@@ -360,7 +376,7 @@ async function onSubmit() {
             <USelect
               v-model="formState.class_id"
               :items="classOptions"
-              placeholder="Please select"
+              placeholder="Pilih..."
               class="w-full"
             />
           </UFormField>
@@ -369,7 +385,7 @@ async function onSubmit() {
             <USelect
               v-model="formState.tax_month"
               :items="monthOptions"
-              placeholder="Please select"
+              placeholder="Pilih..."
               class="w-full"
             />
           </UFormField>
@@ -410,7 +426,7 @@ async function onSubmit() {
             <USelect v-model="formState.ptkp_status" :items="ptkpOptions" class="w-full" />
           </UFormField>
 
-          <UFormField name="ter_category" label="Kategori SIM-TER (Jan–Nov)">
+          <UFormField name="ter_category" label="Kategori SIM-TER (Jan–Nov)" description="Wajib untuk Masa Jan–Nov; kosongkan hanya untuk Desember (progresif)">
             <USelect v-model="formState.ter_category" :items="terCategoryOptions" placeholder="Tanpa TER" class="w-full" />
           </UFormField>
 
@@ -461,7 +477,7 @@ async function onSubmit() {
             <UInput v-model="formState.rate_percent" type="number" disabled class="w-full" />
           </UFormField>
 
-          <UFormField name="income_tax" label="Pajak Penghasilan (Rp)" required>
+          <UFormField name="income_tax" label="Pajak Penghasilan (Rp)" :description="rincianPPh" required>
             <UInput :model-value="formatCurrency(calculatedIncomeTax)" disabled class="w-full" />
           </UFormField>
 

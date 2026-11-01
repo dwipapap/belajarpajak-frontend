@@ -2,6 +2,7 @@
 definePageMeta({ layout: false })
 
 const auth = useAuth()
+const toast = useToast()
 
 const state = reactive({
   identifier: '',
@@ -105,7 +106,7 @@ async function onSubmit() {
             </UInput>
           </UFormField>
 
-          <button class="app-login__forgot" type="button">Lupa Kata Sandi?</button>
+          <button class="app-login__forgot" type="button" @click="toast.add({ title: 'Lupa kata sandi?', description: 'Hubungi admin atau guru untuk mereset kata sandi Anda.', color: 'info', icon: 'i-lucide-key-round' })">Lupa Kata Sandi?</button>
 
           <UButton
             type="submit"

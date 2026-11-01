@@ -50,7 +50,7 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
       { label: 'BPNR', icon: 'i-lucide-files', to: modulePath('bpnr') },
       { label: 'Penyetoran Sendiri', icon: 'i-lucide-wallet-cards', to: modulePath('sp') },
       { label: 'Pemotongan Secara Digunggung', icon: 'i-lucide-layers-3', to: modulePath('cy') },
-      { label: 'Dokumen yang Dipersamakan dengan Bukti Potong', icon: 'i-lucide-file-check-2', disabled: true },
+      { label: 'Dokumen yang Dipersamakan dengan Bukti Potong', icon: 'i-lucide-file-check-2', disabled: true, badge: 'Segera hadir' },
       { label: 'BP 21 - Bukti Pemotongan Selain Pegawai Tetap', icon: 'i-lucide-file-text', to: modulePath('bp21') },
       { label: 'BP 23 - Bukti Pemotongan PPh Pasal 23', icon: 'i-lucide-file-signature', to: modulePath('bp23') },
       { label: 'BP 26 - Bukti Pemotongan Wajib Pajak Luar Negeri', icon: 'i-lucide-globe', to: modulePath('bp26') },
@@ -65,10 +65,10 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
     active: route.path.includes('/siswa/spt') || route.path.includes('/guru/spt'),
     children: [
       { label: 'Surat Pemberitahuan (SPT)', icon: 'i-lucide-file-spreadsheet', to: modulePath('spt') },
-      { label: 'Formulir Pajak', icon: 'i-lucide-clipboard-pen', disabled: true },
-      { label: 'Pencatatan', icon: 'i-lucide-book-text', disabled: true },
-      { label: 'Dasbor Kompensasi', icon: 'i-lucide-layout-dashboard', disabled: true },
-      { label: 'Pengungkapan Ketidakbenaran SPT', icon: 'i-lucide-file-warning', disabled: true }
+      { label: 'Formulir Pajak', icon: 'i-lucide-clipboard-pen', disabled: true, badge: 'Segera hadir' },
+      { label: 'Pencatatan', icon: 'i-lucide-book-text', disabled: true, badge: 'Segera hadir' },
+      { label: 'Dasbor Kompensasi', icon: 'i-lucide-layout-dashboard', disabled: true, badge: 'Segera hadir' },
+      { label: 'Pengungkapan Ketidakbenaran SPT', icon: 'i-lucide-file-warning', disabled: true, badge: 'Segera hadir' }
     ]
   },
   {
@@ -76,34 +76,35 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
     icon: 'i-lucide-badge-dollar-sign',
     active: route.path.includes('/siswa/pembayaran') || route.path.includes('/pembayaran/mandiri'),
     children: [
-      { label: 'Permohonan Pemindahbukuan', icon: 'i-lucide-arrow-left-right', disabled: true },
+      { label: 'Permohonan Pemindahbukuan', icon: 'i-lucide-arrow-left-right', disabled: true, badge: 'Segera hadir' },
       { label: 'Layanan Mandiri Kode Billing', icon: 'i-lucide-receipt', to: modulePath('pembayaran/mandiri') },
-      { label: 'Pembuatan Kode Billing atas Tagihan Pajak', icon: 'i-lucide-file-plus-2', disabled: true },
+      { label: 'Pembuatan Kode Billing atas Tagihan Pajak', icon: 'i-lucide-file-plus-2', disabled: true, badge: 'Segera hadir' },
       { label: 'Daftar Kode Billing', icon: 'i-lucide-list-checks', to: modulePath('pembayaran') },
-      { label: 'Formulir Restitusi Pajak', icon: 'i-lucide-file-input', disabled: true },
-      { label: 'Permohonan Pemberian Imbalan Bunga', icon: 'i-lucide-circle-dollar-sign', disabled: true },
-      { label: 'Permohonan PPh DTP atas Penghasilan PDAM', icon: 'i-lucide-landmark', disabled: true }
+      { label: 'Formulir Restitusi Pajak', icon: 'i-lucide-file-input', disabled: true, badge: 'Segera hadir' },
+      { label: 'Permohonan Pemberian Imbalan Bunga', icon: 'i-lucide-circle-dollar-sign', disabled: true, badge: 'Segera hadir' },
+      { label: 'Permohonan PPh DTP atas Penghasilan PDAM', icon: 'i-lucide-landmark', disabled: true, badge: 'Segera hadir' }
     ]
   },
   {
     label: 'Buku Besar',
     icon: 'i-lucide-book-open-check',
-    disabled: true
+    disabled: true,
+    badge: 'Segera hadir'
   },
   {
     label: 'Layanan WP',
     icon: 'i-lucide-layout-grid',
     children: [
-      { label: 'Profil Wajib Pajak', icon: 'i-lucide-id-card', disabled: true },
-      { label: 'Permohonan', icon: 'i-lucide-inbox', disabled: true }
+      { label: 'Profil Wajib Pajak', icon: 'i-lucide-id-card', disabled: true, badge: 'Segera hadir' },
+      { label: 'Permohonan', icon: 'i-lucide-inbox', disabled: true, badge: 'Segera hadir' }
     ]
   },
   {
     label: 'Manajemen Akses',
     icon: 'i-lucide-key-round',
     children: [
-      { label: 'Role Akses', icon: 'i-lucide-key-round', disabled: true },
-      { label: 'Pengguna', icon: 'i-lucide-users', disabled: true }
+      { label: 'Role Akses', icon: 'i-lucide-key-round', disabled: true, badge: 'Segera hadir' },
+      { label: 'Pengguna', icon: 'i-lucide-users', disabled: true, badge: 'Segera hadir' }
     ]
   }
 ])

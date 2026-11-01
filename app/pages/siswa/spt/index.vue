@@ -151,8 +151,8 @@ async function deleteDraft(row: TaxReturnRead) {
             </template>
             <template #amount-cell="{ row }">Rp {{ formatCurrency(row.original.amount_due) }}</template>
             <template #submitted_at-cell="{ row }">
-              <span v-if="row.original.submitted_at">{{ new Date(row.original.submitted_at).toLocaleDateString('id-ID') }}</span>
-              <span v-else>-</span>
+              <span v-if="row.original.submitted_at">{{ new Date(row.original.submitted_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}</span>
+              <span v-else>—</span>
             </template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">

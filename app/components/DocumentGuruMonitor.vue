@@ -347,6 +347,7 @@ async function saveFlag() {
       </template>
 
       <div class="overflow-x-auto">
+        <p class="mb-2 text-xs text-muted">Review = memberi nilai dan umpan balik pada dokumen. Flag SPT = menandai dokumen yang telah terbit untuk dilaporkan dalam SPT — bukan penilaian.</p>
         <UTable
           :data="slipList?.items ?? []"
           :columns="columns"
@@ -397,21 +398,24 @@ async function saveFlag() {
 
           <template #actions-cell="{ row }">
             <div class="flex justify-end gap-1">
-              <UButton
-                icon="i-lucide-clipboard-check"
-                label="Review"
-                size="xs"
-                @click="openReview(row.original)"
-              />
-              <UButton
-                v-if="sptFlag && row.original.status === 'issued'"
-                icon="i-lucide-flag"
-                label="Flag SPT"
-                color="neutral"
-                variant="soft"
-                size="xs"
-                @click="openFlagModal(row.original)"
-              />
+              <UTooltip text="Beri nilai dan umpan balik untuk dokumen ini">
+                <UButton
+                  icon="i-lucide-clipboard-check"
+                  label="Review"
+                  size="xs"
+                  @click="openReview(row.original)"
+                />
+              </UTooltip>
+              <UTooltip v-if="sptFlag && row.original.status === 'issued'" text="Tandai dokumen terbit untuk dilaporkan dalam SPT — bukan penilaian">
+                <UButton
+                  icon="i-lucide-flag"
+                  label="Flag SPT"
+                  color="neutral"
+                  variant="soft"
+                  size="xs"
+                  @click="openFlagModal(row.original)"
+                />
+              </UTooltip>
               <UButton
                 v-if="invalidate"
                 icon="i-lucide-ban"

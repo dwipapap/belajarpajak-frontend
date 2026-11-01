@@ -169,35 +169,36 @@ async function onSubmit() {
       <NuxtLink to="/siswa">Beranda</NuxtLink><UIcon name="i-lucide-chevron-right" class="size-3.5" />
       <NuxtLink to="/siswa/e-faktur">e-Faktur</NuxtLink><UIcon name="i-lucide-chevron-right" class="size-3.5" />
       <NuxtLink to="/siswa/e-faktur/masukan">Pajak Masukan</NuxtLink><UIcon name="i-lucide-chevron-right" class="size-3.5" />
-      <strong>Input Invoice Edit</strong>
+      <strong>Buat / Ubah Faktur Masukan</strong>
     </div>
 
     <UForm :state="formState" :validate="validate" class="bupot-form" @submit="onSubmit">
       <div class="bupot-form__header">
-        <div><p>{{ formState.seller_npwp || '-' }}</p><h1>Input Invoice Edit</h1></div>
+        <div><p>{{ formState.seller_npwp || '-' }}</p><h1>{{ isEdit ? 'Ubah Faktur Masukan' : 'Buat Faktur Masukan' }}</h1></div>
         <div class="bupot-form__actions">
-          <UButton to="/siswa/e-faktur/masukan" icon="i-lucide-arrow-left" color="neutral" variant="ghost">Go to search</UButton>
+          <UButton to="/siswa/e-faktur/masukan" icon="i-lucide-arrow-left" color="neutral" variant="ghost">Kembali</UButton>
           <UButton type="submit" icon="i-lucide-save" label="Simpan Konsep" color="neutral" :loading="saving" @click="submitIntent = 'draft';" />
         </div>
       </div>
 
       <UAlert v-if="submitError" color="error" variant="subtle" icon="i-lucide-circle-alert" :title="submitError" />
+      <UAlert color="info" variant="subtle" icon="i-lucide-info" title="Simpan Konsep menyimpan draf yang masih bisa diubah; dokumen masuk ke Belum Dikreditkan." />
 
       <!-- Dokumen Transaksi -->
       <section class="faktur-section">
         <button type="button" class="faktur-section__trigger" @click="openSections.document = !openSections.document"><UIcon :name="openSections.document ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-4" />Dokumen Transaksi</button>
         <div v-if="openSections.document" class="bupot-grid">
-          <UFormField name="is_advance_payment" label="Uang Muka"><UCheckbox v-model="formState.is_advance_payment" /></UFormField>
-          <UFormField name="is_settlement" label="Pelunasan"><UCheckbox v-model="formState.is_settlement" /></UFormField>
+          <UFormField name="is_advance_payment" label="Uang Muka" description="Centang bila faktur ini untuk pembayaran uang muka"><UCheckbox v-model="formState.is_advance_payment" /></UFormField>
+          <UFormField name="is_settlement" label="Pelunasan" description="Centang bila faktur ini untuk pelunasan"><UCheckbox v-model="formState.is_settlement" /></UFormField>
           <UFormField name="invoice_number" label="Nomor Faktur"><UInput :model-value="formatInvoiceNumber(formState.invoice_number) === '-' ? '' : formatInvoiceNumber(formState.invoice_number)" placeholder="Nomor Faktur" disabled class="w-full" /></UFormField>
           <UFormField name="transaction_code" label="Kode Transaksi" required><USelect v-model="formState.transaction_code" :items="transactionCodeOptions" class="w-full" /></UFormField>
           <UFormField name="invoice_date" label="Tanggal Faktur" required><UInput v-model="formState.invoice_date" type="date" class="w-full" /></UFormField>
-          <UFormField name="invoice_kind" label="Jenis Faktur" required><USelect v-model="formState.invoice_kind" :items="invoiceKindOptions" class="w-full" /></UFormField>
+          <UFormField name="invoice_kind" label="Jenis Faktur" description="Normal untuk faktur baru" required><USelect v-model="formState.invoice_kind" :items="invoiceKindOptions" class="w-full" /></UFormField>
           <UFormField name="tax_month" label="Masa Pajak" required><USelect v-model="formState.tax_month" :items="monthOptions" class="w-full" /></UFormField>
           <UFormField name="tax_year" label="Tahun" required><UInput v-model.number="formState.tax_year" type="number" disabled class="w-full" /></UFormField>
           <UFormField name="reference" label="Referensi"><UInput v-model="formState.reference" placeholder="Keterangan" class="w-full" /></UFormField>
-          <UFormField name="seller_idtku" label="IDTKU Penjual"><UInput v-model="formState.seller_idtku" class="w-full" /></UFormField>
-          <UFormField name="class_id" label="Kelas"><USelect v-model="formState.class_id" :items="classOptions" placeholder="Please select" class="w-full" /></UFormField>
+          <UFormField name="seller_idtku" label="NITKU Penjual"><UInput v-model="formState.seller_idtku" class="w-full" /></UFormField>
+          <UFormField name="class_id" label="Kelas"><USelect v-model="formState.class_id" :items="classOptions" placeholder="Pilih..." class="w-full" /></UFormField>
         </div>
       </section>
 
@@ -216,12 +217,12 @@ async function onSubmit() {
         <button type="button" class="faktur-section__trigger" @click="openSections.buyer = !openSections.buyer"><UIcon :name="openSections.buyer ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-4" />Informasi Pembeli</button>
         <div v-if="openSections.buyer" class="bupot-grid">
           <UFormField name="buyer_identity_number" label="Nomor Identitas WP" required><UInput v-model="formState.buyer_identity_number" class="w-full" /></UFormField>
-          <UFormField name="buyer_identity_type" label="ID"><URadioGroup v-model="formState.buyer_identity_type" :items="buyerIdentityOptions" /></UFormField>
+          <UFormField name="buyer_identity_type" label="Jenis Identitas" description="NPWP Perusahaan untuk badan usaha; NIK untuk orang pribadi"><URadioGroup v-model="formState.buyer_identity_type" :items="buyerIdentityOptions" /></UFormField>
           <UFormField name="buyer_country" label="Negara"><USelect v-model="formState.buyer_country" :items="countryOptions" class="w-full" /></UFormField>
           <UFormField name="buyer_document_number" label="Nomor Dokumen" :description="needsDocumentNumber ? undefined : 'Untuk Paspor / Identitas Lain'"><UInput v-model="formState.buyer_document_number" :disabled="!needsDocumentNumber" class="w-full" /></UFormField>
           <UFormField name="buyer_name" label="Nama" required><UInput v-model="formState.buyer_name" class="w-full" /></UFormField>
           <UFormField name="buyer_address" label="Alamat" required><UInput v-model="formState.buyer_address" class="w-full" /></UFormField>
-          <UFormField name="buyer_idtku" label="IDTKU" required><UInput v-model="formState.buyer_idtku" class="w-full" /></UFormField>
+          <UFormField name="buyer_idtku" label="NITKU" description="Nomor Identitas Tempat Kegiatan Usaha pembeli" required><UInput v-model="formState.buyer_idtku" class="w-full" /></UFormField>
           <UFormField name="buyer_email" label="Email"><UInput v-model="formState.buyer_email" type="email" class="w-full" /></UFormField>
         </div>
       </section>
@@ -236,7 +237,7 @@ async function onSubmit() {
           </div>
           <div class="faktur-table">
             <table class="w-full">
-              <thead><tr><th class="p-2" /><th class="p-2 text-left">Tipe</th><th class="p-2 text-left">Nama</th><th class="p-2 text-left">Kode</th><th class="p-2 text-right">KUANTITAS</th><th class="p-2 text-left">Satuan</th><th class="p-2 text-right">Harga Satuan</th><th class="p-2 text-right">Total Harga</th><th class="p-2 text-right">Potongan</th><th class="p-2 text-right">DPP</th><th class="p-2 text-right">DPP Nilai Lain</th><th class="p-2 text-right">Tarif PPN</th><th class="p-2 text-right">PPN</th><th class="p-2 text-right">Tarif PPnBM</th><th class="p-2 text-right">PPnBM</th><th class="p-2" /></tr></thead>
+              <thead><tr><th class="p-2" /><th class="p-2 text-left">Tipe</th><th class="p-2 text-left">Nama</th><th class="p-2 text-left">Kode</th><th class="p-2 text-right">Kuantitas</th><th class="p-2 text-left">Satuan</th><th class="p-2 text-right">Harga Satuan</th><th class="p-2 text-right">Total Harga</th><th class="p-2 text-right">Potongan</th><th class="p-2 text-right">DPP</th><th class="p-2 text-right">DPP Nilai Lain</th><th class="p-2 text-right">Tarif PPN</th><th class="p-2 text-right">PPN</th><th class="p-2 text-right">Tarif PPnBM</th><th class="p-2 text-right">PPnBM</th><th class="p-2" /></tr></thead>
               <tbody>
                 <tr v-if="!lines.length"><td colspan="16" class="py-8 text-center text-sm text-muted">Tidak ada data yang ditemukan.</td></tr>
                 <tr v-for="(line, index) in lines" :key="index" class="border-t border-default">

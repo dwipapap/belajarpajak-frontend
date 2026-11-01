@@ -104,6 +104,7 @@ async function creditSelected() {
       color: result.credited ? 'success' : 'warning',
       icon: 'i-lucide-check-circle'
     })
+    activeCreditStatus.value = 'credited'
     await refreshAll()
   } catch (error) {
     toast.add({ title: 'Gagal mengkreditkan', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })

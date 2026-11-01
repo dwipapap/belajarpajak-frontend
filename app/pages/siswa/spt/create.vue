@@ -30,15 +30,15 @@ const typeOptions: { label: string, value: TaxReturnType, description: string, i
     icon: 'i-lucide-scroll-text'
   },
   {
-    label: 'PPh 21/26',
+    label: 'PPh 21/26 Bulanan — Agregasi BPMP',
     value: 'pph_21_26',
-    description: 'SPT Masa PPh 21/26 — agregasi bukti potong bulanan pegawai tetap (BPMP), BP21, dan BP26.',
+    description: 'Gunakan ini bila SPT dihitung dari bukti potong bulanan pegawai tetap (BPMP), BP21, dan BP26.',
     icon: 'i-lucide-file-stack'
   },
   {
-    label: 'PPh 21/26 (SIM-TER)',
+    label: 'PPh 21/26 Final — Agregasi SIM-TER/Progresif',
     value: 'pph21_26',
-    description: 'SPT Masa PPh 21/26 — agregasi BP21 + BP26 terbit (SIM-TER/progresif).',
+    description: 'Gunakan ini bila SPT memakai skema pemotongan final SIM-TER/progresif (agregasi BP21 + BP26 terbit).',
     icon: 'i-lucide-file-text'
   }
 ]
@@ -144,7 +144,8 @@ async function submit() {
 
       <!-- Step 3: jenis SPT -->
       <div v-else class="spt-wizard__body">
-        <h2>Pilih Jenis SPT</h2>
+        <h2>Pilih Jenis SPT — Normal atau Pembetulan</h2>
+        <p class="mb-3 text-sm text-muted">Normal untuk pelaporan pertama periode ini; Pembetulan hanya untuk SPT yang sudah dilaporkan.</p>
         <div class="flex gap-4">
           <button
             type="button"

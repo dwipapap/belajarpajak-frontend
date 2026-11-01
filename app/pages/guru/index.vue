@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ClassDetail, DashboardSummary, SchoolClass } from '~/types/api'
+import type { ClassDetail, DashboardSummary, SchoolClass, TaxReturnSummary } from '~/types/api'
 
 definePageMeta({ middleware: 'role', roles: ['guru'] })
 
@@ -8,6 +8,13 @@ const { apiFetch } = useApi()
 const { data: summary } = useAsyncData(
   'guru-summary',
   () => apiFetch<DashboardSummary>('/api/v1/dashboard/summary')
+)
+
+/** SPT dilaporkan yang belum diberi nilai — antrean penilaian guru. */
+const { data: sptSummary } = useAsyncData(
+  'guru-dashboard-spt-summary',
+  () => apiFetch<TaxReturnSummary>('/api/v1/spt/summary'),
+  { default: () => ({ draft: 0, awaiting_payment: 0, reported: 0, total: 0 }) }
 )
 
 const { data: classes, status: classesStatus } = useAsyncData(
@@ -53,6 +60,22 @@ function selectClass(id: number) {
             <p class="text-sm text-muted">{{ card.label }}</p>
             <p class="text-2xl font-semibold text-default">{{ card.value }}</p>
           </div>
+        </div>
+      </UCard>
+
+      <UCard>
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="rounded-lg bg-warning/10 p-3">
+              <UIcon name="i-lucide-clipboard-check" class="size-6 text-warning" />
+            </div>
+            <div>
+              <p class="text-sm text-muted">Perlu dinilai</p>
+              <p class="text-2xl font-semibold text-default">{{ sptSummary.reported }}</p>
+              <p class="text-xs text-muted">SPT dilaporkan menunggu penilaian. Antrean per modul: SPT, BP21, BP23, BP26.</p>
+            </div>
+          </div>
+          <UButton to="/guru/spt" icon="i-lucide-arrow-right" color="neutral" variant="ghost" label="Nilai SPT" />
         </div>
       </UCard>
       

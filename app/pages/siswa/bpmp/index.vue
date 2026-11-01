@@ -27,9 +27,9 @@ const filterFacility = ref<BpmpTaxFacility | undefined>(undefined)
 const filterSptFlag = ref<BpmpSptFlag | undefined>(undefined)
 
 const headingByStatus = {
-  draft: 'EBUPOT BPMP NOT ISSUED',
-  issued: 'EBUPOT BPMP ISSUED',
-  invalid: 'EBUPOT BPMP TIDAK VALID'
+  draft: 'e-Bupot BPMP',
+  issued: 'e-Bupot BPMP',
+  invalid: 'e-Bupot BPMP'
 } satisfies Record<BpmpStatus, string>
 
 const { data: summary, refresh: refreshSummary } = useAsyncData(
@@ -182,10 +182,11 @@ async function issueSelected() {
       color: result.failed ? 'warning' : 'success',
       icon: 'i-lucide-send'
     })
+    activeStatus.value = 'issued' as typeof activeStatus.value
     await refreshAll()
   } catch (error) {
     toast.add({
-      title: 'Bulk terbitkan gagal',
+      title: 'Terbitkan massal gagal',
       description: apiErrorMessage(error),
       color: 'error',
       icon: 'i-lucide-circle-alert'
@@ -237,7 +238,7 @@ const monitoringItems = computed<DropdownMenuItem[]>(() => [
     onSelect: () => downloadFile(`/api/v1/bpmp/export-xml${exportQuery('issued')}`, 'bpmp_issued.xml')
   },
   {
-    label: 'Download CSV by Period',
+    label: 'Unduh CSV per Masa',
     icon: 'i-lucide-file-spreadsheet',
     onSelect: () => downloadFile(`/api/v1/bpmp/export-csv${exportQuery(activeStatus.value)}`, 'bpmp_export.csv')
   }
@@ -251,7 +252,7 @@ const bulkProcessItems = computed<DropdownMenuItem[]>(() => [
     onSelect: () => issueSelected()
   },
   {
-    label: 'Download CSV by Period',
+    label: 'Unduh CSV per Masa',
     icon: 'i-lucide-file-spreadsheet',
     onSelect: () => downloadFile(`/api/v1/bpmp/export-csv${exportQuery(activeStatus.value)}`, 'bpmp_export.csv')
   }
@@ -341,12 +342,12 @@ function closeImport() {
 
       <section class="bupot-main">
         <div class="bupot-main__header">
-          <h1>{{ headingByStatus[activeStatus] }}</h1>
+          <h1>e-Bupot BPMP</h1>
           <div class="bupot-actions">
             <UButton
               to="/siswa/bpmp/create"
               icon="i-lucide-plus"
-              label="Create eBupot BPMP"
+              label="Buat e-Bupot BPMP"
               class="bupot-primary-button"
             />
             <UButton
@@ -364,7 +365,7 @@ function closeImport() {
               @click="issueSelected"
             />
             <UDropdownMenu :items="monitoringItems">
-              <UButton icon="i-lucide-monitor" label="Monitoring" color="neutral" variant="soft" />
+              <UButton icon="i-lucide-monitor" label="Pemantauan" color="neutral" variant="soft" />
             </UDropdownMenu>
             <UButton
               icon="i-lucide-upload"
@@ -374,7 +375,7 @@ function closeImport() {
               @click="openImport"
             />
             <UDropdownMenu :items="bulkProcessItems">
-              <UButton icon="i-lucide-layers" label="Bulk Process" color="neutral" variant="soft" />
+              <UButton icon="i-lucide-layers" label="Proses Massal" color="neutral" variant="soft" />
             </UDropdownMenu>
             <UButton icon="i-lucide-refresh-cw" color="neutral" variant="soft" @click="refreshAll" />
           </div>
@@ -438,7 +439,7 @@ function closeImport() {
             </template>
 
             <template #income_tax-cell="{ row }">
-              Rp {{ formatCurrency(row.original.income_tax) }}
+              <span :title="`Bruto Rp ${formatCurrency(row.original.gross_income ?? row.original.dpp)} • PPh Rp ${formatCurrency(row.original.income_tax)}`">Rp {{ formatCurrency(row.original.income_tax) }}</span>
             </template>
 
             <template #tarif_treaty_basis_points-cell="{ row }">

@@ -269,14 +269,14 @@ async function onSubmit() {
       <UIcon name="i-lucide-chevron-right" class="size-3.5" />
       <NuxtLink to="/siswa/e-faktur/keluaran">Pajak Keluaran</NuxtLink>
       <UIcon name="i-lucide-chevron-right" class="size-3.5" />
-      <strong>Output Invoice Edit</strong>
+      <strong>Buat / Ubah Faktur Keluaran</strong>
     </div>
 
     <UForm :state="formState" :validate="validate" class="bupot-form" @submit="onSubmit">
       <div class="bupot-form__header">
         <div>
           <p>{{ formState.seller_npwp }}</p>
-          <h1>Output Invoice Edit</h1>
+          <h1>{{ isEdit ? 'Ubah Faktur Keluaran' : 'Buat Faktur Keluaran' }}</h1>
         </div>
         <div class="bupot-form__actions">
           <UButton
@@ -285,7 +285,7 @@ async function onSubmit() {
             color="neutral"
             variant="ghost"
           >
-            Go to search
+            Kembali
           </UButton>
           <UButton
             type="submit"
@@ -313,6 +313,13 @@ async function onSubmit() {
         icon="i-lucide-circle-alert"
         :title="submitError"
       />
+      <UAlert
+        color="info"
+        variant="subtle"
+        icon="i-lucide-info"
+        title="Simpan Konsep menyimpan draf yang masih bisa diubah di tab Belum Terbit; Submit menerbitkan dokumen ke tab Telah Terbit."
+        class="mb-1"
+      />
 
       <!-- Dokumen Transaksi -->
       <section class="faktur-section">
@@ -328,11 +335,11 @@ async function onSubmit() {
           Dokumen Transaksi
         </button>
         <div v-if="openSections.document" class="bupot-grid">
-          <UFormField name="is_advance_payment" label="Uang Muka">
+          <UFormField name="is_advance_payment" label="Uang Muka" description="Centang bila faktur ini untuk pembayaran uang muka">
             <UCheckbox v-model="formState.is_advance_payment" />
           </UFormField>
 
-          <UFormField name="is_settlement" label="Pelunasan">
+          <UFormField name="is_settlement" label="Pelunasan" description="Centang bila faktur ini untuk pelunasan">
             <UCheckbox v-model="formState.is_settlement" />
           </UFormField>
 
@@ -359,7 +366,7 @@ async function onSubmit() {
             <UInput v-model="formState.invoice_date" type="date" class="w-full" />
           </UFormField>
 
-          <UFormField name="invoice_kind" label="Jenis Faktur" required>
+          <UFormField name="invoice_kind" label="Jenis Faktur" description="Normal untuk faktur baru" required>
             <USelect v-model="formState.invoice_kind" :items="invoiceKindOptions" class="w-full" />
           </UFormField>
 
@@ -379,7 +386,7 @@ async function onSubmit() {
             <UInput v-model="formState.seller_address" class="w-full" />
           </UFormField>
 
-          <UFormField name="seller_idtku" label="IDTKU">
+          <UFormField name="seller_idtku" label="NITKU" description="Nomor Identitas Tempat Kegiatan Usaha, 22 digit bila diisi">
             <UInput v-model="formState.seller_idtku" class="w-full" />
           </UFormField>
 
@@ -387,7 +394,7 @@ async function onSubmit() {
             <USelect
               v-model="formState.class_id"
               :items="classOptions"
-              placeholder="Please select"
+              placeholder="Pilih..."
               class="w-full"
             />
           </UFormField>
@@ -412,7 +419,7 @@ async function onSubmit() {
             <UInput v-model="formState.buyer_identity_number" class="w-full" />
           </UFormField>
 
-          <UFormField name="buyer_identity_type" label="ID">
+          <UFormField name="buyer_identity_type" label="Jenis Identitas" description="NPWP Perusahaan untuk badan usaha; NIK untuk orang pribadi">
             <URadioGroup
               v-model="formState.buyer_identity_type"
               :items="buyerIdentityOptions"
@@ -443,7 +450,7 @@ async function onSubmit() {
             <UInput v-model="formState.buyer_address" class="w-full" />
           </UFormField>
 
-          <UFormField name="buyer_idtku" label="IDTKU" required>
+          <UFormField name="buyer_idtku" label="NITKU" description="Nomor Identitas Tempat Kegiatan Usaha pembeli" required>
             <UInput v-model="formState.buyer_idtku" class="w-full" />
           </UFormField>
 
@@ -492,7 +499,7 @@ async function onSubmit() {
                   <th class="p-2 text-left">Tipe</th>
                   <th class="p-2 text-left">Nama</th>
                   <th class="p-2 text-left">Kode</th>
-                  <th class="p-2 text-right">KUANTITAS</th>
+                  <th class="p-2 text-right">Kuantitas</th>
                   <th class="p-2 text-left">Satuan</th>
                   <th class="p-2 text-right">Harga Satuan</th>
                   <th class="p-2 text-right">Total Harga</th>

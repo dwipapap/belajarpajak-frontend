@@ -140,13 +140,14 @@ const columns: TableColumn<TaxReturnRead>[] = [
         <div class="bupot-side__title">Monitor SPT</div>
         <div class="bupot-side__stats">
           <div><span>Konsep</span><strong>{{ summary.draft }}</strong></div>
-          <div><span>Menunggu Bayar</span><strong>{{ summary.awaiting_payment }}</strong></div>
+          <div><span>Menunggu Pembayaran</span><strong>{{ summary.awaiting_payment }}</strong></div>
           <div><span>Dilaporkan</span><strong>{{ summary.reported }}</strong></div>
         </div>
       </aside>
 
       <section class="bupot-main">
         <div class="bupot-main__header"><h1>SPT Siswa</h1></div>
+        <p class="text-xs text-muted">Nilai = memberi skor dan umpan balik pada SPT. Buka antrean tiap modul (SPT, BP21, BP23, BP26) untuk menilai dokumen yang telah terbit.</p>
 
         <div class="bupot-toolbar">
           <UButton icon="i-lucide-refresh-cw" color="info" variant="soft" :loading="listStatus === 'pending'" @click="refreshAll" />
@@ -170,7 +171,7 @@ const columns: TableColumn<TaxReturnRead>[] = [
               </UBadge>
             </template>
             <template #amount-cell="{ row }">Rp {{ formatCurrency(row.original.amount_due) }}</template>
-            <template #score-cell="{ row }">{{ row.original.score ?? '-' }}</template>
+            <template #score-cell="{ row }">{{ row.original.score ?? '—' }}</template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">
                 <UButton icon="i-lucide-clipboard-check" size="xs" label="Nilai" @click="openReview(row.original)" />

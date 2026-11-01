@@ -82,9 +82,10 @@ export function isBillingExpired(createdAt: string | null, status: BillingStatus
 
 /** KAP-KJS whitelist Layanan Mandiri (mirror backend MANDIRI_KJS; label manusia). */
 export const mandiriKjsOptions: { label: string, value: string }[] = [
-  { label: '411121-100 — PPN Masa / PPh 21 Setor Sendiri', value: '411121-100' },
+  { label: '411211-100 — PPN Masa', value: '411211-100' },
+  { label: '411121-100 — PPh 21 Setor Sendiri', value: '411121-100' },
   { label: '411124-100 — PPh 23', value: '411124-100' },
-  { label: '411127-100 — PPh 26', value: '411127-100' },
+  { label: '411127-110 — PPh 26', value: '411127-110' },
   { label: '411128-100 — PPh Final 4(2)', value: '411128-100' },
   { label: '411122-100 — PPh 22', value: '411122-100' }
 ]

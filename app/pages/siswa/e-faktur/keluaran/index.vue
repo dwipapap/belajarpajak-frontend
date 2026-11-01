@@ -112,6 +112,7 @@ async function uploadSelected() {
       color: result.issued ? 'success' : 'warning',
       icon: 'i-lucide-send'
     })
+    activeStatus.value = 'issued'
     await refreshAll()
   } catch (error) {
     toast.add({
@@ -161,10 +162,11 @@ async function issueOne(invoice: TaxInvoiceRead) {
     })
     toast.add({
       title: 'Faktur diterbitkan',
-      description: `Nomor faktur dibuat untuk ${invoice.buyer_name}.`,
+      description: `Nomor faktur dibuat untuk ${invoice.buyer_name}. Dokumen masuk ke tab Telah Terbit.`,
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
+    activeStatus.value = 'issued'
     await refreshAll()
   } catch (error) {
     toast.add({
@@ -238,14 +240,14 @@ const canActOnSelection = computed(
           <UButton
             icon="i-lucide-info"
             trailing-icon="i-lucide-chevron-down"
-            label="Monitoring"
+            label="Pemantauan" title="Segera hadir"
             class="bupot-primary-button"
             disabled
           />
           <UButton
             icon="i-lucide-layers"
             trailing-icon="i-lucide-chevron-down"
-            label="Bulk Process"
+            label="Proses Massal" title="Segera hadir"
             class="bupot-primary-button"
             disabled
           />

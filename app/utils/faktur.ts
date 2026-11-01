@@ -104,7 +104,7 @@ export const unitOptions = [
 ]
 
 export const itemCodeOptions = [
-  { label: '000000 - Barang/Jasa Lainnya', value: '000000' },
+  { label: '000000 - Barang / Jasa Lainnya', value: '000000' },
   { label: '010000 - Barang Kena Pajak Umum', value: '010000' },
   { label: '020000 - Bahan Bangunan', value: '020000' },
   { label: '030000 - Kendaraan Bermotor', value: '030000' },

@@ -112,6 +112,7 @@ export function validateBupotCreate(state: {
   recipient_nitku?: string
   document_nitku?: string
   tax_facility?: string
+  ter_category?: string | null
 }) {
   const errors: { name: string, message: string }[] = []
   if (!state.class_id) errors.push({ name: 'class_id', message: 'Pilih kelas' })
@@ -146,6 +147,9 @@ export function validateBupotCreate(state: {
   const npwp = (state.withholder_npwp || '').trim()
   if (npwp && !/^\d{15,16}$/.test(npwp)) {
     errors.push({ name: 'withholder_npwp', message: 'NPWP pemotong harus 15 atau 16 digit' })
+  }
+  if ('ter_category' in state && state.tax_month !== undefined && Number(state.tax_month) !== 12 && !state.ter_category) {
+    errors.push({ name: 'ter_category', message: 'Untuk Masa Jan–Nov pilih kategori TER (A/B/C)' })
   }
   if (state.tax_facility === 'skb' && !state.document_number) {
     errors.push({ name: 'document_number', message: 'SKB wajib mencantumkan nomor dokumen SKB' })
