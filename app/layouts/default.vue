@@ -6,6 +6,8 @@ const route = useRoute()
 
 const homePath = computed(() => roleHome(auth.user.value?.role))
 
+const isSuperadmin = computed(() => auth.user.value?.role === 'superadmin')
+
 function modulePath(slug: string) {
   switch (auth.user.value?.role) {
     case 'guru':
@@ -20,13 +22,50 @@ function modulePath(slug: string) {
   }
 }
 
-const moduleItems = computed<NavigationMenuItem[]>(() => [
+const moduleItems = computed<NavigationMenuItem[]>(() => {
+  // Superadmin is a platform operator, not a taxpayer: show only the
+  // platform-management menu (all point at routes that exist today).
+  // Institution + cross-tenant user management live on the /admin dashboard.
+  if (isSuperadmin.value) {
+    return [
+      {
+        label: 'Dasbor',
+        icon: 'i-lucide-layout-dashboard',
+        to: '/admin',
+        active: route.path === '/admin'
+      },
+      {
+        label: 'Tarif Pajak',
+        icon: 'i-lucide-percent',
+        to: '/admin/tarif-pajak',
+        active: route.path.includes('/admin/tarif-pajak')
+      },
+      {
+        label: 'Log Audit',
+        icon: 'i-lucide-scroll-text',
+        to: '/admin/audit',
+        active: route.path.includes('/admin/audit')
+      }
+    ]
+  }
+
+  return [
   {
     label: 'Portal Saya',
     icon: 'i-lucide-shield-user',
     to: homePath.value,
     active: route.path === homePath.value
   },
+  ...(auth.user.value?.role === 'admin'
+    ? [
+        {
+          label: 'Kelas',
+          icon: 'i-lucide-book-open',
+          to: '/admin/kelas',
+          active: route.path.includes('/admin/kelas')
+        }
+      ]
+    : []),
   {
     label: 'e-Faktur',
     icon: 'i-lucide-receipt-text',
@@ -107,7 +146,8 @@ const moduleItems = computed<NavigationMenuItem[]>(() => [
       { label: 'Pengguna', icon: 'i-lucide-users', disabled: true, badge: 'Segera hadir' }
     ]
   }
-])
+  ]
+})
 
 const roleLabel = computed(() => {
   switch (auth.user.value?.role) {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui'
-import type { BpnrListResponse, BpnrRead, BpnrStatus, BpnrSummary } from '~/types/api'
+import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
+import type { BpnrListResponse, BpnrRead, BpnrStatus, BpnrSummary, Bp26BulkIssueResult } from '~/types/api'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -11,6 +11,9 @@ const toast = useToast()
 const activeStatus = ref<BpnrStatus>('draft')
 const page = ref(1)
 const pageSize = 10
+
+const filterMonth = ref<number | undefined>(undefined)
+const filterYear = ref<number | undefined>(undefined)
 
 const { data: summary, refresh: refreshSummary } = useAsyncData(
   'siswa-bpnr-summary',
@@ -26,16 +29,33 @@ const { data: bpnrList, status: listStatus, refresh: refreshList } = useAsyncDat
       page: String(page.value),
       size: String(pageSize)
     })
+    if (filterMonth.value !== undefined) query.set('tax_month', String(filterMonth.value))
+    if (filterYear.value) query.set('tax_year', String(filterYear.value))
     return apiFetch<BpnrListResponse>(`/api/v1/bpnr?${query.toString()}`)
   },
-  { watch: [activeStatus, page] }
+  { watch: [activeStatus, page, filterMonth, filterYear] }
 )
 
-watch(activeStatus, () => {
+const selectedIds = ref(new Set<number>())
+
+watch([activeStatus, filterMonth, filterYear], () => {
   page.value = 1
+  selectedIds.value = new Set()
 })
 
+watch(bpnrList, () => {
+  selectedIds.value = new Set()
+})
+
+function toggleSelected(id: number) {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
+
 const columns: TableColumn<BpnrRead>[] = [
+  { id: 'select' },
   { accessorKey: 'tax_month', header: 'Masa Pajak' },
   { accessorKey: 'withholding_number', header: 'Nomor Pemotongan' },
   { accessorKey: 'status', header: 'Status' },
@@ -63,7 +83,7 @@ async function confirmIssue() {
       body: { signer_name: signerName.value || undefined, kode_otorisasi: kodeOtorisasi.value || undefined }
     })
     toast.add({
-      title: 'bpnr diterbitkan',
+      title: 'BPNR diterbitkan',
       description: `BPE-SIM dibuat untuk ${pendingSlip.value.recipient_name}.`,
       color: 'success',
       icon: 'i-lucide-check-circle'
@@ -74,7 +94,7 @@ async function confirmIssue() {
     await Promise.all([refreshList(), refreshSummary()])
   } catch (error) {
     toast.add({
-      title: 'Gagal menerbitkan bpnr',
+      title: 'Gagal menerbitkan BPNR',
       description: apiErrorMessage(error),
       color: 'error',
       icon: 'i-lucide-circle-alert'
@@ -107,6 +127,119 @@ const kodeOtorisasi = ref('')
 async function refreshAll() {
   await Promise.all([refreshList(), refreshSummary()])
 }
+
+function clearFilters() {
+  filterMonth.value = undefined
+  filterYear.value = undefined
+}
+
+async function deleteSelected() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  let deleted = 0
+  for (const id of ids) {
+    try {
+      await apiFetch(`/api/v1/bpnr/${id}`, { method: 'DELETE' })
+      deleted += 1
+    } catch {
+      // keep going; report the aggregate below
+    }
+  }
+  toast.add({
+    title: `${deleted} dari ${ids.length} BPNR dihapus`,
+    color: deleted === ids.length ? 'success' : 'warning',
+    icon: 'i-lucide-trash-2'
+  })
+  await refreshAll()
+}
+
+async function issueSelected() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  try {
+    const result = await apiFetch<Bp26BulkIssueResult>('/api/v1/bpnr/bulk-issue', {
+      method: 'POST',
+      body: { ids }
+    })
+    toast.add({
+      title: `${result.issued} BPNR diterbitkan`,
+      description: result.failed ? `${result.failed} gagal diterbitkan.` : undefined,
+      color: result.failed ? 'warning' : 'success',
+      icon: 'i-lucide-send'
+    })
+    activeStatus.value = 'issued' as typeof activeStatus.value
+    await refreshAll()
+  } catch (error) {
+    toast.add({
+      title: 'Terbitkan massal gagal',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  }
+}
+
+async function downloadFile(path: string, filename: string) {
+  try {
+    const blob = await apiFetch<Blob>(path, { responseType: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    toast.add({
+      title: 'Unduhan gagal',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  }
+}
+
+function exportQuery(withStatus?: BpnrStatus) {
+  const query = new URLSearchParams()
+  if (withStatus) query.set('status', withStatus)
+  if (filterMonth.value !== undefined) query.set('tax_month', String(filterMonth.value))
+  if (filterYear.value) query.set('tax_year', String(filterYear.value))
+  const text = query.toString()
+  return text ? `?${text}` : ''
+}
+
+const monitoringItems = computed<DropdownMenuItem[]>(() => [
+  {
+    label: 'XML',
+    icon: 'i-lucide-file-code',
+    onSelect: () => downloadFile(`/api/v1/bpnr/export-xml${exportQuery(activeStatus.value)}`, 'bpnr_export.xml')
+  },
+  {
+    label: 'Diterbitkan Masa Pajak',
+    icon: 'i-lucide-calendar-check',
+    onSelect: () => downloadFile(`/api/v1/bpnr/export-xml${exportQuery('issued')}`, 'bpnr_issued.xml')
+  },
+  {
+    label: 'Unduh CSV per Masa',
+    icon: 'i-lucide-file-spreadsheet',
+    onSelect: () => downloadFile(`/api/v1/bpnr/export-csv${exportQuery(activeStatus.value)}`, 'bpnr_export.csv')
+  }
+])
+
+const bulkProcessItems = computed<DropdownMenuItem[]>(() => [
+  {
+    label: 'Diterbitkan Masa Pajak',
+    icon: 'i-lucide-send',
+    disabled: activeStatus.value !== 'draft' || selectedIds.value.size === 0,
+    onSelect: () => issueSelected()
+  },
+  {
+    label: 'Unduh CSV per Masa',
+    icon: 'i-lucide-file-spreadsheet',
+    onSelect: () => downloadFile(`/api/v1/bpnr/export-csv${exportQuery(activeStatus.value)}`, 'bpnr_export.csv')
+  }
+])
 </script>
 
 <template>
@@ -154,18 +287,44 @@ async function refreshAll() {
               label="Buat e-Bupot BPNR"
               class="bupot-primary-button"
             />
-            <UButton icon="i-lucide-trash-2" label="Hapus" color="neutral" disabled />
-            <UButton icon="i-lucide-send" label="Terbitkan" color="neutral" disabled />
+            <UButton
+              icon="i-lucide-trash-2"
+              label="Hapus"
+              color="neutral"
+              :disabled="activeStatus !== 'draft' || selectedIds.size === 0"
+              @click="deleteSelected"
+            />
+            <UButton
+              icon="i-lucide-send"
+              label="Terbitkan"
+              color="neutral"
+              :disabled="activeStatus !== 'draft' || selectedIds.size === 0"
+              @click="issueSelected"
+            />
+            <UDropdownMenu :items="monitoringItems">
+              <UButton icon="i-lucide-monitor" label="Pemantauan" color="neutral" variant="soft" />
+            </UDropdownMenu>
+            <UDropdownMenu :items="bulkProcessItems">
+              <UButton icon="i-lucide-layers" label="Proses Massal" color="neutral" variant="soft" />
+            </UDropdownMenu>
             <UButton icon="i-lucide-refresh-cw" color="neutral" variant="soft" @click="refreshAll" />
           </div>
         </div>
 
         <div class="bupot-toolbar">
-          <UButton icon="i-lucide-refresh-cw" color="info" variant="soft" @click="refreshAll" />
-          <UButton icon="i-lucide-file" color="neutral" variant="solid" disabled />
-          <UButton icon="i-lucide-file-spreadsheet" color="success" variant="solid" disabled />
-          <UButton icon="i-lucide-file-text" color="error" variant="solid" disabled />
-          <UButton icon="i-lucide-filter-x" color="neutral" variant="soft" disabled />
+          <USelect v-model="filterMonth" :items="monthFilterOptions" class="w-40" />
+          <UInput
+            v-model="filterYear"
+            type="number"
+            placeholder="Tahun Pajak"
+            class="w-32"
+          />
+          <UButton
+            icon="i-lucide-filter-x"
+            color="neutral"
+            variant="soft"
+            @click="clearFilters"
+          />
         </div>
 
         <div class="bupot-table">
@@ -174,6 +333,13 @@ async function refreshAll() {
             :columns="columns"
             :loading="listStatus === 'pending'"
           >
+            <template #select-cell="{ row }">
+              <UCheckbox
+                :model-value="selectedIds.has(row.original.id)"
+                @update:model-value="toggleSelected(row.original.id)"
+              />
+            </template>
+
             <template #tax_month-cell="{ row }">
               <span class="font-medium">{{ formatPeriod(row.original) }}</span>
             </template>
@@ -249,7 +415,7 @@ async function refreshAll() {
       </section>
     </div>
 
-    <UModal v-model:open="showIssueModal" title="Terbitkan bpnr (simulasi TTE)">
+    <UModal v-model:open="showIssueModal" title="Terbitkan BPNR (simulasi TTE)">
       <template #body>
         <p class="text-sm text-muted mb-3">
           Penandatangan simulasi + Kode Otorisasi simulasi (min 6 karakter). Bukan TTE resmi.

@@ -10,6 +10,7 @@ export interface Tenant {
   type: TenantType
   is_active: boolean
   contact_wa: string | null
+  berlaku_dari: string | null
   berlaku_sampai: string | null
   max_guru: number | null
   max_siswa: number | null
@@ -43,6 +44,29 @@ export interface TenantUpdate {
   max_guru?: number | null
   max_siswa?: number | null
   max_kelas?: number | null
+}
+
+/**
+ * Per-tenant usage summary for the superadmin console.
+ * Served by GET /api/v1/tenants/{id}/summary when the backend provides it;
+ * the frontend must tolerate its absence (404) and render a "memuat…"
+ * fallback from the tenant list data instead of mocking numbers.
+ */
+export interface TenantQuotaUsage {
+  used: number | null
+  limit: number | null
+}
+
+export interface TenantSummary {
+  tenant_id: number
+  guru: TenantQuotaUsage | null
+  siswa: TenantQuotaUsage | null
+  kelas: TenantQuotaUsage | null
+  berlaku_sampai: string | null
+  berlaku_dari: string | null
+  days_remaining: number | null
+  expired_soon: boolean
+  admins?: User[] | null
 }
 
 export interface User {
@@ -121,8 +145,19 @@ export interface SchoolClass {
   tenant_id: number
   name: string
   academic_year: string
+  archived?: boolean
   guru_id: number
   guru: User | null
+}
+
+export interface ClassCreate {
+  name: string
+  academic_year: string
+  guru_id: number
+}
+
+export interface EnrollmentCreate {
+  siswa_id: number
 }
 
 export interface ClassDetail extends SchoolClass {
