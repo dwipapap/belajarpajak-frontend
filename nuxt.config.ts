@@ -6,6 +6,12 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui'],
   css: ['~/assets/css/main.css'],
 
+  // Light only (DESIGN.md: no dark mode). Without this, Nuxt UI follows the
+  // OS theme and renders its components dark under our light page shell.
+  ui: {
+    colorMode: false
+  },
+
   // SPA mode: auth lives entirely client-side (JWT in memory + refresh token in
   // localStorage), so there is nothing useful to render on the server.
   ssr: false,
