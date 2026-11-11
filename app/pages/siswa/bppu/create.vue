@@ -31,83 +31,46 @@ const taxObjectOptions: {
   ratePercent: number
   kapKjs: string
 }[] = [
+  // Must match the backend TAX_OBJECT_MATRIX for BPPU (rate and KAP are validated there).
   {
-    label: '28-100-01 - Pengalihan hak atas tanah/bangunan (PPh 4(2))',
-    value: '28-100-01',
-    taxObjectName: 'Pengalihan hak atas tanah/bangunan',
-    taxType: 'PPh 4(2)',
-    taxNature: 'final',
-    ratePercent: 2.5,
-    kapKjs: '411128-100'
-  },
-  {
-    label: '28-100-02 - Persewaan tanah/bangunan (PPh 4(2))',
-    value: '28-100-02',
-    taxObjectName: 'Persewaan tanah/bangunan',
-    taxType: 'PPh 4(2)',
-    taxNature: 'final',
-    ratePercent: 10,
-    kapKjs: '411128-403'
-  },
-  {
-    label: '15-100-01 - Penerbangan dalam negeri (PPh 15)',
-    value: '15-100-01',
-    taxObjectName: 'Penerbangan dalam negeri',
-    taxType: 'PPh 15',
-    taxNature: 'final',
-    ratePercent: 1.8,
-    kapKjs: '411129-600'
-  },
-  {
-    label: '22-100-01 - Impor barang (PPh 22)',
-    value: '22-100-01',
-    taxObjectName: 'Impor barang',
-    taxType: 'PPh 22',
-    taxNature: 'non_final',
-    ratePercent: 2.5,
-    kapKjs: '411122-100'
-  },
-  {
-    label: '24-100-01 - Sewa harta selain tanah/bangunan (PPh 23)',
+    label: '24-100-01 - Dividen (PPh 23, 15%)',
     value: '24-100-01',
-    taxObjectName: 'Sewa harta selain tanah/bangunan',
+    taxObjectName: 'Dividen',
     taxType: 'PPh 23',
-    taxNature: 'non_final',
-    ratePercent: 2,
-    kapKjs: '411124-100'
-  },
-  {
-    label: '24-100-02 - Imbalan jasa (PPh 23)',
-    value: '24-100-02',
-    taxObjectName: 'Imbalan jasa',
-    taxType: 'PPh 23',
-    taxNature: 'non_final',
-    ratePercent: 2,
-    kapKjs: '411124-100'
-  },
-  {
-    label: '24-100-01 - Dividen (15%)',
-    value: '24-100-01',
     incomeType: 'Dividen',
     taxNature: 'non_final',
     ratePercent: 15,
     kapKjs: '411124-100'
   },
   {
-    label: '24-102-01 - Sewa harta (2%, x2 tanpa NPWP)',
+    label: '24-102-01 - Sewa harta (PPh 23, 2%)',
     value: '24-102-01',
+    taxObjectName: 'Sewa dan penghasilan lain sehubungan dengan penggunaan harta',
+    taxType: 'PPh 23',
     incomeType: 'Sewa dan penghasilan lain sehubungan dengan penggunaan harta',
     taxNature: 'non_final',
     ratePercent: 2,
     kapKjs: '411124-104'
   },
   {
-    label: '24-104-01 - Jasa konsultan (2%, x2 tanpa NPWP)',
+    label: '24-104-01 - Jasa konsultan (PPh 23, 2%)',
     value: '24-104-01',
+    taxObjectName: 'Jasa konsultan',
+    taxType: 'PPh 23',
     incomeType: 'Jasa Konsultan',
     taxNature: 'non_final',
     ratePercent: 2,
     kapKjs: '411124-104'
+  },
+  {
+    label: '28-100-01 - Jasa konstruksi (PPh 4(2) final, 2%)',
+    value: '28-100-01',
+    taxObjectName: 'Jasa konstruksi',
+    taxType: 'PPh 4(2)',
+    incomeType: 'Jasa konstruksi',
+    taxNature: 'final',
+    ratePercent: 2,
+    kapKjs: '411128-100'
   }
 ]
 
@@ -146,7 +109,7 @@ const formState = reactive({
   tax_facility: 'none' as BppuTaxFacility,
   tax_type: 'PPh 4(2)',
   tax_object_code: '28-100-01',
-  tax_object_name: 'Pengalihan hak atas tanah/bangunan',
+  tax_object_name: 'Jasa konstruksi',
   income_type: '',
   tax_nature: 'final' as BppuTaxNature,
   dpp: 0,

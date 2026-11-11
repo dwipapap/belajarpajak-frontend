@@ -31,14 +31,6 @@ const taxObjectOptions: {
     taxNature: 'non_final',
     ratePercent: 5,
     kapKjs: '411121-100'
-  },
-  {
-    label: '21-100-03 - Honorarium teratur pegawai tetap (PPh 21)',
-    value: '21-100-03',
-    taxObjectName: 'Honorarium teratur pegawai tetap',
-    taxNature: 'non_final',
-    ratePercent: 5,
-    kapKjs: '411121-100'
   }
 ]
 
