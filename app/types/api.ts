@@ -204,6 +204,7 @@ export interface Bp21Read {
   signer_name: string | null
   tax_object_code: string
   income_type: string
+  tax_type: string | null
   tax_nature: Bp21TaxNature
   tax_facility: Bp21TaxFacility
   previous_gross_income: number
@@ -293,15 +294,31 @@ export type BpnrSummary = Bp21Summary
 export type SpStatus = Bp21Status
 export type SpTaxNature = Bp21TaxNature
 export type SpTaxFacility = Bp21TaxFacility
-export type SpRead = Bp23Read
-export type SpCreate = Bp23Create
+// SP/CY have no counterparty: recipient fields are always null and DPP is
+// entered directly (PPh = DPP x tarif), mirroring backend NO_COUNTERPARTY_TYPES.
+export type SetorRead = Omit<Bp23Read, 'recipient_identity_number' | 'recipient_name'> & {
+  recipient_identity_number: string | null
+  recipient_name: string | null
+}
+export type SetorCreate = Omit<
+  Bp23Create,
+  | 'recipient_identity_number'
+  | 'recipient_name'
+  | 'recipient_address'
+  | 'recipient_nitku'
+  | 'previous_gross_income'
+  | 'gross_income'
+  | 'dpp_percent'
+> & { dpp: number }
+export type SpRead = SetorRead
+export type SpCreate = SetorCreate
 export type SpListResponse = Paginated<SpRead>
 export type SpSummary = Bp21Summary
 export type CyStatus = Bp21Status
 export type CyTaxNature = Bp21TaxNature
 export type CyTaxFacility = Bp21TaxFacility
-export type CyRead = Bp23Read
-export type CyCreate = Bp23Create
+export type CyRead = SetorRead
+export type CyCreate = SetorCreate
 export type CyListResponse = Paginated<CyRead>
 export type CySummary = Bp21Summary
 export type Bp26SptFlag =
@@ -491,8 +508,10 @@ export interface BppuCreate {
   tax_nature: BppuTaxNature
   tax_facility: BppuTaxFacility
   previous_gross_income?: number
-  gross_income: number
-  dpp_percent: number
+  gross_income?: number
+  dpp_percent?: number
+  /** Dasar Pengenaan Pajak entered directly (BPPU form); backend stores it at 100%. */
+  dpp?: number
   rate_percent: number
   kap_kjs?: string | null
   document_type?: string | null

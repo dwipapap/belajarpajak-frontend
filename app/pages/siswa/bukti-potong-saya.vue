@@ -77,11 +77,11 @@ const rows = computed<Row[]>(() => [
   })),
   ...(sp.value.items as SpRead[]).map(i => ({
     kind: 'SP' as const, id: i.id, period: formatPeriod(i), number: i.withholding_number,
-    name: i.recipient_name, tax: i.income_tax, signer: (i as never as { signer_name: string | null }).signer_name || null
+    name: i.recipient_name ?? '-', tax: i.income_tax, signer: (i as never as { signer_name: string | null }).signer_name || null
   })),
   ...(cy.value.items as CyRead[]).map(i => ({
     kind: 'CY' as const, id: i.id, period: formatPeriod(i), number: i.withholding_number,
-    name: i.recipient_name, tax: i.income_tax, signer: (i as never as { signer_name: string | null }).signer_name || null
+    name: i.recipient_name ?? '-', tax: i.income_tax, signer: (i as never as { signer_name: string | null }).signer_name || null
   }))
 ])
 

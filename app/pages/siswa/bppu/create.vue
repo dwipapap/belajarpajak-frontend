@@ -12,6 +12,7 @@ definePageMeta({ middleware: 'role', roles: ['siswa'] })
 const auth = useAuth()
 const { apiFetch } = useApi()
 const toast = useToast()
+const { signOpen, signing, openSign, confirmSign } = useBupotSubmitSign('bppu', 'BPPU')
 
 const facilityOptions: { label: string, value: BppuTaxFacility }[] = [
   { label: 'Tanpa Fasilitas', value: 'none' },
@@ -115,26 +116,7 @@ const taxNatureOptions: { label: string, value: BppuTaxNature }[] = [
   { label: 'Tidak Final', value: 'non_final' }
 ]
 
-// Options for the BPPU create form.
-const documentTypeOptions = [
-  'Akta Perjanjian',
-  'Akta Rapat Umum Pemegang Saham',
-  'Bukti Pembayaran',
-  'Dokumen Ketentuan Peraturan Perpajakan',
-  'Dokumen Lainnya',
-  'Dokumen Pemberian Fasilitas Lainnya',
-  'Faktur Pajak',
-  'Jasa Giro',
-  'Kontrak',
-  'Pengumuman',
-  'Surat Keputusan',
-  'Surat Pernyataan',
-  'Surat Tagihan',
-  'Trade Confirmation',
-  'Invoice',
-  'Kuitansi',
-  'Dokumen yang dipersamakan'
-]
+const documentTypeOptions = bupotDocumentTypes
 
 const { data: classes } = useAsyncData(
   'siswa-bppu-create-classes',
@@ -167,9 +149,7 @@ const formState = reactive({
   tax_object_name: 'Pengalihan hak atas tanah/bangunan',
   income_type: '',
   tax_nature: 'final' as BppuTaxNature,
-  previous_gross_income: 0,
-  gross_income: 0,
-  dpp_percent: 100,
+  dpp: 0,
   rate_percent: 2.5,
   kap_kjs: '411128-100',
   document_type: 'Bukti Pembayaran',
@@ -177,6 +157,8 @@ const formState = reactive({
   document_date: new Date().toISOString().slice(0, 10),
   document_nitku: ''
 })
+const { showClassField } = useAutoClass(formState, classOptions)
+const { masaPajak, masaPajakItems } = useMasaPajak(formState)
 
 const saving = ref(false)
 const submitIntent = ref<'draft' | 'issue'>('draft')
@@ -200,13 +182,9 @@ watch(
   { immediate: true }
 )
 
-const dppAmount = computed(() =>
-  Math.round(Number(formState.gross_income || 0) * Number(formState.dpp_percent || 0) / 100)
-)
-
 const calculatedIncomeTax = computed(() => {
   if (formState.tax_facility === 'skb' || formState.tax_facility === 'rate_0') return 0
-  const dpp = Math.round(Number(formState.gross_income || 0) * Number(formState.dpp_percent || 0) / 100)
+  const dpp = Number(formState.dpp || 0)
   const rate = Number(formState.rate_percent || 0)
   let finalRate = rate
   if (!formState.recipient_identity_number || formState.recipient_identity_number.startsWith('0000000000000000')) {
@@ -233,9 +211,7 @@ function buildPayload(): BppuCreate {
     income_type: formState.income_type,
     tax_nature: formState.tax_nature,
     tax_facility: formState.tax_facility,
-    previous_gross_income: Number(formState.previous_gross_income || 0),
-    gross_income: Number(formState.gross_income),
-    dpp_percent: Number(formState.dpp_percent),
+    dpp: Number(formState.dpp),
     rate_percent: Number(formState.rate_percent),
     kap_kjs: formState.kap_kjs || null,
     document_type: formState.document_type || null,
@@ -243,6 +219,15 @@ function buildPayload(): BppuCreate {
     document_date: formState.document_date || null,
     document_nitku: formState.document_nitku || null
   }
+}
+
+// Shared rules, with DPP entered directly instead of Penghasilan Bruto.
+function validateBppu(state: typeof formState) {
+  return validateBupotCreate({ ...state, gross_income: state.dpp }).map(error =>
+    error.name === 'gross_income'
+      ? { name: 'dpp', message: 'Dasar Pengenaan Pajak harus lebih dari 0' }
+      : error
+  )
 }
 
 async function onSubmit() {
@@ -255,21 +240,15 @@ async function onSubmit() {
     })
 
     if (submitIntent.value === 'issue') {
-      await apiFetch<BppuRead>(`/api/v1/bppu/${created.id}/issue`, { method: 'POST' })
-      toast.add({
-        title: 'BPPU diterbitkan',
-        description: 'Dokumen masuk ke tab Telah Terbit.',
-        color: 'success',
-        icon: 'i-lucide-send'
-      })
-    } else {
-      toast.add({
-        title: 'Konsep BPPU disimpan',
-        description: 'Dokumen masuk ke tab Belum Terbit.',
-        color: 'success',
-        icon: 'i-lucide-save'
-      })
+      openSign(created.id)
+      return
     }
+    toast.add({
+      title: 'Konsep BPPU disimpan',
+      description: 'Dokumen masuk ke tab Belum Terbit.',
+      color: 'success',
+      icon: 'i-lucide-save'
+    })
 
     await navigateTo('/siswa/bppu')
   } catch (error) {
@@ -283,6 +262,7 @@ async function onSubmit() {
 
 <template>
   <div class="bupot-create">
+    <DocumentSignModal v-model:open="signOpen" :loading="signing" @confirm="confirmSign" />
     <div class="bupot-breadcrumb">
       <NuxtLink to="/siswa">Beranda</NuxtLink>
       <UIcon name="i-lucide-chevron-right" class="size-3.5" />
@@ -291,24 +271,13 @@ async function onSubmit() {
       <strong>BPPU - Bukti Pemotongan PPh Unifikasi</strong>
     </div>
 
-    <UForm :state="formState" :validate="validateBupotCreate" class="bupot-form" @submit="onSubmit">
+    <UForm :state="formState" :validate="validateBppu" class="bupot-form" @submit="onSubmit">
       <div class="bupot-form__header">
         <div>
           <p>{{ auth.user.value?.tenant_id ?? '1471110802000001' }}</p>
-          <h1>e-Bupot BPPU</h1>
+          <h1>EBUPOT BPU</h1>
         </div>
         <div class="bupot-form__actions">
-          <UButton to="/siswa/bppu" icon="i-lucide-arrow-left" color="neutral" variant="ghost">
-            Kembali
-          </UButton>
-          <UButton
-            type="submit"
-            icon="i-lucide-save"
-            label="Simpan Konsep"
-            color="neutral"
-            :loading="saving && submitIntent === 'draft'"
-            @click="submitIntent = 'draft';"
-          />
           <UButton
             type="submit"
             icon="i-lucide-send"
@@ -317,6 +286,15 @@ async function onSubmit() {
             :loading="saving && submitIntent === 'issue'"
             @click="submitIntent = 'issue';"
           />
+          <UButton
+            type="submit"
+            icon="i-lucide-save"
+            label="Simpan Konsep"
+            color="neutral"
+            :loading="saving && submitIntent === 'draft'"
+            @click="submitIntent = 'draft';"
+          />
+          <UButton to="/siswa/bppu" icon="i-lucide-search" label="Go to search" color="neutral" variant="ghost" />
         </div>
       </div>
 
@@ -331,7 +309,7 @@ async function onSubmit() {
         color="info"
         variant="subtle"
         icon="i-lucide-info"
-        title="Simpan Konsep menyimpan draf yang masih bisa diubah di tab Belum Terbit; Submit menerbitkan dokumen ke tab Telah Terbit."
+        title="Simpan Konsep menyimpan draf yang masih bisa diubah di tab Belum Terbit; Submit menyimpan lalu meminta tanda tangan elektronik sebelum dokumen terbit ke tab Telah Terbit."
         class="mb-1"
       />
 
@@ -341,7 +319,7 @@ async function onSubmit() {
           <UButton icon="i-lucide-chevron-down" color="neutral" variant="ghost" size="xs" />
         </header>
         <div class="bupot-grid">
-          <UFormField name="class_id" label="Kelas" required>
+          <UFormField v-if="showClassField" name="class_id" label="Kelas" required>
             <USelect
               v-model="formState.class_id"
               :items="classOptions"
@@ -351,16 +329,7 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="tax_month" label="Masa Pajak" required>
-            <USelect
-              v-model="formState.tax_month"
-              :items="monthOptions"
-              placeholder="Pilih..."
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField name="tax_year" label="Tahun Pajak" required>
-            <UInput v-model="formState.tax_year" type="number" class="w-full" />
+            <USelect v-model="masaPajak" :items="masaPajakItems" class="w-full" />
           </UFormField>
 
           <UFormField name="status" label="Status" required>
@@ -378,20 +347,16 @@ async function onSubmit() {
           <UFormField name="recipient_nitku" label="NITKU / Nomor Identitas Subunit Organisasi">
             <UInput v-model="formState.recipient_nitku" class="w-full" />
           </UFormField>
-
-          <UFormField name="recipient_address" label="Alamat">
-            <UTextarea v-model="formState.recipient_address" autoresize class="w-full" />
-          </UFormField>
         </div>
       </section>
 
       <section class="bupot-section">
         <header>
-          <h2>Penghitungan Pajak Penghasilan</h2>
+          <h2>Pajak Penghasilan (Rp)</h2>
           <UButton icon="i-lucide-chevron-down" color="neutral" variant="ghost" size="xs" />
         </header>
         <div class="bupot-grid">
-          <UFormField name="tax_facility" label="Fasilitas Pajak Penerima Penghasilan" required>
+          <UFormField name="tax_facility" label="Fasilitas Pajak yang Dimiliki oleh Penerima Penghasilan" required>
             <USelect v-model="formState.tax_facility" :items="facilityOptions" class="w-full" />
           </UFormField>
 
@@ -403,10 +368,6 @@ async function onSubmit() {
             <UInput v-model="formState.tax_type" disabled class="w-full" />
           </UFormField>
 
-          <UFormField name="income_type" label="Jenis Penghasilan" required>
-            <UInput v-model="formState.income_type" disabled class="w-full" />
-          </UFormField>
-
           <UFormField name="tax_object_code_readonly" label="Kode Objek Pajak" required>
             <UInput v-model="formState.tax_object_code" disabled class="w-full" />
           </UFormField>
@@ -416,23 +377,11 @@ async function onSubmit() {
           </UFormField>
         </div>
 
-        <div class="bupot-note">
-          Pendapatan Bruto yang Telah Dibayar Sebelumnya, khusus untuk kode objek tertentu jika
-          terdapat pembayaran lebih dari sekali dalam periode dua tahun.
-        </div>
-
         <div class="bupot-grid">
-          <UFormField name="previous_gross_income" label="Jumlah">
-            <UInput v-model="formState.previous_gross_income" type="number" disabled class="w-full" />
+          <UFormField name="dpp" label="Dasar Pengenaan Pajak (Rp)" required>
+            <UInput v-model="formState.dpp" type="number" class="w-full" />
           </UFormField>
 
-          <UFormField name="gross_income" label="Penghasilan Bruto (Rp)" required>
-            <UInput v-model="formState.gross_income" type="number" class="w-full" />
-          </UFormField>
-
-          <UFormField name="dpp_percent" label="DPP (%)" required>
-            <UInput v-model="formState.dpp_percent" type="number" class="w-full" />
-          </UFormField>
 
           <UFormField name="rate_percent" label="Tarif (%)" required>
             <UInput v-model="formState.rate_percent" type="number" disabled class="w-full" />
@@ -442,7 +391,7 @@ async function onSubmit() {
             <UInput :model-value="formatCurrency(calculatedIncomeTax)" disabled class="w-full" />
           </UFormField>
 
-          <UFormField name="kap_kjs" label="KAP-KJS" required>
+          <UFormField name="kap_kjs" label="KAP" required>
             <UInput v-model="formState.kap_kjs" disabled class="w-full" />
           </UFormField>
         </div>
