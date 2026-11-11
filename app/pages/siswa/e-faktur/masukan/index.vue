@@ -2,6 +2,7 @@
 import type { TableColumn } from '@nuxt/ui'
 import type {
   TaxInputBulkCreditResult,
+  TaxInputBulkDecisionResult,
   TaxInputBulkDeleteResult,
   TaxInputBulkUncreditResult,
   TaxInputCreditStatus,
@@ -24,6 +25,8 @@ const pageSize = ref(50)
 const filterSellerName = ref('')
 const filterInvoiceNumber = ref('')
 const filterTransactionCode = ref<string | undefined>(undefined)
+const filterTaxMonth = ref<number | undefined>(undefined)
+const filterTaxYear = ref<number | undefined>(undefined)
 
 const selectedIds = ref(new Set<number>())
 const confirmDeleteOpen = ref(false)
@@ -32,7 +35,7 @@ const busy = ref(false)
 const { data: summary, refresh: refreshSummary } = useAsyncData(
   'siswa-faktur-masukan-summary',
   () => apiFetch<TaxInputSummary>('/api/v1/faktur-masukan/summary'),
-  { default: () => ({ draft: 0, credited: 0, not_credited: 0, invalid: 0, total: 0 }) }
+  { default: () => ({ draft: 0, credited: 0, not_credited: 0, uncredited: 0, invalid: 0, total: 0 }) }
 )
 
 const { data: invoiceList, status: listStatus, refresh: refreshList } = useAsyncData(
@@ -46,12 +49,14 @@ const { data: invoiceList, status: listStatus, refresh: refreshList } = useAsync
     if (filterSellerName.value) query.set('seller_name', filterSellerName.value)
     if (filterInvoiceNumber.value) query.set('invoice_number', filterInvoiceNumber.value)
     if (filterTransactionCode.value) query.set('transaction_code', filterTransactionCode.value)
+    if (filterTaxMonth.value) query.set('tax_month', String(filterTaxMonth.value))
+    if (filterTaxYear.value) query.set('tax_year', String(filterTaxYear.value))
     return apiFetch<TaxInputListResponse>(`/api/v1/faktur-masukan?${query.toString()}`)
   },
-  { watch: [activeCreditStatus, page, pageSize, filterSellerName, filterInvoiceNumber, filterTransactionCode] }
+  { watch: [activeCreditStatus, page, pageSize, filterSellerName, filterInvoiceNumber, filterTransactionCode, filterTaxMonth, filterTaxYear] }
 )
 
-watch([activeCreditStatus, pageSize, filterSellerName, filterInvoiceNumber, filterTransactionCode], () => {
+watch([activeCreditStatus, pageSize, filterSellerName, filterInvoiceNumber, filterTransactionCode, filterTaxMonth, filterTaxYear], () => {
   page.value = 1
   selectedIds.value = new Set()
 })
@@ -71,6 +76,8 @@ function clearFilters() {
   filterSellerName.value = ''
   filterInvoiceNumber.value = ''
   filterTransactionCode.value = undefined
+  filterTaxMonth.value = undefined
+  filterTaxYear.value = undefined
 }
 
 const columns: TableColumn<TaxInputRead>[] = [
@@ -129,6 +136,44 @@ async function uncreditSelected() {
   } finally { busy.value = false }
 }
 
+async function tidakKreditkanSelected() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  busy.value = true
+  try {
+    const result = await apiFetch<TaxInputBulkDecisionResult>('/api/v1/faktur-masukan/bulk-tidak-kreditkan', { method: 'POST', body: { ids } })
+    toast.add({
+      title: `${result.updated} faktur tidak dikreditkan`,
+      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Masuk ke tab Tidak Dikreditkan.',
+      color: result.updated ? 'success' : 'warning',
+      icon: 'i-lucide-circle-slash'
+    })
+    activeCreditStatus.value = 'uncredited'
+    await refreshAll()
+  } catch (error) {
+    toast.add({ title: 'Gagal memproses', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  } finally { busy.value = false }
+}
+
+async function kembaliApprovedSelected() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  busy.value = true
+  try {
+    const result = await apiFetch<TaxInputBulkDecisionResult>('/api/v1/faktur-masukan/bulk-kembali-approved', { method: 'POST', body: { ids } })
+    toast.add({
+      title: `${result.updated} faktur kembali Approved`,
+      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Masuk ke tab Belum Dikreditkan.',
+      color: result.updated ? 'success' : 'warning',
+      icon: 'i-lucide-undo-2'
+    })
+    activeCreditStatus.value = 'not_credited'
+    await refreshAll()
+  } catch (error) {
+    toast.add({ title: 'Gagal memproses', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  } finally { busy.value = false }
+}
+
 async function deleteSelected() {
   const ids = [...selectedIds.value]
   if (!ids.length) return
@@ -170,6 +215,26 @@ async function uncreditOne(invoice: TaxInputRead) {
   }
 }
 
+async function tidakKreditkanOne(invoice: TaxInputRead) {
+  try {
+    await apiFetch(`/api/v1/faktur-masukan/${invoice.id}/tidak-kreditkan`, { method: 'POST' })
+    toast.add({ title: 'Faktur tidak dikreditkan', description: `Keputusan untuk faktur ${invoice.seller_name}.`, color: 'success', icon: 'i-lucide-circle-slash' })
+    await refreshAll()
+  } catch (error) {
+    toast.add({ title: 'Gagal memproses', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+}
+
+async function kembaliApprovedOne(invoice: TaxInputRead) {
+  try {
+    await apiFetch(`/api/v1/faktur-masukan/${invoice.id}/kembali-approved`, { method: 'POST' })
+    toast.add({ title: 'Kembali ke status Approved', color: 'success', icon: 'i-lucide-undo-2' })
+    await refreshAll()
+  } catch (error) {
+    toast.add({ title: 'Gagal memproses', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+}
+
 const canActOnSelection = computed(() => selectedIds.value.size > 0)
 </script>
 
@@ -199,7 +264,7 @@ const canActOnSelection = computed(() => selectedIds.value.size > 0)
             @click="activeCreditStatus = tab.value"
           >
             <span>{{ tab.label }}</span>
-            <UBadge color="neutral" variant="subtle">{{ summary[tab.value === 'credited' ? 'credited' : 'not_credited'] }}</UBadge>
+            <UBadge color="neutral" variant="subtle">{{ summary[tab.value] }}</UBadge>
           </button>
         </nav>
       </aside>
@@ -208,8 +273,11 @@ const canActOnSelection = computed(() => selectedIds.value.size > 0)
         <div class="bupot-main__header"><h1>Pajak Masukan</h1></div>
 
         <div class="faktur-toolbar">
-          <UButton to="/siswa/e-faktur/masukan/create" icon="i-lucide-plus" label="Buat Faktur Masukan" class="bupot-primary-button" />
-          <UButton icon="i-lucide-check-circle" label="Kreditkan" class="bupot-primary-button" :loading="busy" :disabled="!canActOnSelection" @click="creditSelected" />
+          <UButton icon="i-lucide-check-circle" label="Kreditkan Faktur" class="bupot-primary-button" :loading="busy" :disabled="!canActOnSelection" @click="creditSelected" />
+          <UButton icon="i-lucide-circle-slash" label="Tidak Kreditkan Faktur" class="bupot-primary-button" :loading="busy" :disabled="!canActOnSelection" @click="tidakKreditkanSelected" />
+          <UButton icon="i-lucide-undo-2" label="Kembali ke status Approved" class="bupot-primary-button" :loading="busy" :disabled="!canActOnSelection" @click="kembaliApprovedSelected" />
+          <UButton icon="i-lucide-info" trailing-icon="i-lucide-chevron-down" label="Monitoring" title="Segera hadir" class="bupot-primary-button" disabled />
+          <UButton icon="i-lucide-layers" trailing-icon="i-lucide-chevron-down" label="Bulk Process" title="Segera hadir" class="bupot-primary-button" disabled />
           <UButton icon="i-lucide-undo-2" label="Batal Kredit" color="neutral" variant="soft" :disabled="!canActOnSelection" @click="uncreditSelected" />
           <UButton icon="i-lucide-trash-2" label="Hapus Dokumen" color="error" :disabled="!canActOnSelection" @click="confirmDeleteOpen = true;" />
         </div>
@@ -226,6 +294,8 @@ const canActOnSelection = computed(() => selectedIds.value.size > 0)
           <UInput v-model="filterSellerName" placeholder="Nama Penjual" icon="i-lucide-search" size="xs" />
           <UInput v-model="filterInvoiceNumber" placeholder="Nomor Faktur" icon="i-lucide-search" size="xs" />
           <USelect v-model="filterTransactionCode" :items="transactionCodeFilterOptions" placeholder="Pilih Kode Transaksi" size="xs" class="min-w-56" />
+          <USelect v-model="filterTaxMonth" :items="monthFilterOptions" placeholder="Masa Pajak Pengkreditan" size="xs" class="min-w-56" />
+          <UInput v-model="filterTaxYear" type="number" placeholder="Tahun Pajak Pengkreditan" size="xs" class="w-44" />
         </div>
 
         <div class="faktur-table">
@@ -249,12 +319,19 @@ const canActOnSelection = computed(() => selectedIds.value.size > 0)
             <template #total_ppnbm-cell="{ row }">Rp {{ formatCurrency(row.original.total_ppnbm) }}</template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">
-                <UButton v-if="row.original.credit_status === 'not_credited'" icon="i-lucide-check-circle" label="Kreditkan" size="xs" @click="creditOne(row.original)" />
+                <template v-if="row.original.credit_status === 'not_credited'">
+                  <UButton icon="i-lucide-check-circle" label="Kreditkan" size="xs" @click="creditOne(row.original)" />
+                  <UButton icon="i-lucide-circle-slash" label="Tidak Kreditkan" size="xs" color="neutral" variant="soft" @click="tidakKreditkanOne(row.original)" />
+                </template>
+                <template v-else-if="row.original.credit_status === 'uncredited'">
+                  <UButton icon="i-lucide-check-circle" label="Kreditkan" size="xs" @click="creditOne(row.original)" />
+                  <UButton icon="i-lucide-undo-2" label="Kembali Approved" size="xs" color="neutral" variant="soft" @click="kembaliApprovedOne(row.original)" />
+                </template>
                 <UButton v-else icon="i-lucide-undo-2" label="Batal Kredit" size="xs" color="neutral" variant="soft" @click="uncreditOne(row.original)" />
                 <UButton v-if="row.original.status === 'draft'" :to="`/siswa/e-faktur/masukan/${row.original.id}`" icon="i-lucide-pencil" size="xs" color="neutral" variant="soft" label="Ubah" />
               </div>
             </template>
-            <template #empty><p class="py-8 text-center text-sm text-muted">Tidak ada data yang ditemukan.</p></template>
+            <template #empty><p class="py-8 text-center text-sm text-muted">Belum ada faktur masukan. Faktur muncul otomatis di sini saat penjual (teman sekelas) meng-upload faktur dengan Anda sebagai pembeli.</p></template>
           </UTable>
         </div>
 

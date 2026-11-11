@@ -1,6 +1,21 @@
 // Shared labels/formatters for the e-Bupot modules (BP21, BP23, BP26, BPPU, ...).
 import type { Bp21Status, Bp21TaxFacility, Bp26SptFlag } from '~/types/api'
 
+export type BupotModule = 'bppu' | 'bpnr' | 'bp21' | 'bp26' | 'sp' | 'cy' | 'bpmp' | 'bp23'
+export type BupotToolbarAction = 'create' | 'delete' | 'issue' | 'monitoring' | 'import' | 'bulk' | 'cancel' | 'refresh'
+export const bupotCode: Record<BupotModule, string> = {
+  bppu: 'BPU', bpnr: 'BPNR', bp21: 'BP21', bp26: 'BP26', sp: 'SP', cy: 'CY', bpmp: 'MP', bp23: 'BP23'
+}
+export function bupotTitle(module: BupotModule, status: Bp21Status): string {
+  const phase = { draft: 'NOT ISSUED', issued: 'ISSUED', invalid: 'TIDAK VALID' }[status]
+  return `EBUPOT ${bupotCode[module]} ${phase}`
+}
+export function bupotToolbarVisible(action: BupotToolbarAction, status: Bp21Status): boolean {
+  if (action === 'refresh' || action === 'monitoring' || action === 'bulk') return true
+  if (status === 'draft') return ['create', 'delete', 'issue', 'import'].includes(action)
+  return status === 'issued' && action === 'cancel'
+}
+
 export const monthLabels = [
   '',
   'Januari',
@@ -68,6 +83,21 @@ export const sptFlagLabel = {
   spt_legal_process: 'SPT Proses Hukum'
 } satisfies Record<Bp26SptFlag, string>
 
+export const sptFlagColumns: { label: string, value: Bp26SptFlag }[] = [
+  { label: 'Dilaporkan Dalam SPT', value: 'reported_in_spt' },
+  { label: 'Dalam Proses Keberatan', value: 'objection_in_progress' },
+  { label: 'Selesai Proses Keberatan', value: 'objection_completed' },
+  { label: 'Keberatan tidak memenuhi persyaratan (Tolak Formal)', value: 'objection_rejected_formal' },
+  { label: 'Dalam Proses Reviu Pencabutan Permohonan Keberatan', value: 'objection_withdrawal_review' },
+  { label: 'Pencabutan Keberatan Diterima', value: 'objection_withdrawal_accepted' },
+  { label: 'SPT Telah/Sedang Diperiksa', value: 'spt_audited' },
+  { label: 'SPT Dalam Penanganan Hukum', value: 'spt_legal_process' }
+]
+
+export function electronicSignatureLabel(status: string): string {
+  return status === 'signed' ? 'Sudah Ditandatangani' : 'Belum Ditandatangani'
+}
+
 export const sptFlagFilterOptions: { label: string, value: Bp26SptFlag | undefined }[] = [
   { label: 'Semua Flag SPT', value: undefined },
   ...(Object.entries(sptFlagLabel) as [Bp26SptFlag, string][]).map(
@@ -99,6 +129,32 @@ export function formatPeriod(row: { tax_month: number, tax_year: number }) {
 }
 
 /** Client-side validation shared by the BP21/BP23/BP26 create forms. */
+// SP (setor sendiri) / CY (digunggung): no counterparty, DPP entered directly.
+export function validateSetorCreate(state: {
+  class_id?: number
+  tax_month?: number
+  tax_year?: number
+  dpp?: number
+  document_number?: string
+  document_nitku?: string
+}) {
+  const errors: { name: string, message: string }[] = []
+  if (!state.class_id) errors.push({ name: 'class_id', message: 'Pilih kelas' })
+  if (!state.tax_month) errors.push({ name: 'tax_month', message: 'Pilih masa pajak' })
+  if (!state.tax_year) errors.push({ name: 'tax_year', message: 'Isi tahun pajak' })
+  if (!state.dpp || Number(state.dpp) <= 0) {
+    errors.push({ name: 'dpp', message: 'Dasar Pengenaan Pajak harus lebih dari 0' })
+  }
+  if (!state.document_number) {
+    errors.push({ name: 'document_number', message: 'Nomor dokumen referensi wajib diisi' })
+  }
+  const nitku = (state.document_nitku || '').trim()
+  if (nitku && !/^\d{22}$/.test(nitku)) {
+    errors.push({ name: 'document_nitku', message: 'NITKU harus 22 digit bila diisi' })
+  }
+  return errors
+}
+
 export function validateBupotCreate(state: {
   class_id?: number
   tax_month?: number

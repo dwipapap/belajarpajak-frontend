@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SchoolClass, TaxInvoiceLineCreate, TaxInvoiceRead } from '~/types/api'
+import type { ClassDetail, SchoolClass, TaxInvoiceLineCreate, TaxInvoiceRead } from '~/types/api'
 
 const props = defineProps<{
   /** Present when editing an existing draft; absent when creating. */
@@ -49,8 +49,32 @@ const formState = reactive({
   buyer_name: '',
   buyer_address: '',
   buyer_idtku: '000000',
-  buyer_email: ''
+  buyer_email: '',
+  buyer_siswa_id: undefined as number | undefined
 })
+
+/** Classmates of the chosen class (excluding self) for the buyer select (opsi A).
+ * Declared after formState: the immediate watcher reads formState.class_id. */
+const classmates = ref<ClassDetail['students']>([])
+watch(() => formState.class_id, async (classId) => {
+  classmates.value = []
+  if (!classId) return
+  try {
+    const detail = await apiFetch<ClassDetail>(`/api/v1/classes/${classId}`)
+    const selfId = auth.user.value?.id
+    classmates.value = (detail.students ?? []).filter(student => student.id !== selfId)
+  } catch {
+    classmates.value = []
+  }
+}, { immediate: true })
+
+const buyerSiswaOptions = computed(() => [
+  { label: 'Bukan peserta kelas (isi manual)', value: undefined as number | undefined },
+  ...classmates.value.map(student => ({
+    label: `${student.full_name} (${student.username ?? student.email})`,
+    value: student.id
+  }))
+])
 
 const lines = ref<TaxInvoiceLineCreate[]>([])
 const selectedLines = ref(new Set<number>())
@@ -142,7 +166,8 @@ if (isEdit.value) {
       buyer_name: invoice.value.buyer_name,
       buyer_address: invoice.value.buyer_address ?? '',
       buyer_idtku: invoice.value.buyer_idtku ?? '',
-      buyer_email: invoice.value.buyer_email ?? ''
+      buyer_email: invoice.value.buyer_email ?? '',
+      buyer_siswa_id: invoice.value.buyer_siswa_id ?? undefined
     })
     lines.value = invoice.value.lines.map(line => ({
       line_type: line.line_type,
@@ -215,6 +240,7 @@ function buildPayload() {
     buyer_address: formState.buyer_address || null,
     buyer_idtku: formState.buyer_idtku || null,
     buyer_email: formState.buyer_email || null,
+    buyer_siswa_id: formState.buyer_siswa_id ?? null,
     lines: lines.value
   }
 }
@@ -437,6 +463,10 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
           Informasi Pembeli
         </button>
         <div v-if="openSections.buyer" class="bupot-grid">
+          <UFormField name="buyer_siswa_id" label="Pembeli adalah peserta kelas" description="Faktur akan muncul di menu Pajak Masukan teman Anda setelah di-upload.">
+            <USelect v-model="formState.buyer_siswa_id" :items="buyerSiswaOptions" placeholder="Pilih teman sekelas (opsional)" class="w-full" />
+          </UFormField>
+
           <UFormField name="buyer_identity_number" label="Nomor Identitas WP" required>
             <UInput v-model="formState.buyer_identity_number" class="w-full" />
           </UFormField>

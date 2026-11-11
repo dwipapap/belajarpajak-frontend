@@ -37,6 +37,7 @@ const { data: spList, status: listStatus, refresh: refreshList } = useAsyncData(
 )
 
 const selectedIds = ref(new Set<number>())
+const { cancelling, cancelSelected } = useBupotBulkCancel('sp', selectedIds, () => refreshAll())
 
 watch([activeStatus, filterMonth, filterYear], () => {
   page.value = 1
@@ -54,18 +55,19 @@ function toggleSelected(id: number) {
   selectedIds.value = next
 }
 
-const columns: TableColumn<SpRead>[] = [
+const baseColumns: TableColumn<SpRead>[] = [
   { id: 'select' },
   { accessorKey: 'tax_month', header: 'Masa Pajak' },
   { accessorKey: 'withholding_number', header: 'Nomor Pemotongan' },
   { accessorKey: 'status', header: 'Status' },
-  { accessorKey: 'recipient_identity_number', header: 'Nomor Identitas WP' },
-  { accessorKey: 'recipient_name', header: 'Nama' },
+  { accessorKey: 'document_nitku', header: 'NITKU/Nomor Identitas Sub Unit Organisasi' },
+  { accessorKey: 'tax_type', header: 'Jenis Pajak' },
   { accessorKey: 'tax_object_code', header: 'Kode Objek Pajak' },
-  { accessorKey: 'dpp', header: 'DPP (Rp)' },
-  { accessorKey: 'income_tax', header: 'PPh (Rp)' },
-  { id: 'actions' }
+  { accessorKey: 'dpp', header: 'Dasar Pengenaan Pajak (Rp)' },
+  { accessorKey: 'income_tax', header: 'Pajak Penghasilan (Rp)' },
+  { accessorKey: 'tax_facility', header: 'Fasilitas Pajak' }
 ]
+const columns = computed<TableColumn<SpRead>[]>(() => [...baseColumns, ...(activeStatus.value === 'issued' ? sptFlagColumns.map(flag => ({ id: flag.value, accessorKey: 'spt_flag', header: flag.label })) : []), { id: 'actions' }])
 
 async function issueSlip(slip: SpRead) {
   pendingSlip.value = slip
@@ -84,7 +86,7 @@ async function confirmIssue() {
     })
     toast.add({
       title: 'SP diterbitkan',
-      description: `BPE-SIM dibuat untuk ${pendingSlip.value.recipient_name}.`,
+      description: 'BPE-SIM dibuat.',
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
@@ -279,33 +281,41 @@ const bulkProcessItems = computed<DropdownMenuItem[]>(() => [
 
       <section class="bupot-main">
         <div class="bupot-main__header">
-          <h1>e-Bupot SP</h1>
+          <h1>{{ bupotTitle('sp', activeStatus) }}</h1>
           <div class="bupot-actions">
-            <UButton
+            <UButton v-if="bupotToolbarVisible('create', activeStatus)"
               to="/siswa/sp/create"
               icon="i-lucide-plus"
-              label="Buat e-Bupot SP"
+              label="Create eBupot SP"
               class="bupot-primary-button"
             />
-            <UButton
+            <UButton v-if="bupotToolbarVisible('delete', activeStatus)"
               icon="i-lucide-trash-2"
               label="Hapus"
               color="neutral"
               :disabled="activeStatus !== 'draft' || selectedIds.size === 0"
               @click="deleteSelected"
             />
-            <UButton
+            <UButton v-if="bupotToolbarVisible('issue', activeStatus)"
               icon="i-lucide-send"
               label="Terbitkan"
               color="neutral"
               :disabled="activeStatus !== 'draft' || selectedIds.size === 0"
               @click="issueSelected"
             />
-            <UDropdownMenu :items="monitoringItems">
-              <UButton icon="i-lucide-monitor" label="Pemantauan" color="neutral" variant="soft" />
+            <UButton v-if="bupotToolbarVisible('cancel', activeStatus)"
+              icon="i-lucide-ban"
+              label="Batal"
+              color="neutral"
+              :loading="cancelling"
+              :disabled="selectedIds.size === 0"
+              @click="cancelSelected"
+            />
+            <UDropdownMenu v-if="bupotToolbarVisible('monitoring', activeStatus)" :items="monitoringItems">
+              <UButton icon="i-lucide-monitor" label="Monitoring" color="neutral" variant="soft" />
             </UDropdownMenu>
-            <UDropdownMenu :items="bulkProcessItems">
-              <UButton icon="i-lucide-layers" label="Proses Massal" color="neutral" variant="soft" />
+            <UDropdownMenu v-if="bupotToolbarVisible('bulk', activeStatus)" :items="bulkProcessItems">
+              <UButton icon="i-lucide-layers" label="Bulk Process" color="neutral" variant="soft" />
             </UDropdownMenu>
             <UButton icon="i-lucide-refresh-cw" color="neutral" variant="soft" @click="refreshAll" />
           </div>
@@ -354,6 +364,18 @@ const bulkProcessItems = computed<DropdownMenuItem[]>(() => [
               </UBadge>
             </template>
 
+            <template #document_nitku-cell="{ row }">
+              <span>{{ row.original.document_nitku || row.original.withholder_nitku || '-' }}</span>
+            </template>
+
+            <template #tax_type-cell="{ row }">
+              {{ row.original.tax_type || row.original.income_type || '-' }}
+            </template>
+
+            <template #tax_facility-cell="{ row }">
+              {{ facilityLabel[row.original.tax_facility] }}
+            </template>
+
             <template #dpp-cell="{ row }">
               Rp {{ formatCurrency(row.original.dpp) }}
             </template>
@@ -368,6 +390,30 @@ const bulkProcessItems = computed<DropdownMenuItem[]>(() => [
               <span :title="`Bruto Rp ${formatCurrency(row.original.gross_income ?? row.original.dpp)} • PPh Rp ${formatCurrency(row.original.income_tax)}`">Rp {{ formatCurrency(row.original.income_tax) }}</span>
             </template>
 
+            <template #reported_in_spt-cell="{ row }">
+              <UIcon v-if="row.original.spt_flag === 'reported_in_spt'" name="i-lucide-check" />
+            </template>
+            <template #objection_in_progress-cell="{ row }">
+              <UIcon v-if="row.original.spt_flag === 'objection_in_progress'" name="i-lucide-check" />
+            </template>
+            <template #objection_completed-cell="{ row }">
+              <UIcon v-if="row.original.spt_flag === 'objection_completed'" name="i-lucide-check" />
+            </template>
+            <template #objection_rejected_formal-cell="{ row }">
+              <UIcon v-if="row.original.spt_flag === 'objection_rejected_formal'" name="i-lucide-check" />
+            </template>
+            <template #objection_withdrawal_review-cell="{ row }">
+              <UIcon v-if="row.original.spt_flag === 'objection_withdrawal_review'" name="i-lucide-check" />
+            </template>
+            <template #objection_withdrawal_accepted-cell="{ row }">
+              <UIcon v-if="row.original.spt_flag === 'objection_withdrawal_accepted'" name="i-lucide-check" />
+            </template>
+            <template #spt_audited-cell="{ row }">
+              <UIcon v-if="row.original.spt_flag === 'spt_audited'" name="i-lucide-check" />
+            </template>
+            <template #spt_legal_process-cell="{ row }">
+              <UIcon v-if="row.original.spt_flag === 'spt_legal_process'" name="i-lucide-check" />
+            </template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">
                 <UButton

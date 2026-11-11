@@ -204,6 +204,7 @@ export interface Bp21Read {
   signer_name: string | null
   tax_object_code: string
   income_type: string
+  tax_type: string | null
   tax_nature: Bp21TaxNature
   tax_facility: Bp21TaxFacility
   previous_gross_income: number
@@ -293,15 +294,31 @@ export type BpnrSummary = Bp21Summary
 export type SpStatus = Bp21Status
 export type SpTaxNature = Bp21TaxNature
 export type SpTaxFacility = Bp21TaxFacility
-export type SpRead = Bp23Read
-export type SpCreate = Bp23Create
+// SP/CY have no counterparty: recipient fields are always null and DPP is
+// entered directly (PPh = DPP x tarif), mirroring backend NO_COUNTERPARTY_TYPES.
+export type SetorRead = Omit<Bp23Read, 'recipient_identity_number' | 'recipient_name'> & {
+  recipient_identity_number: string | null
+  recipient_name: string | null
+}
+export type SetorCreate = Omit<
+  Bp23Create,
+  | 'recipient_identity_number'
+  | 'recipient_name'
+  | 'recipient_address'
+  | 'recipient_nitku'
+  | 'previous_gross_income'
+  | 'gross_income'
+  | 'dpp_percent'
+> & { dpp: number }
+export type SpRead = SetorRead
+export type SpCreate = SetorCreate
 export type SpListResponse = Paginated<SpRead>
 export type SpSummary = Bp21Summary
 export type CyStatus = Bp21Status
 export type CyTaxNature = Bp21TaxNature
 export type CyTaxFacility = Bp21TaxFacility
-export type CyRead = Bp23Read
-export type CyCreate = Bp23Create
+export type CyRead = SetorRead
+export type CyCreate = SetorCreate
 export type CyListResponse = Paginated<CyRead>
 export type CySummary = Bp21Summary
 export type Bp26SptFlag =
@@ -491,8 +508,10 @@ export interface BppuCreate {
   tax_nature: BppuTaxNature
   tax_facility: BppuTaxFacility
   previous_gross_income?: number
-  gross_income: number
-  dpp_percent: number
+  gross_income?: number
+  dpp_percent?: number
+  /** Dasar Pengenaan Pajak entered directly (BPPU form); backend stores it at 100%. */
+  dpp?: number
   rate_percent: number
   kap_kjs?: string | null
   document_type?: string | null
@@ -657,6 +676,7 @@ export interface TaxInvoiceCreate {
   seller_name?: string | null
   seller_address?: string | null
   seller_idtku?: string | null
+  buyer_siswa_id?: number | null
   buyer_identity_type: BuyerIdentityType
   buyer_identity_number: string
   buyer_country: string
@@ -708,6 +728,8 @@ export interface TaxInvoiceRead {
   buyer_idtku: string | null
   buyer_email: string | null
 
+  buyer_siswa_id: number | null
+
   /** All totals are computed by the backend from the lines. */
   total_price: number
   total_discount: number
@@ -752,7 +774,8 @@ export interface TaxInvoiceBulkIssueResult {
 
 /* --- e-Faktur: Pajak Masukan --- */
 
-export type TaxInputCreditStatus = 'not_credited' | 'credited'
+export type TaxInputCreditStatus = 'not_credited' | 'credited' | 'uncredited'
+export type TaxInputOrigin = 'prepopulated' | 'manual'
 
 export interface TaxInputLineCreate {
   line_type: TaxInvoiceLineType
@@ -821,6 +844,7 @@ export interface TaxInputRead {
   credit_status: TaxInputCreditStatus
   credited_at: string | null
   source_invoice_id: number | null
+  origin: TaxInputOrigin
   is_advance_payment: boolean
   is_settlement: boolean
   transaction_code: string
@@ -861,6 +885,7 @@ export interface TaxInputSummary {
   draft: number
   credited: number
   not_credited: number
+  uncredited: number
   invalid: number
   total: number
 }
@@ -873,6 +898,12 @@ export interface TaxInputBulkCreditResult {
 
 export interface TaxInputBulkUncreditResult {
   uncredited: number
+  skipped: number
+  errors: string[]
+}
+
+export interface TaxInputBulkDecisionResult {
+  updated: number
   skipped: number
   errors: string[]
 }
@@ -890,7 +921,8 @@ export type TaxReturnType = 'ppn' | 'pph_unifikasi' | 'pph_21_26' | 'pph21_26'
 export type TaxReturnKind = 'normal' | 'pembetulan'
 export type TaxReturnStatus = 'draft' | 'awaiting_payment' | 'reported'
 export type SignerCapacity = 'wajib_pajak' | 'kuasa_wajib_pajak'
-export type BillingStatus = 'unpaid' | 'paid'
+export type BillingStatus = 'unpaid' | 'paid' | 'cancelled'
+export type LbTreatment = 'kompensasi' | 'restitusi'
 
 export interface TaxReturnLineRead {
   id: number
@@ -941,6 +973,7 @@ export interface TaxReturnRead {
   kompensasi_lebih_bayar: number
   ppn_kurang_bayar: number
   ppn_lebih_bayar: number
+  lb_treatment: LbTreatment | null
   total_income_tax: number
   amount_due: number
 
@@ -975,6 +1008,27 @@ export interface TaxReturnPernyataan {
   signer_npwp?: string | null
   signer_capacity: SignerCapacity
 }
+
+export interface TaxReturnSubmit {
+  passphrase: string
+  lb_treatment?: LbTreatment | null
+}
+
+export interface SptLampiranRow {
+  nama: string
+  identitas: string | null
+  nomor_dokumen: string | null
+  tanggal_dokumen: string | null
+  dpp: number
+  ppn: number
+  ppnbm: number
+  kjs: string | null
+  pph: number
+  source_type: string
+  source_id: number
+}
+
+export type SptLampiranListResponse = Paginated<SptLampiranRow>
 
 export interface BillingLineRead {
   id: number

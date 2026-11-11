@@ -65,6 +65,21 @@ async function refresh() {
   await refreshList()
 }
 
+/** BATAL: kembalikan SPT terkait ke konsep (membatalkan kode billing ini). */
+async function batalBilling(row: BillingRead) {
+  if (!row.spt_id) return
+  busy.value = true
+  try {
+    await apiFetch(`/api/v1/spt/${row.spt_id}/batal`, { method: 'POST' })
+    toast.add({ title: 'SPT dibatalkan ke konsep', color: 'success', icon: 'i-lucide-undo-2' })
+    await refresh()
+  } catch (error) {
+    toast.add({ title: 'Gagal membatalkan SPT', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  } finally {
+    busy.value = false
+  }
+}
+
 async function downloadPdf(billing: BillingRead) {
   try {
     const blob = await apiFetch<Blob>(`/api/v1/billings/${billing.id}/pdf`, {
@@ -173,6 +188,7 @@ const columns: TableColumn<BillingRead>[] = [
           <div>
             <h1>Daftar Kode Billing</h1>
             <p class="text-sm text-muted">Billing SPT + mandiri + tagihan. Berlaku 14 hari (simulasi PENG-4/PJ/2025); guru menilai via SPT.</p>
+            <p v-if="activeStatus === 'unpaid'" class="text-sm text-muted">Gunakan tombol BATAL untuk mengubah status SPT dari MENUNGGU PEMBAYARAN ke KONSEP.</p>
           </div>
           <div class="bupot-actions">
             <UButton to="/siswa/pembayaran/mandiri" icon="i-lucide-plus" label="Buat Billing Mandiri" class="bupot-primary-button" />
@@ -203,6 +219,7 @@ const columns: TableColumn<BillingRead>[] = [
             <template #status-cell="{ row }">
               <div class="flex flex-col gap-1">
                 <UBadge v-if="row.original.status === 'paid'" color="success" variant="subtle">Sudah Dibayar</UBadge>
+                <UBadge v-else-if="row.original.status === 'cancelled'" color="neutral" variant="subtle">Dibatalkan</UBadge>
                 <UBadge v-else-if="isBillingExpired(row.original.created_at, row.original.status)" color="error" variant="soft" title="Masa berlaku simulasi 14 hari habis — buat kode billing baru bila masih perlu membayar">
                   Kedaluwarsa — buat billing baru
                 </UBadge>
@@ -234,6 +251,16 @@ const columns: TableColumn<BillingRead>[] = [
                   color="success"
                   label="Bayar"
                   @click="setPayTarget(row.original)"
+                />
+                <UButton
+                  v-if="row.original.status === 'unpaid' && row.original.spt_id"
+                  icon="i-lucide-undo-2"
+                  size="xs"
+                  color="neutral"
+                  variant="soft"
+                  label="Batal"
+                  title="Gunakan tombol BATAL untuk mengubah status SPT dari MENUNGGU PEMBAYARAN ke KONSEP"
+                  @click="batalBilling(row.original)"
                 />
                 <UButton
                   v-if="row.original.spt_id"

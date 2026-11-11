@@ -90,7 +90,7 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
       { label: 'Pajak Keluaran', icon: 'i-lucide-file-output', to: modulePath('e-faktur/keluaran') },
       { label: 'Pajak Masukan', icon: 'i-lucide-file-input', to: modulePath('e-faktur/masukan') },
       { label: 'Retur', icon: 'i-lucide-undo-2', disabled: true },
-      { label: 'Dokumen Lain', icon: 'i-lucide-files', disabled: true },
+      { label: 'Dokumen Lain — Pajak Masukan', icon: 'i-lucide-files', to: modulePath('e-faktur/masukan/create') },
       { label: 'Prepopulated', icon: 'i-lucide-database', disabled: true }
     ]
   },
