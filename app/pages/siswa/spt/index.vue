@@ -98,6 +98,20 @@ async function downloadBpe(row: TaxReturnRead) {
   }
 }
 
+async function downloadSptPdf(row: TaxReturnRead) {
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/spt/${row.id}/pdf`, { responseType: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `SPT-${row.return_type}-${row.tax_year}-${String(row.tax_month).padStart(2, '0')}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    toast.add({ title: 'Gagal mengunduh PDF SPT', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+}
+
 async function deleteDraft(row: TaxReturnRead) {
   try {
     await apiFetch(`/api/v1/spt/${row.id}`, { method: 'DELETE' })
@@ -192,6 +206,14 @@ async function batalSpt(row: TaxReturnRead) {
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">
                 <UButton :to="`/siswa/spt/${row.original.id}`" icon="i-lucide-eye" size="xs" label="Buka" />
+                <UButton
+                  v-if="row.original.status !== 'draft'"
+                  icon="i-lucide-file-text"
+                  size="xs"
+                  variant="soft"
+                  label="PDF SPT"
+                  @click="downloadSptPdf(row.original)"
+                />
                 <UButton
                   v-if="row.original.status === 'reported'"
                   icon="i-lucide-file-down"

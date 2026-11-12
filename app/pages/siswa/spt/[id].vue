@@ -85,6 +85,26 @@ function validatePernyataan() {
   return errors
 }
 
+const sptPdfBusy = ref(false)
+
+async function downloadSptPdf() {
+  if (!spt.value) return
+  sptPdfBusy.value = true
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/spt/${spt.value.id}/pdf`, { responseType: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `SPT-${spt.value.return_type}-${spt.value.tax_year}-${String(spt.value.tax_month).padStart(2, '0')}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    toast.add({ title: 'Gagal mengunduh PDF SPT', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  } finally {
+    sptPdfBusy.value = false
+  }
+}
+
 async function downloadBillingPdf() {
   if (!billing.value) return
   pdfBusy.value = true
@@ -272,6 +292,15 @@ function money(value: number) {
           </ol>
         </div>
         <div class="flex gap-2">
+          <UButton
+            v-if="!isDraft || (spt.lines ?? []).length > 0"
+            icon="i-lucide-file-text"
+            label="PDF SPT"
+            color="neutral"
+            variant="soft"
+            :loading="sptPdfBusy"
+            @click="downloadSptPdf"
+          />
           <UButton
             v-if="isDraft && activeTab === 'induk'"
             icon="i-lucide-upload-cloud"
