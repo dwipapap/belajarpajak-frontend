@@ -195,6 +195,20 @@ async function deleteSelected() {
   }
 }
 
+async function downloadPdf(invoice: { id: number }) {
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/faktur-masukan/${invoice.id}/pdf`, { responseType: 'blob' } as never)
+    window.open(URL.createObjectURL(blob), '_blank')
+  } catch (error) {
+    toast.add({
+      title: 'Gagal membuka PDF faktur',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  }
+}
+
 async function creditOne(invoice: TaxInputRead) {
   try {
     await apiFetch(`/api/v1/faktur-masukan/${invoice.id}/credit`, { method: 'POST' })
@@ -328,6 +342,7 @@ const canActOnSelection = computed(() => selectedIds.value.size > 0)
                   <UButton icon="i-lucide-undo-2" label="Kembali Approved" size="xs" color="neutral" variant="soft" @click="kembaliApprovedOne(row.original)" />
                 </template>
                 <UButton v-else icon="i-lucide-undo-2" label="Batal Kredit" size="xs" color="neutral" variant="soft" @click="uncreditOne(row.original)" />
+                <UButton v-if="row.original.status !== 'draft'" icon="i-lucide-file-down" label="PDF" size="xs" color="neutral" variant="soft" @click="downloadPdf(row.original)" />
                 <UButton v-if="row.original.status === 'draft'" :to="`/siswa/e-faktur/masukan/${row.original.id}`" icon="i-lucide-pencil" size="xs" color="neutral" variant="soft" label="Ubah" />
               </div>
             </template>

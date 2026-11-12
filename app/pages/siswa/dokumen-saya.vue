@@ -28,14 +28,18 @@ const { data: dokumen, status: listStatus, refresh: refreshList } = useAsyncData
 
 const jenisTabs: { value: DokumenSayaJenis | undefined, label: string }[] = [
   { value: undefined, label: 'Semua' },
+  { value: 'spt', label: 'SPT' },
   { value: 'bpe_spt', label: 'BPE SPT' },
   { value: 'bukti_potong', label: 'Bukti Potong' },
+  { value: 'faktur', label: 'Faktur Pajak' },
   { value: 'kode_billing', label: 'Kode Billing' }
 ]
 
 const jenisLabel: Record<DokumenSayaJenis, string> = {
+  spt: 'SPT',
   bpe_spt: 'BPE SPT',
   bukti_potong: 'Bukti Potong',
+  faktur: 'Faktur Pajak',
   kode_billing: 'Kode Billing'
 }
 
@@ -58,9 +62,13 @@ const columns: TableColumn<DokumenSayaRow>[] = [
 
 function fileName(row: DokumenSayaRow) {
   const safe = row.nomor.replace(/[^A-Za-z0-9-]+/g, '-')
-  return row.jenis === 'bpe_spt' ? `BPE-${safe}.pdf`
-    : row.jenis === 'kode_billing' ? `BILLING_${safe}.pdf`
-      : `BPE-SIM-${safe}.pdf`
+  switch (row.jenis) {
+    case 'spt': return `${safe}.pdf`
+    case 'bpe_spt': return `BPE-${safe}.pdf`
+    case 'faktur': return `FakturPajak-${safe}.pdf`
+    case 'kode_billing': return `BILLING_${safe}.pdf`
+    default: return `BuktiPotong-${safe}.pdf`
+  }
 }
 
 async function download(row: DokumenSayaRow) {

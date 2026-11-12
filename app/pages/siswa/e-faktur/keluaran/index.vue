@@ -170,6 +170,20 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
   }
 }
 
+async function downloadPdf(invoice: { id: number }) {
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/faktur-keluaran/${invoice.id}/pdf`, { responseType: 'blob' } as never)
+    window.open(URL.createObjectURL(blob), '_blank')
+  } catch (error) {
+    toast.add({
+      title: 'Gagal membuka PDF faktur',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  }
+}
+
 async function deleteSelected() {
   const ids = [...selectedIds.value]
   if (!ids.length) return
@@ -400,8 +414,17 @@ const canActOnSelection = computed(
                   size="xs"
                   @click="requestIssueOne(row.original)"
                 />
+                <UButton
+                  v-if="row.original.status !== 'draft'"
+                  icon="i-lucide-file-down"
+                  label="PDF"
+                  size="xs"
+                  color="neutral"
+                  variant="soft"
+                  @click="downloadPdf(row.original)"
+                />
                 <UBadge
-                  v-else-if="row.original.score !== null"
+                  v-if="row.original.score !== null"
                   color="success"
                   variant="subtle"
                 >

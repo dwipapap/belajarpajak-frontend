@@ -189,6 +189,20 @@ async function cancelSlip(slip: BpmpRead) {
   }
 }
 
+async function downloadPdf(slip: BpmpRead) {
+  try {
+    const blob = await apiFetch<Blob>(`/api/v1/bpmp/${slip.id}/pdf`, { responseType: 'blob' } as never)
+    window.open(URL.createObjectURL(blob), '_blank')
+  } catch (error) {
+    toast.add({
+      title: 'Gagal mengunduh BPE',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  }
+}
+
 async function deleteSelected() {
   const ids = [...selectedIds.value]
   if (!ids.length) return
@@ -510,6 +524,15 @@ function closeImport() {
                   variant="soft"
                   size="xs"
                   @click="cancelSlip(row.original)"
+                />
+                <UButton
+                  v-if="row.original.status === 'issued'"
+                  icon="i-lucide-file-down"
+                  label="BPE"
+                  size="xs"
+                  color="neutral"
+                  variant="soft"
+                  @click="downloadPdf(row.original)"
                 />
                 <UBadge
                   v-if="row.original.score !== null"

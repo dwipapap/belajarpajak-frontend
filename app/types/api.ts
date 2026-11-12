@@ -1063,7 +1063,7 @@ export interface BillingRead {
 
 export type BillingChannel = 'teller' | 'atm' | 'mbanking' | 'ibanking' | 'pos'
 
-export type DokumenSayaJenis = 'bpe_spt' | 'bukti_potong' | 'kode_billing'
+export type DokumenSayaJenis = 'spt' | 'bpe_spt' | 'bukti_potong' | 'faktur' | 'kode_billing'
 
 export interface DokumenSayaRow {
   jenis: DokumenSayaJenis
