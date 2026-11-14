@@ -23,8 +23,14 @@ const kjsHumanLabel: Record<string, string> = {
   '411124-102': 'PPh 23 Bunga',
   '411124-103': 'PPh 23 Royalti',
   '411124-104': 'PPh 23 Jasa/Sewa',
+  '411122-900': 'PPh 22 Setor Sendiri',
+  '411122-910': 'PPh 22 Lainnya',
+  '411127-100': 'PPh 26',
   '411127-110': 'PPh 26',
-  '411128-100': 'PPh Final 4(2)'
+  '411128-100': 'PPh Final 4(2)',
+  '411128-403': 'PPh Final 4(2) Sewa Tanah/Bangunan',
+  '411128-600': 'PPh Pasal 15',
+  '411129-600': 'PPh Pasal 15'
 }
 
 function humanKjsLabel(code: string) {

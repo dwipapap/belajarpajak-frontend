@@ -8,37 +8,6 @@ const { apiFetch } = useApi()
 const toast = useToast()
 const { signOpen, signing, openSign, confirmSign } = useBupotSubmitSign('bpmp', 'BPMP')
 
-const taxObjectOptions: {
-  label: string
-  value: string
-  taxObjectName: string
-  taxNature: BpmpTaxNature
-  ratePercent: number
-  kapKjs: string
-}[] = [
-  {
-    label: '21-100-01 - Gaji pegawai tetap (PPh 21)',
-    value: '21-100-01',
-    taxObjectName: 'Gaji pegawai tetap',
-    taxNature: 'non_final',
-    ratePercent: 5,
-    kapKjs: '411121-100'
-  },
-  {
-    label: '21-100-02 - Tunjangan dan imbalan teratur (PPh 21)',
-    value: '21-100-02',
-    taxObjectName: 'Tunjangan dan imbalan teratur pegawai tetap',
-    taxNature: 'non_final',
-    ratePercent: 5,
-    kapKjs: '411121-100'
-  }
-]
-
-const taxNatureOptions: { label: string, value: BpmpTaxNature }[] = [
-  { label: 'Final', value: 'final' },
-  { label: 'Tidak Final', value: 'non_final' }
-]
-
 // PTKP status determines the TER category (PMK 168/2023 Art. 3):
 // A = TK/0, TK/1, K/0 · B = TK/2, TK/3, K/1, K/2 · C = K/3.
 const ptkpStatusOptions = [
@@ -88,13 +57,13 @@ const formState = reactive({
   recipient_name: auth.user.value?.full_name || '',
   ptkp_status: 'TK/0',
   tax_type: 'PPh 21',
-  tax_object_code: '21-100-01',
-  tax_object_name: 'Gaji pegawai tetap',
+  tax_object_code: '',
+  tax_object_name: '',
   tax_nature: 'non_final' as BpmpTaxNature,
   gross_income: 0,
   dpp_percent: 100,
   rate_percent: 5,
-  kap_kjs: '411121-100',
+  kap_kjs: '',
   document_type: 'Bukti Pembayaran',
   document_number: '',
   document_date: new Date().toISOString().slice(0, 10),
@@ -107,20 +76,10 @@ const saving = ref(false)
 const submitIntent = ref<'draft' | 'issue'>('draft')
 const submitError = ref<string | null>(null)
 
-const selectedTaxObject = computed(() =>
-  taxObjectOptions.find(item => item.value === formState.tax_object_code) ?? taxObjectOptions[0]!
-)
-
-watch(
-  () => formState.tax_object_code,
-  () => {
-    const selected = selectedTaxObject.value
-    formState.tax_object_name = selected.taxObjectName
-    formState.tax_nature = selected.taxNature
-    formState.rate_percent = selected.ratePercent
-    formState.kap_kjs = selected.kapKjs
-  },
-  { immediate: true }
+const { items: taxObjectItems, loading: taxObjectLoading, natureLabel } = useObjekPajak(
+  'bpmp',
+  formState,
+  () => '9'
 )
 
 const dppAmount = computed(() =>
@@ -284,7 +243,14 @@ async function onSubmit() {
         </header>
         <div class="bupot-grid">
           <UFormField name="tax_object_code" label="Nama Objek Pajak" required>
-            <USelect v-model="formState.tax_object_code" :items="taxObjectOptions" class="w-full" />
+            <USelectMenu
+              v-model="formState.tax_object_code"
+              :items="taxObjectItems"
+              value-key="value"
+              :loading="taxObjectLoading"
+              placeholder="Cari nama objek pajak..."
+              class="w-full"
+            />
           </UFormField>
 
           <UFormField name="tax_type" label="Jenis Pajak" required>
@@ -296,7 +262,7 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="tax_nature" label="Sifat Pajak Penghasilan" required>
-            <USelect v-model="formState.tax_nature" :items="taxNatureOptions" class="w-full" />
+            <UInput :model-value="natureLabel" disabled class="w-full" />
           </UFormField>
 
           <UFormField name="gross_income" label="Penghasilan Bruto (Rp)" required>

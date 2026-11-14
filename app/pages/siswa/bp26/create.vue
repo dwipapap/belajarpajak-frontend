@@ -9,62 +9,7 @@ const { apiFetch } = useApi()
 const toast = useToast()
 const { signOpen, signing, openSign, confirmSign } = useBupotSubmitSign('bp26', 'BP26')
 
-const taxObjectOptions: {
-  label: string
-  value: string
-  taxObjectName: string
-  taxNature: Bp26TaxNature
-  ratePercent: number
-  kapKjs: string
-}[] = [
-  {
-    label: '27-100-01 - Dividen yang diterima WPLN',
-    value: '27-100-01',
-    taxObjectName: 'Dividen yang diterima WPLN',
-    taxNature: 'final',
-    ratePercent: 20,
-    kapKjs: '411127-100'
-  },
-  {
-    label: '27-100-02 - Bunga yang diterima WPLN',
-    value: '27-100-02',
-    taxObjectName: 'Bunga yang diterima WPLN',
-    taxNature: 'final',
-    ratePercent: 20,
-    kapKjs: '411127-101'
-  },
-  {
-    label: '27-100-03 - Royalti yang diterima WPLN',
-    value: '27-100-03',
-    taxObjectName: 'Royalti yang diterima WPLN',
-    taxNature: 'final',
-    ratePercent: 20,
-    kapKjs: '411127-102'
-  },
-  {
-    label: '27-100-04 - Imbalan sehubungan dengan jasa, pekerjaan, dan kegiatan',
-    value: '27-100-04',
-    taxObjectName: 'Imbalan sehubungan dengan jasa, pekerjaan, dan kegiatan',
-    taxNature: 'final',
-    ratePercent: 20,
-    kapKjs: '411127-104'
-  },
-  {
-    label: '27-100-05 - Hadiah dan penghargaan yang diterima WPLN',
-    value: '27-100-05',
-    taxObjectName: 'Hadiah dan penghargaan yang diterima WPLN',
-    taxNature: 'final',
-    ratePercent: 20,
-    kapKjs: '411127-100'
-  }
-]
-
-const facilityChoiceOptions = bupotFacilityChoices
-
-const taxNatureOptions: { label: string, value: Bp26TaxNature }[] = [
-  { label: 'Final', value: 'final' },
-  { label: 'Tidak Final', value: 'non_final' }
-]
+const facilityChoiceOptions = bupotFacilityChoicesNonResident
 
 const documentTypeOptions = bupotDocumentTypes
 
@@ -90,17 +35,14 @@ const formState = reactive({
   recipient_identity_number: '',
   recipient_name: auth.user.value?.full_name || '',
   tax_type: 'PPh 26',
-  tax_object_code: '27-100-01',
-  tax_object_name: 'Dividen yang diterima WPLN',
+  tax_object_code: '',
+  tax_object_name: '',
   tax_nature: 'final' as Bp26TaxNature,
   gross_income: 0,
   dpp_percent: 100,
   rate_percent: 20,
-  kap_kjs: '411127-100',
-  negara_treaty: '',
-  pasal_treaty: '',
+  kap_kjs: '',
   nomor_skd: '',
-  tarif_treaty_percent: undefined as number | undefined,
   document_type: 'Bukti Pembayaran',
   document_number: '',
   document_date: new Date().toISOString().slice(0, 10),
@@ -113,20 +55,10 @@ const saving = ref(false)
 const submitIntent = ref<'draft' | 'issue'>('draft')
 const submitError = ref<string | null>(null)
 
-const selectedTaxObject = computed(() =>
-  taxObjectOptions.find(item => item.value === formState.tax_object_code) ?? taxObjectOptions[0]!
-)
-
-watch(
-  () => formState.tax_object_code,
-  () => {
-    const selected = selectedTaxObject.value
-    formState.tax_object_name = selected.taxObjectName
-    formState.tax_nature = selected.taxNature
-    formState.rate_percent = selected.ratePercent
-    formState.kap_kjs = selected.kapKjs
-  },
-  { immediate: true }
+const { items: taxObjectItems, loading: taxObjectLoading, natureLabel, rateEditable } = useObjekPajak(
+  'bp26',
+  formState,
+  () => facilityCodeByChoice[formState.facility_choice]
 )
 
 const dppAmount = computed(() =>
@@ -138,24 +70,13 @@ const calculatedIncomeTax = computed(() =>
     ? 0
     : Math.round(
     dppAmount.value
-    * Number(
-      formState.facility_choice === 'treaty'
-      && formState.tax_nature === 'non_final'
-      && formState.negara_treaty
-      && formState.tarif_treaty_percent !== undefined
-        ? formState.tarif_treaty_percent
-        : formState.rate_percent
-    )
+    * Number(formState.rate_percent)
     / 100
   )
 )
 
 function buildPayload(): Bp26Create {
   const treaty = formState.facility_choice === 'treaty'
-  const treatyRate =
-    formState.tarif_treaty_percent === undefined || formState.tarif_treaty_percent === null
-      ? null
-      : Math.round(Number(formState.tarif_treaty_percent) * 100)
   return {
     class_id: formState.class_id,
     tax_month: Number(formState.tax_month),
@@ -166,15 +87,15 @@ function buildPayload(): Bp26Create {
     tax_object_code: formState.tax_object_code,
     tax_object_name: formState.tax_object_name,
     tax_nature: formState.tax_nature,
-    tax_facility: formState.facility_choice === 'treaty' ? 'none' : formState.facility_choice,
+    tax_facility: formState.facility_choice,
     gross_income: Number(formState.gross_income),
     dpp_percent: Number(formState.dpp_percent),
     rate_percent: Number(formState.rate_percent),
     kap_kjs: formState.kap_kjs || null,
-    negara_treaty: treaty ? formState.negara_treaty || null : null,
-    pasal_treaty: treaty ? formState.pasal_treaty || null : null,
+    negara_treaty: null,
+    pasal_treaty: null,
     nomor_skd: treaty ? formState.nomor_skd || null : null,
-    tarif_treaty_basis_points: treaty ? treatyRate : null,
+    tarif_treaty_basis_points: null,
     document_type: formState.document_type || null,
     document_number: formState.document_number || null,
     document_date: formState.document_date || null,
@@ -299,6 +220,9 @@ async function onSubmit() {
           <UFormField name="facility_choice" label="Nama Fasilitas" required>
             <USelect v-model="formState.facility_choice" :items="facilityChoiceOptions" class="w-full" />
           </UFormField>
+          <UFormField v-if="formState.facility_choice === 'treaty'" name="nomor_skd" label="Receipt Number" required>
+            <UInput v-model="formState.nomor_skd" class="w-full" />
+          </UFormField>
 
           <UFormField name="recipient_identity_number" label="Nomor Identitas WP" required>
             <UInput v-model="formState.recipient_identity_number" class="w-full" />
@@ -308,7 +232,14 @@ async function onSubmit() {
             <UInput v-model="formState.recipient_name" class="w-full" />
           </UFormField>
           <UFormField name="tax_object_code" label="Nama Objek Pajak" required>
-            <USelect v-model="formState.tax_object_code" :items="taxObjectOptions" class="w-full" />
+            <USelectMenu
+              v-model="formState.tax_object_code"
+              :items="taxObjectItems"
+              value-key="value"
+              :loading="taxObjectLoading"
+              placeholder="Cari nama objek pajak..."
+              class="w-full"
+            />
           </UFormField>
 
           <UFormField name="tax_type" label="Jenis Pajak" required>
@@ -320,7 +251,7 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="tax_nature" label="Sifat Pajak Penghasilan" required>
-            <USelect v-model="formState.tax_nature" :items="taxNatureOptions" class="w-full" />
+            <UInput :model-value="natureLabel" disabled class="w-full" />
           </UFormField>
 
           <UFormField name="gross_income" label="Penghasilan Bruto (Rp)" required>
@@ -332,7 +263,7 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="rate_percent" label="Tarif (%)" required>
-            <UInput v-model="formState.rate_percent" type="number" disabled class="w-full" />
+            <UInput v-model="formState.rate_percent" type="number" :disabled="!rateEditable" class="w-full" />
           </UFormField>
 
           <UFormField name="income_tax" label="Pajak Penghasilan (Rp)" required>
@@ -343,27 +274,9 @@ async function onSubmit() {
             <UInput v-model="formState.kap_kjs" disabled class="w-full" />
           </UFormField>
 
-          <UFormField v-if="formState.facility_choice === 'treaty'" name="negara_treaty" label="Negara Treaty" required>
-            <UInput v-model="formState.negara_treaty" placeholder="SGP" class="w-full" />
-          </UFormField>
 
-          <UFormField v-if="formState.facility_choice === 'treaty'" name="pasal_treaty" label="Pasal Treaty">
-            <UInput v-model="formState.pasal_treaty" placeholder="10" class="w-full" />
-          </UFormField>
 
-          <UFormField v-if="formState.facility_choice === 'treaty'" name="nomor_skd" label="Nomor SKD" required>
-            <UInput v-model="formState.nomor_skd" class="w-full" />
-          </UFormField>
 
-          <UFormField v-if="formState.facility_choice === 'treaty'" name="tarif_treaty_percent" label="Tarif Treaty (%)">
-            <UInput
-              v-model="formState.tarif_treaty_percent"
-              type="number"
-              min="0"
-              max="100"
-              class="w-full"
-            />
-          </UFormField>
         </div>
       </section>
 

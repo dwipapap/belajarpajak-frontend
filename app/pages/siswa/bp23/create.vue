@@ -14,62 +14,7 @@ const { apiFetch } = useApi()
 const toast = useToast()
 const { signOpen, signing, openSign, confirmSign } = useBupotSubmitSign('bp23', 'BP23')
 
-const facilityOptions: { label: string, value: Bp23TaxFacility }[] = [
-  { label: 'Tanpa Fasilitas', value: 'none' },
-  { label: 'Ditanggung Pemerintah', value: 'dtp' },
-  { label: 'Surat Keterangan Bebas', value: 'skb' },
-  { label: 'Tarif 0%', value: 'rate_0' }
-]
-
-const taxObjectOptions: {
-  label: string
-  value: string
-  incomeType: string
-  taxNature: Bp23TaxNature
-  ratePercent: number
-  kapKjs: string
-}[] = [
-  {
-    label: '24-100-01 - Dividen (15%)',
-    value: '24-100-01',
-    incomeType: 'Dividen',
-    taxNature: 'non_final',
-    ratePercent: 15,
-    kapKjs: '411124-100'
-  },
-  {
-    label: '24-101-01 - Bunga (15%)',
-    value: '24-101-01',
-    incomeType: 'Bunga',
-    taxNature: 'non_final',
-    ratePercent: 15,
-    kapKjs: '411124-102'
-  },
-  {
-    label: '24-103-01 - Royalti (15%)',
-    value: '24-103-01',
-    incomeType: 'Royalti',
-    taxNature: 'non_final',
-    ratePercent: 15,
-    kapKjs: '411124-103'
-  },
-  {
-    label: '24-102-01 - Sewa harta (2%, x2 tanpa NPWP)',
-    value: '24-102-01',
-    incomeType: 'Sewa dan penghasilan lain sehubungan dengan penggunaan harta',
-    taxNature: 'non_final',
-    ratePercent: 2,
-    kapKjs: '411124-104'
-  },
-  {
-    label: '24-104-01 - Jasa konsultan (2%, x2 tanpa NPWP)',
-    value: '24-104-01',
-    incomeType: 'Jasa Konsultan',
-    taxNature: 'non_final',
-    ratePercent: 2,
-    kapKjs: '411124-104'
-  }
-]
+const facilityOptions = bupotFacilityChoices
 
 const documentTypeOptions = bupotDocumentTypes
 
@@ -99,14 +44,14 @@ const formState = reactive({
   recipient_address: '',
   recipient_nitku: '',
   tax_facility: 'none' as Bp23TaxFacility,
-  tax_object_code: '24-100-01',
-  income_type: 'Dividen',
+  tax_object_code: '',
+  income_type: '',
   tax_nature: 'non_final' as Bp23TaxNature,
   previous_gross_income: 0,
   gross_income: 0,
   dpp_percent: 100,
   rate_percent: 15,
-  kap_kjs: '411124-100',
+  kap_kjs: '',
   document_type: 'Bukti Pembayaran',
   document_number: '',
   document_date: new Date().toISOString().slice(0, 10),
@@ -119,20 +64,10 @@ const saving = ref(false)
 const submitIntent = ref<'draft' | 'issue'>('draft')
 const submitError = ref<string | null>(null)
 
-const selectedTaxObject = computed(() =>
-  taxObjectOptions.find(item => item.value === formState.tax_object_code) ?? taxObjectOptions[0]!
-)
-
-watch(
-  () => formState.tax_object_code,
-  () => {
-    const selected = selectedTaxObject.value
-    formState.income_type = selected.incomeType
-    formState.tax_nature = selected.taxNature
-    formState.rate_percent = selected.ratePercent
-    formState.kap_kjs = selected.kapKjs
-  },
-  { immediate: true }
+const { items: taxObjectItems, loading: taxObjectLoading, taxTypeLabel, rateEditable } = useObjekPajak(
+  'bp23',
+  formState,
+  () => facilityCodeByChoice[formState.tax_facility]
 )
 
 const dppAmount = computed(() =>
@@ -309,11 +244,18 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="tax_object_code" label="Nama Objek Pajak" required>
-            <USelect v-model="formState.tax_object_code" :items="taxObjectOptions" class="w-full" />
+            <USelectMenu
+              v-model="formState.tax_object_code"
+              :items="taxObjectItems"
+              value-key="value"
+              :loading="taxObjectLoading"
+              placeholder="Cari nama objek pajak..."
+              class="w-full"
+            />
           </UFormField>
 
           <UFormField name="income_type" label="Jenis Pajak" required>
-            <UInput v-model="formState.income_type" disabled class="w-full" />
+            <UInput :model-value="taxTypeLabel" disabled class="w-full" />
           </UFormField>
 
           <UFormField name="tax_object_code_readonly" label="Kode Objek Pajak" required>
@@ -348,7 +290,7 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="rate_percent" label="Tarif (%)" required>
-            <UInput v-model="formState.rate_percent" type="number" disabled class="w-full" />
+            <UInput v-model="formState.rate_percent" type="number" :disabled="!rateEditable" class="w-full" />
           </UFormField>
 
           <UFormField name="income_tax" label="Pajak Penghasilan (Rp)" required>
