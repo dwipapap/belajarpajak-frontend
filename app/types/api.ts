@@ -174,7 +174,20 @@ export interface DashboardSummary {
 
 export type Bp21Status = 'draft' | 'issued' | 'invalid'
 export type Bp21TaxNature = 'final' | 'non_final'
-export type Bp21TaxFacility = 'none' | 'dtp' | 'skb' | 'rate_0'
+/** `treaty` = SKD (kode fasilitas 7), `lainnya` = Fasilitas Lainnya (8); `skb`/`rate_0` are legacy values. */
+export type Bp21TaxFacility = 'none' | 'dtp' | 'treaty' | 'lainnya' | 'skb' | 'rate_0'
+
+/** One row of GET /referensi/objek-pajak (katalog objek pajak resmi, resolved for a facility). */
+export interface ObjekPajak {
+  kode: string
+  nama: string
+  pasal: string
+  sifat: string | null
+  kap_kjs: string
+  tarif: number | null
+  tarif_manual: boolean
+  pph_manual: boolean
+}
 
 export interface Bp21Read {
   id: number

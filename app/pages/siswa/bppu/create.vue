@@ -14,70 +14,7 @@ const { apiFetch } = useApi()
 const toast = useToast()
 const { signOpen, signing, openSign, confirmSign } = useBupotSubmitSign('bppu', 'BPPU')
 
-const facilityOptions: { label: string, value: BppuTaxFacility }[] = [
-  { label: 'Tanpa Fasilitas', value: 'none' },
-  { label: 'Ditanggung Pemerintah', value: 'dtp' },
-  { label: 'Surat Keterangan Bebas', value: 'skb' },
-  { label: 'Tarif 0%', value: 'rate_0' }
-]
-
-const taxObjectOptions: {
-  label: string
-  value: string
-  taxObjectName?: string
-  taxType?: string
-  incomeType?: string
-  taxNature: BppuTaxNature
-  ratePercent: number
-  kapKjs: string
-}[] = [
-  // Must match the backend TAX_OBJECT_MATRIX for BPPU (rate and KAP are validated there).
-  {
-    label: '24-100-01 - Dividen (PPh 23, 15%)',
-    value: '24-100-01',
-    taxObjectName: 'Dividen',
-    taxType: 'PPh 23',
-    incomeType: 'Dividen',
-    taxNature: 'non_final',
-    ratePercent: 15,
-    kapKjs: '411124-100'
-  },
-  {
-    label: '24-102-01 - Sewa harta (PPh 23, 2%)',
-    value: '24-102-01',
-    taxObjectName: 'Sewa dan penghasilan lain sehubungan dengan penggunaan harta',
-    taxType: 'PPh 23',
-    incomeType: 'Sewa dan penghasilan lain sehubungan dengan penggunaan harta',
-    taxNature: 'non_final',
-    ratePercent: 2,
-    kapKjs: '411124-104'
-  },
-  {
-    label: '24-104-01 - Jasa konsultan (PPh 23, 2%)',
-    value: '24-104-01',
-    taxObjectName: 'Jasa konsultan',
-    taxType: 'PPh 23',
-    incomeType: 'Jasa Konsultan',
-    taxNature: 'non_final',
-    ratePercent: 2,
-    kapKjs: '411124-104'
-  },
-  {
-    label: '28-100-01 - Jasa konstruksi (PPh 4(2) final, 2%)',
-    value: '28-100-01',
-    taxObjectName: 'Jasa konstruksi',
-    taxType: 'PPh 4(2)',
-    incomeType: 'Jasa konstruksi',
-    taxNature: 'final',
-    ratePercent: 2,
-    kapKjs: '411128-100'
-  }
-]
-
-const taxNatureOptions: { label: string, value: BppuTaxNature }[] = [
-  { label: 'Final', value: 'final' },
-  { label: 'Tidak Final', value: 'non_final' }
-]
+const facilityOptions = bupotFacilityChoices
 
 const documentTypeOptions = bupotDocumentTypes
 
@@ -108,13 +45,13 @@ const formState = reactive({
   recipient_nitku: '',
   tax_facility: 'none' as BppuTaxFacility,
   tax_type: 'PPh 4(2)',
-  tax_object_code: '28-100-01',
-  tax_object_name: 'Jasa konstruksi',
+  tax_object_code: '',
+  tax_object_name: '',
   income_type: '',
   tax_nature: 'final' as BppuTaxNature,
   dpp: 0,
   rate_percent: 2.5,
-  kap_kjs: '411128-100',
+  kap_kjs: '',
   document_type: 'Bukti Pembayaran',
   document_number: '',
   document_date: new Date().toISOString().slice(0, 10),
@@ -127,22 +64,10 @@ const saving = ref(false)
 const submitIntent = ref<'draft' | 'issue'>('draft')
 const submitError = ref<string | null>(null)
 
-const selectedTaxObject = computed(() =>
-  taxObjectOptions.find(item => item.value === formState.tax_object_code) ?? taxObjectOptions[0]!
-)
-
-watch(
-  () => formState.tax_object_code,
-  () => {
-    const selected = selectedTaxObject.value
-    formState.tax_object_name = selected.taxObjectName ?? ''
-    formState.tax_type = selected.taxType ?? ''
-    formState.income_type = selected.incomeType ?? ''
-    formState.tax_nature = selected.taxNature
-    formState.rate_percent = selected.ratePercent
-    formState.kap_kjs = selected.kapKjs
-  },
-  { immediate: true }
+const { items: taxObjectItems, loading: taxObjectLoading, natureLabel, rateEditable, selected: selectedObject } = useObjekPajak(
+  'bppu',
+  formState,
+  () => facilityCodeByChoice[formState.tax_facility]
 )
 
 const calculatedIncomeTax = computed(() => {
@@ -150,7 +75,9 @@ const calculatedIncomeTax = computed(() => {
   const dpp = Number(formState.dpp || 0)
   const rate = Number(formState.rate_percent || 0)
   let finalRate = rate
-  if (!formState.recipient_identity_number || formState.recipient_identity_number.startsWith('0000000000000000')) {
+  // Tarif x2 tanpa NPWP berlaku hanya untuk objek PPh Pasal 23.
+  const noNpwp = !formState.recipient_identity_number || formState.recipient_identity_number.startsWith('0000000000000000')
+  if (noNpwp && selectedObject.value?.pasal === 'Pasal 23') {
     finalRate *= 2
   }
   return Math.round(dpp * finalRate / 100)
@@ -324,7 +251,14 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="tax_object_code" label="Nama Objek Pajak" required>
-            <USelect v-model="formState.tax_object_code" :items="taxObjectOptions" class="w-full" />
+            <USelectMenu
+              v-model="formState.tax_object_code"
+              :items="taxObjectItems"
+              value-key="value"
+              :loading="taxObjectLoading"
+              placeholder="Cari nama objek pajak..."
+              class="w-full"
+            />
           </UFormField>
 
           <UFormField name="tax_type" label="Jenis Pajak" required>
@@ -336,7 +270,7 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="tax_nature" label="Sifat Pajak Penghasilan" required>
-            <USelect v-model="formState.tax_nature" :items="taxNatureOptions" class="w-full" />
+            <UInput :model-value="natureLabel" disabled class="w-full" />
           </UFormField>
         </div>
 
@@ -347,7 +281,7 @@ async function onSubmit() {
 
 
           <UFormField name="rate_percent" label="Tarif (%)" required>
-            <UInput v-model="formState.rate_percent" type="number" disabled class="w-full" />
+            <UInput v-model="formState.rate_percent" type="number" :disabled="!rateEditable" class="w-full" />
           </UFormField>
 
           <UFormField name="income_tax" label="Pajak Penghasilan (Rp)" required>

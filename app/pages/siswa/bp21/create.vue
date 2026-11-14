@@ -16,70 +16,7 @@ const { apiFetch } = useApi()
 const toast = useToast()
 const { signOpen, signing, openSign, confirmSign } = useBupotSubmitSign('bp21', 'BP21')
 
-const facilityOptions: { label: string, value: Bp21TaxFacility }[] = [
-  { label: 'Tanpa Fasilitas', value: 'none' },
-  { label: 'Ditanggung Pemerintah', value: 'dtp' },
-  { label: 'Surat Keterangan Bebas', value: 'skb' },
-  { label: 'Tarif 0%', value: 'rate_0' }
-]
-
-const taxObjectOptions: {
-  label: string
-  value: string
-  incomeType: string
-  taxNature: Bp21TaxNature
-  ratePercent: number
-  kapKjs: string
-}[] = [
-  {
-    label: '21-100-01 - Gaji pegawai tetap',
-    value: '21-100-01',
-    incomeType: 'Gaji pegawai tetap',
-    taxNature: 'non_final',
-    ratePercent: 5,
-    kapKjs: '411121-100'
-  },
-  {
-    label: '21-100-02 - Pensiun berkala',
-    value: '21-100-02',
-    incomeType: 'Pensiun berkala',
-    taxNature: 'non_final',
-    ratePercent: 5,
-    kapKjs: '411121-100'
-  },
-  {
-    label: '21-100-09 - Honorarium tenaga ahli',
-    value: '21-100-09',
-    incomeType: 'Honorarium tenaga ahli',
-    taxNature: 'non_final',
-    ratePercent: 5,
-    kapKjs: '411121-100'
-  },
-  {
-    label: '21-401-01 - Imbalan pegawai tidak tetap',
-    value: '21-401-01',
-    incomeType: 'Imbalan pegawai tidak tetap',
-    taxNature: 'non_final',
-    ratePercent: 5,
-    kapKjs: '411121-100'
-  },
-  {
-    label: '21-401-02 - Upah harian / mingguan',
-    value: '21-401-02',
-    incomeType: 'Upah harian / mingguan',
-    taxNature: 'non_final',
-    ratePercent: 5,
-    kapKjs: '411121-100'
-  },
-  {
-    label: '21-499-99 - Penghasilan bukan pegawai lainnya',
-    value: '21-499-99',
-    incomeType: 'Penghasilan bukan pegawai lainnya',
-    taxNature: 'non_final',
-    ratePercent: 5,
-    kapKjs: '411121-100'
-  }
-]
+const facilityOptions = bupotFacilityChoices
 
 const documentTypeOptions = bupotDocumentTypes
 
@@ -118,14 +55,14 @@ const formState = reactive({
   ptkp_status: 'TK/0',
   ter_category: undefined as string | undefined,
   tax_facility: 'none' as Bp21TaxFacility,
-  tax_object_code: '21-100-09',
-  income_type: 'Honorarium tenaga ahli',
+  tax_object_code: '',
+  income_type: '',
   tax_nature: 'non_final' as Bp21TaxNature,
   previous_gross_income: 0,
   gross_income: 0,
   dpp_percent: 100,
   rate_percent: 5,
-  kap_kjs: '411121-100',
+  kap_kjs: '',
   document_type: 'Bukti Pembayaran',
   document_number: '',
   document_date: new Date().toISOString().slice(0, 10),
@@ -170,20 +107,10 @@ const rincianPPh = computed(() => {
 
 const submitError = ref<string | null>(null)
 
-const selectedTaxObject = computed(() =>
-  taxObjectOptions.find(item => item.value === formState.tax_object_code) ?? taxObjectOptions[0]!
-)
-
-watch(
-  () => formState.tax_object_code,
-  () => {
-    const selected = selectedTaxObject.value
-    formState.income_type = selected.incomeType
-    formState.tax_nature = selected.taxNature
-    formState.rate_percent = selected.ratePercent
-    formState.kap_kjs = selected.kapKjs
-  },
-  { immediate: true }
+const { items: taxObjectItems, loading: taxObjectLoading, taxTypeLabel } = useObjekPajak(
+  'bp21',
+  formState,
+  () => facilityCodeByChoice[formState.tax_facility]
 )
 
 const dppAmount = computed(() =>
@@ -413,11 +340,18 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField name="tax_object_code" label="Nama Objek Pajak" required>
-            <USelect v-model="formState.tax_object_code" :items="taxObjectOptions" class="w-full" />
+            <USelectMenu
+              v-model="formState.tax_object_code"
+              :items="taxObjectItems"
+              value-key="value"
+              :loading="taxObjectLoading"
+              placeholder="Cari nama objek pajak..."
+              class="w-full"
+            />
           </UFormField>
 
           <UFormField name="income_type" label="Jenis Pajak" required>
-            <UInput v-model="formState.income_type" disabled class="w-full" />
+            <UInput :model-value="taxTypeLabel" disabled class="w-full" />
           </UFormField>
 
           <UFormField name="tax_object_code_readonly" label="Kode Objek Pajak" required>

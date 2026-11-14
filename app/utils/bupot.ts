@@ -59,17 +59,21 @@ export const statusColor = {
 
 export const facilityLabel = {
   none: 'Tanpa Fasilitas',
-  dtp: 'DTP',
-  skb: 'SKB',
-  rate_0: 'Tarif 0%'
+  dtp: 'PPh Ditanggung Pemerintah (DTP)',
+  treaty: 'Surat Keterangan Domisili (SKD)',
+  lainnya: 'Fasilitas Lainnya',
+  skb: 'SKB (lama)',
+  rate_0: 'Tarif 0% (lama)'
 } satisfies Record<Bp21TaxFacility, string>
 
 export const facilityFilterOptions: { label: string, value: Bp21TaxFacility | undefined }[] = [
   { label: 'Semua Fasilitas', value: undefined },
   { label: 'Tanpa Fasilitas', value: 'none' },
-  { label: 'Ditanggung Pemerintah', value: 'dtp' },
-  { label: 'Surat Keterangan Bebas', value: 'skb' },
-  { label: 'Tarif 0%', value: 'rate_0' }
+  { label: 'PPh Ditanggung Pemerintah (DTP)', value: 'dtp' },
+  { label: 'Surat Keterangan Domisili (SKD)', value: 'treaty' },
+  { label: 'Fasilitas Lainnya', value: 'lainnya' },
+  { label: 'SKB (lama)', value: 'skb' },
+  { label: 'Tarif 0% (lama)', value: 'rate_0' }
 ]
 
 export const sptFlagLabel = {
@@ -168,6 +172,7 @@ export function validateBupotCreate(state: {
   recipient_nitku?: string
   document_nitku?: string
   tax_facility?: string
+  tax_object_code?: string
   ter_category?: string | null
 }) {
   const errors: { name: string, message: string }[] = []
@@ -206,6 +211,9 @@ export function validateBupotCreate(state: {
   }
   if ('ter_category' in state && state.tax_month !== undefined && Number(state.tax_month) !== 12 && !state.ter_category) {
     errors.push({ name: 'ter_category', message: 'Untuk Masa Jan–Nov pilih kategori TER (A/B/C)' })
+  }
+  if ('tax_object_code' in state && !state.tax_object_code) {
+    errors.push({ name: 'tax_object_code', message: 'Pilih nama objek pajak' })
   }
   if (state.tax_facility === 'skb' && !state.document_number) {
     errors.push({ name: 'document_number', message: 'SKB wajib mencantumkan nomor dokumen SKB' })

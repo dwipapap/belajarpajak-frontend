@@ -77,13 +77,32 @@ export function useAutoClass(
 }
 
 /**
- * "Nama Fasilitas" on BPNR/BP26. The treaty (SKD/P3B) choice reveals the
- * treaty fields; it maps to tax_facility "none" plus treaty data.
+ * Fasilitas choices per module, labelled as in the official portal. The value is
+ * the stored `tax_facility`; `facilityCodeByChoice` is the catalog facility code
+ * used to resolve rates (9 tanpa fasilitas, 4 DTP, 7 SKD, 8 lainnya).
+ * SKD ("treaty") also reveals the Receipt Number field on BPNR/BP26.
  */
-export type BupotFacilityChoice = 'none' | 'treaty' | 'skb' | 'dtp'
+export type BupotFacilityChoice = 'none' | 'dtp' | 'treaty' | 'lainnya' | 'skb' | 'rate_0'
+
+export const facilityCodeByChoice: Record<BupotFacilityChoice, string> = {
+  none: '9',
+  dtp: '4',
+  treaty: '7',
+  lainnya: '8',
+  skb: '8',
+  rate_0: '9'
+}
+
+/** BPPU / SP / CY / BP23 (and BP21). */
 export const bupotFacilityChoices: { label: string, value: BupotFacilityChoice }[] = [
   { label: 'Tanpa Fasilitas', value: 'none' },
-  { label: 'SKD WPLN / P3B (Tax Treaty)', value: 'treaty' },
-  { label: 'Surat Keterangan Bebas (SKB)', value: 'skb' },
-  { label: 'PPh Ditanggung Pemerintah (DTP)', value: 'dtp' }
+  { label: 'PPh Ditanggung Pemerintah (DTP)', value: 'dtp' },
+  { label: 'Fasilitas Lainnya', value: 'lainnya' }
+]
+
+/** BPNR / BP26. */
+export const bupotFacilityChoicesNonResident: { label: string, value: BupotFacilityChoice }[] = [
+  { label: 'Tanpa Fasilitas', value: 'none' },
+  { label: 'Surat Keterangan Domisili (SKD)', value: 'treaty' },
+  { label: 'Fasilitas Lainnya', value: 'lainnya' }
 ]
