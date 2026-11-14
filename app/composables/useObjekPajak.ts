@@ -75,7 +75,7 @@ export function useObjekPajak(
   )
 
   const taxTypeLabel = computed(() => selected.value ? taxTypeFromPasal(selected.value.pasal) : '')
-  const natureLabel = computed(() => state.tax_nature === 'final' ? 'Final' : 'Tidak Final')
+  const natureLabel = computed(() => !selected.value ? '' : state.tax_nature === 'final' ? 'Final' : 'Tidak Final')
   /** Tarif is typed by the student only when the catalog marks it manual. */
   const rateEditable = computed(() => !!selected.value && (selected.value.tarif_manual || selected.value.tarif === null))
 
