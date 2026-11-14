@@ -49,7 +49,7 @@ const formState = reactive({
   withholder_name: auth.user.value?.tenant_name || 'Institusi Simulasi',
   withholder_nitku: '1471110802000001000001',
   recipient_identity_number: '',
-  recipient_name: auth.user.value?.full_name || '',
+  recipient_name: '',
   recipient_address: '',
   recipient_nitku: '',
   ptkp_status: 'TK/0',

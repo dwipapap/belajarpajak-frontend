@@ -44,7 +44,7 @@ const formState = reactive({
   income_type: '',
   tax_nature: 'non_final' as CyTaxNature,
   dpp: 0,
-  rate_percent: 15,
+  rate_percent: 0,
   kap_kjs: '',
   document_type: 'Bukti Pembayaran',
   document_number: '',

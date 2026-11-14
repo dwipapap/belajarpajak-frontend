@@ -54,7 +54,7 @@ const formState = reactive({
   status: 'NORMAL',
   tax_facility_label: 'Tanpa Fasilitas',
   recipient_identity_number: '',
-  recipient_name: auth.user.value?.full_name || '',
+  recipient_name: '',
   ptkp_status: 'TK/0',
   tax_type: 'PPh 21',
   tax_object_code: '',
