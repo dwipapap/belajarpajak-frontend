@@ -3,9 +3,9 @@ import type {
   Bp21ListResponse,
   Bp21Read,
   Bp21Summary,
-  Bp23ListResponse,
-  Bp23Read,
-  Bp23Summary,
+  BppuListResponse,
+  BppuRead,
+  BppuSummary,
   Bp26ListResponse,
   Bp26Read,
   Bp26Summary,
@@ -36,9 +36,9 @@ const { data: bp21Summary } = useAsyncData(
   { default: () => ({ draft: 0, issued: 0, invalid: 0, total: 0 }) }
 )
 
-const { data: bp23Summary } = useAsyncData(
-  'siswa-dashboard-bp23-summary',
-  () => apiFetch<Bp23Summary>('/api/v1/bp23/summary'),
+const { data: bppuSummary } = useAsyncData(
+  'siswa-dashboard-bppu-summary',
+  () => apiFetch<BppuSummary>('/api/v1/bppu/summary'),
   { default: () => ({ draft: 0, issued: 0, invalid: 0, total: 0 }) }
 )
 
@@ -54,9 +54,9 @@ const { data: bp21List, status: bp21Status } = useAsyncData(
   { default: () => ({ items: [], total: 0, page: 1, size: 5 }) }
 )
 
-const { data: bp23List, status: bp23Status } = useAsyncData(
-  'siswa-dashboard-bp23-list',
-  () => apiFetch<Bp23ListResponse>('/api/v1/bp23?page=1&size=5'),
+const { data: bppuList, status: bppuStatus } = useAsyncData(
+  'siswa-dashboard-bppu-list',
+  () => apiFetch<BppuListResponse>('/api/v1/bppu?page=1&size=5'),
   { default: () => ({ items: [], total: 0, page: 1, size: 5 }) }
 )
 
@@ -68,7 +68,7 @@ const { data: bp26List, status: bp26Status } = useAsyncData(
 
 type RecentDocument = {
   id: number
-  module: 'BP21' | 'BP23' | 'BP26'
+  module: 'BP21' | 'BPPU' | 'BP26'
   to: string
   recipient_name: string
   tax_month: number
@@ -80,10 +80,10 @@ type RecentDocument = {
   created_at: string | null
 }
 
-const bupotTotal = computed(() => bp21Summary.value.total + bp23Summary.value.total + bp26Summary.value.total)
-const issuedTotal = computed(() => bp21Summary.value.issued + bp23Summary.value.issued + bp26Summary.value.issued)
-const draftTotal = computed(() => bp21Summary.value.draft + bp23Summary.value.draft + bp26Summary.value.draft)
-const invalidTotal = computed(() => bp21Summary.value.invalid + bp23Summary.value.invalid + bp26Summary.value.invalid)
+const bupotTotal = computed(() => bp21Summary.value.total + bppuSummary.value.total + bp26Summary.value.total)
+const issuedTotal = computed(() => bp21Summary.value.issued + bppuSummary.value.issued + bp26Summary.value.issued)
+const draftTotal = computed(() => bp21Summary.value.draft + bppuSummary.value.draft + bp26Summary.value.draft)
+const invalidTotal = computed(() => bp21Summary.value.invalid + bppuSummary.value.invalid + bp26Summary.value.invalid)
 
 const statCards = computed(() => [
   {
@@ -95,7 +95,7 @@ const statCards = computed(() => [
   },
   {
     label: 'Total e-Bupot',
-    description: 'BP21 + BP23 + BP26',
+    description: 'BP21 + BPPU + BP26',
     value: bupotTotal.value,
     icon: 'i-lucide-file-text',
     tone: 'primary'
@@ -125,11 +125,11 @@ const modules = computed(() => [
     summary: bp21Summary.value
   },
   {
-    title: 'BP23',
-    description: 'Bukti pemotongan PPh Pasal 23',
-    to: '/siswa/bp23',
-    colorClass: 'is-bp23',
-    summary: bp23Summary.value
+    title: 'BPPU',
+    description: 'Bukti pemotongan PPh Unifikasi (termasuk Pasal 23)',
+    to: '/siswa/bppu',
+    colorClass: 'is-bppu',
+    summary: bppuSummary.value
   },
   {
     title: 'BP26',
@@ -146,10 +146,10 @@ const recentDocuments = computed<RecentDocument[]>(() => {
     module: 'BP21' as const,
     to: '/siswa/bp21'
   }))
-  const bp23 = bp23List.value.items.map((item: Bp23Read) => ({
+  const bppu = bppuList.value.items.map((item: BppuRead) => ({
     ...item,
-    module: 'BP23' as const,
-    to: '/siswa/bp23'
+    module: 'BPPU' as const,
+    to: '/siswa/bppu'
   }))
   const bp26 = bp26List.value.items.map((item: Bp26Read) => ({
     ...item,
@@ -157,7 +157,7 @@ const recentDocuments = computed<RecentDocument[]>(() => {
     to: '/siswa/bp26'
   }))
 
-  return [...bp21, ...bp23, ...bp26]
+  return [...bp21, ...bppu, ...bp26]
     .sort((a, b) => {
       const left = a.updated_at || a.created_at || ''
       const right = b.updated_at || b.created_at || ''
@@ -167,7 +167,7 @@ const recentDocuments = computed<RecentDocument[]>(() => {
 })
 
 const isDocumentsLoading = computed(
-  () => bp21Status.value === 'pending' || bp23Status.value === 'pending' || bp26Status.value === 'pending'
+  () => bp21Status.value === 'pending' || bppuStatus.value === 'pending' || bp26Status.value === 'pending'
 )
 </script>
 
@@ -192,7 +192,7 @@ const isDocumentsLoading = computed(
       <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm z-10 w-64 space-y-3">
         <p class="text-sm font-semibold text-gray-900 mb-2">Aksi Cepat</p>
         <UButton to="/siswa/bp21/create" icon="i-lucide-file-plus-2" label="Buat BP21" class="w-full justify-center" size="md" />
-        <UButton to="/siswa/bp23/create" icon="i-lucide-file-plus-2" label="Buat BP23" color="neutral" variant="outline" class="w-full justify-center" size="md" />
+        <UButton to="/siswa/bppu/create" icon="i-lucide-file-plus-2" label="Buat BPPU" color="neutral" variant="outline" class="w-full justify-center" size="md" />
         <UButton to="/siswa/bp26/create" icon="i-lucide-file-plus-2" label="Buat BP26" color="neutral" variant="outline" class="w-full justify-center" size="md" />
       </div>
     </section>
@@ -266,7 +266,7 @@ const isDocumentsLoading = computed(
 
         <div v-if="isDocumentsLoading" class="p-8 text-center text-sm text-gray-500">Memuat dokumen...</div>
         <div v-else-if="recentDocuments.length === 0" class="p-8 text-center text-sm text-gray-500">
-          Belum ada dokumen. Mulai dari BP21, BP23, atau BP26.
+          Belum ada dokumen. Mulai dari BP21, BPPU, atau BP26.
         </div>
         <div v-else class="flex-1 p-2">
           <NuxtLink 
@@ -348,6 +348,6 @@ const isDocumentsLoading = computed(
   overflow: hidden;
 }
 .is-bp21 { background: oklch(0.92 0.05 270); color: oklch(0.4 0.1 270); }
-.is-bp23 { background: oklch(0.92 0.04 250); color: oklch(0.4 0.08 250); }
+.is-bppu { background: oklch(0.92 0.04 250); color: oklch(0.4 0.08 250); }
 .is-bp26 { background: oklch(0.92 0.05 150); color: oklch(0.4 0.1 150); }
 </style>
