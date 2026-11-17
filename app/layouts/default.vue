@@ -89,6 +89,8 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
     label: 'e-Faktur',
     icon: 'i-lucide-receipt-text',
     active: route.path.includes('/e-faktur'),
+    // One column so each group heading sits directly above its own items.
+    ui: { childList: 'grid-cols-1 gap-0.5 min-w-80' },
     children: [
       // Group headings mirror the reference sidebar (disabled, heading-styled rows).
       efakturHeading('Dasbor e-Faktur'),
