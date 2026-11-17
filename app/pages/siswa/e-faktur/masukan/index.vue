@@ -267,6 +267,12 @@ async function kembaliApprovedOne(invoice: TaxInputRead) {
   }
 }
 
+/** Retur needs an approved (issued) faktur or one already decided Kredit/Tidak Kredit. */
+function canReturn(invoice: TaxInputRead) {
+  return invoice.status !== 'invalid'
+    && (invoice.status === 'issued' || invoice.credit_status !== 'not_credited')
+}
+
 const canActOnSelection = computed(() => selectedIds.value.size > 0)
 </script>
 
@@ -355,6 +361,7 @@ const canActOnSelection = computed(() => selectedIds.value.size > 0)
                   <UButton icon="i-lucide-undo-2" label="Kembali Approved" size="xs" color="neutral" variant="soft" @click="kembaliApprovedOne(row.original)" />
                 </template>
                 <UButton v-else icon="i-lucide-undo-2" label="Batal Kredit" size="xs" color="neutral" variant="soft" @click="uncreditOne(row.original)" />
+                <UButton v-if="canReturn(row.original)" :to="`/siswa/e-faktur/retur-masukan/create?faktur=${row.original.id}`" icon="i-lucide-undo-2" label="Buat Retur" size="xs" color="neutral" variant="soft" />
                 <UButton v-if="row.original.status !== 'draft'" icon="i-lucide-file-down" label="PDF" size="xs" color="neutral" variant="soft" @click="downloadPdf(row.original)" />
                 <UButton v-if="row.original.status === 'draft'" :to="`/siswa/e-faktur/masukan/${row.original.id}`" icon="i-lucide-pencil" size="xs" color="neutral" variant="soft" label="Ubah" />
               </div>

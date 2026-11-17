@@ -1208,3 +1208,86 @@ export interface AngsuranCreate {
   billing_id: number
   n: number
 }
+
+// ---- Retur Pajak Masukan / Keluaran -----------------------------------------
+
+export interface TaxReturLineInput {
+  input_line_id: number
+  return_quantity: number
+  return_discount: number
+}
+
+export interface TaxReturCreate {
+  input_invoice_id: number
+  return_number: string
+  return_date: string
+  is_creditable: boolean | null
+  lines: TaxReturLineInput[]
+}
+
+export interface TaxReturUpdate {
+  return_number?: string
+  return_date?: string
+  is_creditable?: boolean
+  lines?: TaxReturLineInput[]
+}
+
+export interface TaxReturLineRead {
+  id: number
+  input_line_id: number
+  line_order: number
+  line_type: TaxInvoiceLineType
+  item_code: string | null
+  item_name: string
+  unit: string
+  unit_price: number
+  original_quantity: number
+  original_discount: number
+  ppn_rate_percent: number
+  ppnbm_rate_percent: number
+  use_dpp_other: boolean
+  already_returned_quantity: number
+  max_return_quantity: number
+  return_quantity: number
+  return_discount: number
+  return_total_price: number
+  dpp: number
+  dpp_other: number
+  ppn: number
+  ppnbm: number
+}
+
+export interface TaxReturRead {
+  id: number
+  tenant_id: number
+  class_id: number | null
+  siswa_id: number
+  created_by_id: number
+  input_invoice_id: number
+  status: TaxInvoiceStatus
+  status_faktur: StatusFaktur
+  return_number: string
+  return_date: string
+  tax_month: number
+  tax_year: number
+  is_creditable: boolean
+  issued_at: string | null
+  electronic_signature_status: string
+  signer_name: string | null
+  invoice_number: string | null
+  invoice_date: string
+  transaction_code: string
+  seller_npwp: string | null
+  seller_name: string | null
+  buyer_identity_type: BuyerIdentityType
+  buyer_identity_number: string
+  buyer_name: string
+  credit_status: TaxInputCreditStatus
+  total_dpp: number
+  total_dpp_other: number
+  total_ppn: number
+  total_ppnbm: number
+  lines: TaxReturLineRead[]
+}
+
+export type TaxReturListResponse = Paginated<TaxReturRead>

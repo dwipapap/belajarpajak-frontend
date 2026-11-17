@@ -105,6 +105,31 @@ watch(
   }
 )
 
+const sellerAddressOptions = computed(() =>
+  [...new Set([formState.seller_address, 'JALAN ARIFIN AHMAD NO.102, PEKANBARU'].filter(Boolean))]
+)
+const idtkuOptions = (npwp: string) =>
+  [...new Set(['000000', npwp.replace(/\D/g, '') ? `${npwp.replace(/\D/g, '')}000000` : ''].filter(Boolean))]
+const sellerIdtkuOptions = computed(() =>
+  [...new Set([formState.seller_idtku, ...idtkuOptions(formState.seller_npwp)].filter(Boolean))]
+)
+const buyerIdtkuOptions = computed(() =>
+  [...new Set([formState.buyer_idtku, ...idtkuOptions(formState.buyer_identity_number)].filter(Boolean))]
+)
+
+const buyerIdentityLabel = computed(() => ({
+  npwp: 'NPWP/TIN',
+  paspor: 'Nomor Paspor',
+  nik: 'NIK',
+  identitas_lain: 'Nomor Identitas Lain'
+}[formState.buyer_identity_type]))
+
+/** Picking a classmate buyer fills Nama like a known NPWP does in the reference portal. */
+watch(() => formState.buyer_siswa_id, (id) => {
+  const student = classmates.value.find(item => item.id === id)
+  if (student && !formState.buyer_name) formState.buyer_name = student.full_name
+})
+
 const needsDocumentNumber = computed(() =>
   DOCUMENT_NUMBER_IDENTITIES.includes(formState.buyer_identity_type)
 )
@@ -133,6 +158,10 @@ const totals = computed(() =>
     { total_price: 0, dpp: 0, dpp_other: 0, ppn: 0, ppnbm: 0 }
   )
 )
+
+const showDppOther = computed(() => calculatedLines.value.some(item => item.dpp_other > 0))
+const showPpnbm = computed(() => lines.value.some(line => Number(line.ppnbm_rate_percent) > 0))
+const tableColumnCount = computed(() => 13 + Number(showDppOther.value) + Number(showPpnbm.value))
 
 const totalDiscount = computed(() =>
   lines.value.reduce((sum, line) => sum + Number(line.discount || 0), 0)
@@ -365,7 +394,7 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
         color="info"
         variant="subtle"
         icon="i-lucide-info"
-        title="Simpan Konsep menyimpan draf yang masih bisa diubah di tab Belum Terbit; Submit menerbitkan dokumen ke tab Telah Terbit."
+        title="Simpan Konsep menyimpan faktur berstatus CREATED yang masih bisa diubah; Submit menandatangani dan menerbitkan faktur menjadi APPROVED."
         class="mb-1"
       />
 
@@ -391,12 +420,13 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
             <UCheckbox v-model="formState.is_settlement" />
           </UFormField>
 
-          <UFormField name="invoice_number" label="Nomor Faktur">
+          <UFormField name="invoice_number" label="Nomor Faktur Pajak">
             <UInput
               :model-value="formatInvoiceNumber(formState.invoice_number) === '-'
                 ? ''
                 : formatInvoiceNumber(formState.invoice_number)"
-              placeholder="Nomor Faktur"
+              placeholder="Terisi otomatis setelah faktur diterbitkan"
+              readonly
               disabled
               class="w-full"
             />
@@ -410,16 +440,16 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
             />
           </UFormField>
 
-          <UFormField name="invoice_date" label="Tanggal Faktur" required>
+          <UFormField name="invoice_date" label="Tanggal Faktur Pajak" required>
             <UInput v-model="formState.invoice_date" type="date" class="w-full" />
           </UFormField>
 
-          <UFormField name="invoice_kind" label="Jenis Faktur" description="Normal untuk faktur baru" required>
-            <USelect v-model="formState.invoice_kind" :items="invoiceKindOptions" class="w-full" />
+          <UFormField name="invoice_kind" label="Jenis Faktur" required>
+            <USelect v-model="formState.invoice_kind" :items="invoiceKindOptions" disabled class="w-full" />
           </UFormField>
 
           <UFormField name="tax_month" label="Masa Pajak" required>
-            <USelect v-model="formState.tax_month" :items="monthOptions" class="w-full" />
+            <USelect v-model="formState.tax_month" :items="monthOptions" disabled class="w-full" />
           </UFormField>
 
           <UFormField name="tax_year" label="Tahun" required>
@@ -430,12 +460,12 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
             <UInput v-model="formState.reference" placeholder="Keterangan" class="w-full" />
           </UFormField>
 
-          <UFormField name="seller_address" label="Alamat">
-            <UInput v-model="formState.seller_address" class="w-full" />
+          <UFormField name="seller_address" label="Alamat" required>
+            <USelect v-model="formState.seller_address" :items="sellerAddressOptions" class="w-full" />
           </UFormField>
 
-          <UFormField name="seller_idtku" label="NITKU" description="Nomor Identitas Tempat Kegiatan Usaha, 22 digit bila diisi">
-            <UInput v-model="formState.seller_idtku" class="w-full" />
+          <UFormField name="seller_idtku" label="Kode NITKU/IDTKU" required>
+            <USelect v-model="formState.seller_idtku" :items="sellerIdtkuOptions" class="w-full" />
           </UFormField>
 
           <UFormField name="class_id" label="Kelas">
@@ -467,14 +497,15 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
             <USelect v-model="formState.buyer_siswa_id" :items="buyerSiswaOptions" placeholder="Pilih teman sekelas (opsional)" class="w-full" />
           </UFormField>
 
-          <UFormField name="buyer_identity_number" label="Nomor Identitas WP" required>
+          <UFormField name="buyer_identity_number" :label="buyerIdentityLabel" required>
             <UInput v-model="formState.buyer_identity_number" class="w-full" />
           </UFormField>
 
-          <UFormField name="buyer_identity_type" label="Jenis Identitas" description="NPWP Perusahaan untuk badan usaha; NIK untuk orang pribadi">
+          <UFormField name="buyer_identity_type" label="Identitas">
             <URadioGroup
               v-model="formState.buyer_identity_type"
               :items="buyerIdentityOptions"
+              orientation="horizontal"
             />
           </UFormField>
 
@@ -502,8 +533,8 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
             <UInput v-model="formState.buyer_address" class="w-full" />
           </UFormField>
 
-          <UFormField name="buyer_idtku" label="NITKU" description="Nomor Identitas Tempat Kegiatan Usaha pembeli" required>
-            <UInput v-model="formState.buyer_idtku" class="w-full" />
+          <UFormField name="buyer_idtku" label="Kode NITKU/IDTKU" required>
+            <USelect v-model="formState.buyer_idtku" :items="buyerIdtkuOptions" class="w-full" />
           </UFormField>
 
           <UFormField name="buyer_email" label="Email">
@@ -555,19 +586,18 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
                   <th class="p-2 text-left">Satuan</th>
                   <th class="p-2 text-right">Harga Satuan</th>
                   <th class="p-2 text-right">Total Harga</th>
-                  <th class="p-2 text-right">Potongan harga</th>
-                  <th class="p-2 text-right">DPP</th>
-                  <th class="p-2 text-right">DPP Nilai Lain</th>
+                  <th class="p-2 text-right">Diskon</th>
                   <th class="p-2 text-right">Tarif PPN</th>
+                  <th class="p-2 text-right">DPP</th>
+                  <th v-if="showDppOther" class="p-2 text-right">DPP Nilai Lain</th>
                   <th class="p-2 text-right">PPN</th>
-                  <th class="p-2 text-right">Tarif PPnBM</th>
-                  <th class="p-2 text-right">PPnBM</th>
+                  <th v-if="showPpnbm" class="p-2 text-right">PPnBM</th>
                   <th class="p-2" />
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="!lines.length">
-                  <td colspan="16" class="py-8 text-center text-sm text-muted">
+                  <td :colspan="tableColumnCount" class="py-8 text-center text-sm text-muted">
                     Tidak ada data yang ditemukan.
                   </td>
                 </tr>
@@ -588,18 +618,17 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
                     {{ formatCurrency(calculatedLines[index]?.total_price ?? 0) }}
                   </td>
                   <td class="p-2 text-right">{{ formatCurrency(line.discount) }}</td>
+                  <td class="p-2 text-right">{{ line.ppn_rate_percent }}%</td>
                   <td class="p-2 text-right">
                     {{ formatCurrency(calculatedLines[index]?.dpp ?? 0) }}
                   </td>
-                  <td class="p-2 text-right">
+                  <td v-if="showDppOther" class="p-2 text-right">
                     {{ formatCurrency(calculatedLines[index]?.dpp_other ?? 0) }}
                   </td>
-                  <td class="p-2 text-right">{{ line.ppn_rate_percent }}%</td>
                   <td class="p-2 text-right">
                     {{ formatCurrency(calculatedLines[index]?.ppn ?? 0) }}
                   </td>
-                  <td class="p-2 text-right">{{ line.ppnbm_rate_percent }}%</td>
-                  <td class="p-2 text-right">
+                  <td v-if="showPpnbm" class="p-2 text-right">
                     {{ formatCurrency(calculatedLines[index]?.ppnbm ?? 0) }}
                   </td>
                   <td class="p-2 text-right">
@@ -613,17 +642,22 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
                   </td>
                 </tr>
               </tbody>
+              <tfoot>
+                <tr class="border-t-2 border-default font-semibold">
+                  <td class="p-2 text-right" colspan="7">Total</td>
+                  <td class="p-2 text-right">{{ formatCurrency(totals.total_price) }}</td>
+                  <td class="p-2 text-right">{{ formatCurrency(totalDiscount) }}</td>
+                  <td class="p-2" />
+                  <td class="p-2 text-right">{{ formatCurrency(totals.dpp) }}</td>
+                  <td v-if="showDppOther" class="p-2 text-right">
+                    {{ formatCurrency(totals.dpp_other) }}
+                  </td>
+                  <td class="p-2 text-right">{{ formatCurrency(totals.ppn) }}</td>
+                  <td v-if="showPpnbm" class="p-2 text-right">{{ formatCurrency(totals.ppnbm) }}</td>
+                  <td class="p-2" />
+                </tr>
+              </tfoot>
             </table>
-          </div>
-
-          <div class="faktur-total-row">
-            <span>JUMLAH</span>
-            <div><span>Total Harga</span> <strong>{{ formatCurrency(totals.total_price) }}</strong></div>
-            <div><span>Potongan</span> <strong>{{ formatCurrency(totalDiscount) }}</strong></div>
-            <div><span>DPP</span> <strong>{{ formatCurrency(totals.dpp) }}</strong></div>
-            <div><span>DPP Nilai Lain</span> <strong>{{ formatCurrency(totals.dpp_other) }}</strong></div>
-            <div><span>PPN</span> <strong>{{ formatCurrency(totals.ppn) }}</strong></div>
-            <div><span>PPnBM</span> <strong>{{ formatCurrency(totals.ppnbm) }}</strong></div>
           </div>
 
           <div class="bupot-footer">
