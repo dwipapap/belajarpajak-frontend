@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { foreignCountryOptions } from '~/utils/countries'
 import type { BupotFacilityChoice } from '~/utils/bupotForm'
 import type { BpnrCreate, BpnrRead, BpnrTaxNature, SchoolClass } from '~/types/api'
 
@@ -12,6 +13,9 @@ const { signOpen, signing, openSign, confirmSign } = useBupotSubmitSign('bpnr', 
 const facilityChoiceOptions = bupotFacilityChoicesNonResident
 
 const documentTypeOptions = bupotDocumentTypes
+const countryItems = foreignCountryOptions()
+// TODO(paritas): the reference's Metode Pembayaran options are not captured yet.
+const paymentMethodOptions = ['Transfer / Pemindahbukuan', 'Tunai']
 
 const { data: classes } = useAsyncData(
   'siswa-bpnr-create-classes',
@@ -34,6 +38,12 @@ const formState = reactive({
   facility_choice: 'none' as BupotFacilityChoice,
   recipient_identity_number: '',
   recipient_name: '',
+  recipient_address: '',
+  recipient_country: '',
+  recipient_birth_date: '',
+  recipient_birth_place: '',
+  recipient_passport_number: '',
+  recipient_kitas_number: '',
   tax_type: '',
   tax_object_code: '',
   tax_object_name: '',
@@ -46,6 +56,8 @@ const formState = reactive({
   document_type: 'Bukti Pembayaran',
   document_number: '',
   document_date: new Date().toISOString().slice(0, 10),
+  payment_method: '',
+  sp2d_number: '',
   document_nitku: ''
 })
 const { showClassField } = useAutoClass(formState, classOptions)
@@ -83,6 +95,14 @@ function buildPayload(): BpnrCreate {
     tax_year: Number(formState.tax_year),
     recipient_identity_number: formState.recipient_identity_number,
     recipient_name: formState.recipient_name,
+    recipient_address: formState.recipient_address || null,
+    recipient_country: formState.recipient_country || null,
+    recipient_birth_date: formState.recipient_birth_date || null,
+    recipient_birth_place: formState.recipient_birth_place || null,
+    recipient_passport_number: formState.recipient_passport_number || null,
+    recipient_kitas_number: formState.recipient_kitas_number || null,
+    payment_method: formState.payment_method || null,
+    sp2d_number: formState.sp2d_number || null,
     tax_type: formState.tax_type,
     tax_object_code: formState.tax_object_code,
     tax_object_name: formState.tax_object_name,
@@ -144,7 +164,7 @@ async function onSubmit() {
       <strong>BPNR - Bukti Potong Non-Residen</strong>
     </div>
 
-    <UForm :state="formState" :validate="validateBupotCreate" class="bupot-form" @submit="onSubmit">
+    <UForm :state="formState" :validate="validateBpnrCreate" class="bupot-form" @submit="onSubmit">
       <div class="bupot-form__header">
         <div>
           <p>{{ auth.user.value?.tenant_id ?? '1471110802000001' }}</p>
@@ -224,13 +244,49 @@ async function onSubmit() {
             <UInput v-model="formState.nomor_skd" class="w-full" />
           </UFormField>
 
-          <UFormField name="recipient_identity_number" label="Nomor Identitas WP" required>
-            <UInput v-model="formState.recipient_identity_number" class="w-full" />
+          <UFormField
+            name="recipient_identity_number"
+            label="Nomor Identitas WP"
+            help="TIN dari negara asal (1–30 karakter: huruf, angka, - / .)"
+            required
+          >
+            <UInput v-model="formState.recipient_identity_number" maxlength="30" class="w-full" />
           </UFormField>
 
-          <UFormField name="recipient_name" label="Nama" required>
+          <UFormField name="recipient_name" label="Name" required>
             <UInput v-model="formState.recipient_name" class="w-full" />
           </UFormField>
+
+          <UFormField name="recipient_address" label="Address">
+            <UInput v-model="formState.recipient_address" class="w-full" />
+          </UFormField>
+
+          <UFormField name="recipient_country" label="Negara">
+            <USelectMenu
+              v-model="formState.recipient_country"
+              :items="countryItems"
+              value-key="value"
+              placeholder="Pilih negara..."
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField name="recipient_birth_date" label="Tanggal Lahir">
+            <UInput v-model="formState.recipient_birth_date" type="date" class="w-full" />
+          </UFormField>
+
+          <UFormField name="recipient_birth_place" label="Tempat Lahir">
+            <UInput v-model="formState.recipient_birth_place" class="w-full" />
+          </UFormField>
+
+          <UFormField name="recipient_passport_number" label="Nomor Paspor">
+            <UInput v-model="formState.recipient_passport_number" class="w-full" />
+          </UFormField>
+
+          <UFormField name="recipient_kitas_number" label="Nomor KITAS/KITAP">
+            <UInput v-model="formState.recipient_kitas_number" class="w-full" />
+          </UFormField>
+
           <UFormField name="tax_object_code" label="Nama Objek Pajak" required>
             <USelectMenu
               v-model="formState.tax_object_code"
@@ -262,7 +318,7 @@ async function onSubmit() {
             <UInput v-model="formState.dpp_percent" type="number" class="w-full" />
           </UFormField>
 
-          <UFormField name="rate_percent" label="Tarif (%)" required>
+          <UFormField name="rate_percent" label="Tarif (%)(BPNR)" required>
             <UInput v-model="formState.rate_percent" type="number" :disabled="!rateEditable" class="w-full" />
           </UFormField>
 
@@ -273,9 +329,6 @@ async function onSubmit() {
           <UFormField name="kap_kjs" label="KAP" required>
             <UInput v-model="formState.kap_kjs" disabled class="w-full" />
           </UFormField>
-
-
-
 
         </div>
       </section>
@@ -296,6 +349,23 @@ async function onSubmit() {
 
           <UFormField name="document_date" label="Tanggal Dokumen" required>
             <UInput v-model="formState.document_date" type="date" class="w-full" />
+          </UFormField>
+
+          <UFormField name="payment_method" label="Metode Pembayaran (BPNR)">
+            <USelect
+              v-model="formState.payment_method"
+              :items="paymentMethodOptions"
+              placeholder="Pilih..."
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            name="sp2d_number"
+            label="Nomor SP2D (BPNR)"
+            help="Hanya untuk pemotong instansi pemerintah."
+          >
+            <UInput v-model="formState.sp2d_number" class="w-full" />
           </UFormField>
 
           <UFormField name="document_nitku" label="NITKU / Nomor Identitas Sub Unit Organisasi">

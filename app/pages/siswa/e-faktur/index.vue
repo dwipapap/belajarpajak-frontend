@@ -17,23 +17,12 @@ const { data: masukanSummary } = useAsyncData(
   { default: () => ({ draft: 0, credited: 0, not_credited: 0, invalid: 0, total: 0 }) }
 )
 
-/** Mirrors the reference portal's e-Faktur menu. */
+/** Entries the simulator does not model yet: empty lists, mirroring the reference menu. */
 const placeholders = [
-  {
-    title: 'Retur',
-    description: 'Nota retur dan nota pembatalan.',
-    icon: 'i-lucide-undo-2'
-  },
-  {
-    title: 'Dokumen Lain',
-    description: 'Dokumen yang dipersamakan dengan faktur pajak.',
-    icon: 'i-lucide-files'
-  },
-  {
-    title: 'Prepopulated',
-    description: 'Data faktur yang tersedia otomatis dari sistem.',
-    icon: 'i-lucide-database'
-  }
+  { title: 'Retur Pajak Keluaran', to: '/siswa/e-faktur/retur-keluaran', icon: 'i-lucide-undo-2' },
+  { title: 'Retur Pajak Masukan', to: '/siswa/e-faktur/retur-masukan', icon: 'i-lucide-undo-2' },
+  { title: 'Dokumen Lain - Pajak Keluaran', to: '/siswa/e-faktur/dokumen-lain-keluaran', icon: 'i-lucide-files' },
+  { title: 'Dokumen Lain - Pajak Masukan', to: '/siswa/e-faktur/dokumen-lain-masukan', icon: 'i-lucide-files' }
 ]
 </script>
 
@@ -99,20 +88,21 @@ const placeholders = [
             </div>
           </NuxtLink>
 
-          <div
+          <NuxtLink
             v-for="item in placeholders"
             :key="item.title"
+            :to="item.to"
             class="faktur-card faktur-card--disabled"
           >
             <div class="flex items-center gap-2">
               <UIcon :name="item.icon" class="size-5" />
               <h2>{{ item.title }}</h2>
             </div>
-            <p>{{ item.description }}</p>
+            <p>Fitur ini belum tersedia di simulator.</p>
             <div class="faktur-card__counts">
               <UBadge color="neutral" variant="subtle">Segera hadir</UBadge>
             </div>
-          </div>
+          </NuxtLink>
         </div>
       </div>
     </div>

@@ -295,8 +295,19 @@ export type SetorBaseRead = Omit<Bp21Read, 'ptkp_status'> & { ptkp_status: strin
 export type BpnrStatus = Bp21Status
 export type BpnrTaxNature = Bp21TaxNature
 export type BpnrTaxFacility = Bp21TaxFacility
-export type BpnrRead = Bp26Read
-export type BpnrCreate = Bp26Create
+/** BPNR foreign-recipient fields (all optional on the wire). */
+export interface BpnrExtra {
+  recipient_address: string | null
+  recipient_country: string | null
+  recipient_birth_date: string | null
+  recipient_birth_place: string | null
+  recipient_passport_number: string | null
+  recipient_kitas_number: string | null
+  payment_method: string | null
+  sp2d_number: string | null
+}
+export type BpnrRead = Bp26Read & Partial<BpnrExtra>
+export type BpnrCreate = Bp26Create & Partial<BpnrExtra>
 export type BpnrListResponse = Paginated<BpnrRead>
 export type BpnrSummary = Bp21Summary
 export type SpStatus = Bp21Status
@@ -637,6 +648,12 @@ export type TarifProgresifList = TarifProgresifPasal17[]
 /* --- e-Faktur: Pajak Keluaran --- */
 
 export type TaxInvoiceStatus = Bp21Status
+
+/** Derived display status of a faktur (reference "Status Faktur"), see utils/faktur.ts. */
+export type StatusFaktur =
+  | 'AMENDED' | 'APPROVED' | 'CANCELED' | 'CREATED' | 'CREDITED' | 'DELETED'
+  | 'REPORTED' | 'SAVED_INVALID' | 'SIGNING_IN_PROGRESS' | 'UNCREDITED'
+  | 'WAITING_FOR_AMENDMENT' | 'WAITING_FOR_CANCELLATION'
 export type TaxInvoiceKind = 'normal' | 'pengganti' | 'dibatalkan'
 export type TaxInvoiceLineType = 'barang' | 'jasa'
 export type BuyerIdentityType = 'npwp' | 'nik' | 'paspor' | 'identitas_lain'
@@ -703,6 +720,8 @@ export interface TaxInvoiceRead {
   created_by_id: number
 
   status: TaxInvoiceStatus
+  status_faktur: StatusFaktur
+  spt_flag: Bp21SptFlag | null
   invoice_number: string | null
   issued_at: string | null
   invalid_reason: string | null
@@ -842,6 +861,8 @@ export interface TaxInputRead {
   siswa_id: number
   created_by_id: number
   status: TaxInvoiceStatus
+  status_faktur: StatusFaktur
+  spt_flag: Bp21SptFlag | null
   invoice_number: string | null
   issued_at: string | null
   invalid_reason: string | null

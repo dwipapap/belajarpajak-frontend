@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type {
+  StatusFaktur,
   TaxInvoiceBulkIssueResult,
   TaxInvoiceListResponse,
-  TaxInvoiceRead,
-  TaxInvoiceStatus,
-  TaxInvoiceSummary
+  TaxInvoiceRead
 } from '~/types/api'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
@@ -14,29 +13,25 @@ const auth = useAuth()
 const { apiFetch } = useApi()
 const toast = useToast()
 
-const activeStatus = ref<TaxInvoiceStatus>('draft')
+const now = new Date()
 const page = ref(1)
 const pageSize = ref(50)
 
 const filterBuyerIdentity = ref('')
 const filterBuyerName = ref('')
 const filterTransactionCode = ref<string | undefined>(undefined)
+const filterStatusFaktur = ref<StatusFaktur[]>(defaultStatusFaktur())
+const filterMonth = ref<number | undefined>(now.getMonth() + 1)
+const filterYear = ref<number | undefined>(now.getFullYear())
 
 const selectedIds = ref(new Set<number>())
 const confirmDeleteOpen = ref(false)
 const busy = ref(false)
 
-const { data: summary, refresh: refreshSummary } = useAsyncData(
-  'siswa-faktur-keluaran-summary',
-  () => apiFetch<TaxInvoiceSummary>('/api/v1/faktur-keluaran/summary'),
-  { default: () => ({ draft: 0, issued: 0, invalid: 0, total: 0 }) }
-)
-
 const { data: invoiceList, status: listStatus, refresh: refreshList } = useAsyncData(
   'siswa-faktur-keluaran-list',
   () => {
     const query = new URLSearchParams({
-      status: activeStatus.value,
       page: String(page.value),
       size: String(pageSize.value)
     })
@@ -47,12 +42,15 @@ const { data: invoiceList, status: listStatus, refresh: refreshList } = useAsync
     if (filterTransactionCode.value) {
       query.set('transaction_code', filterTransactionCode.value)
     }
+    for (const value of filterStatusFaktur.value) query.append('status_faktur', value)
+    if (filterMonth.value) query.set('tax_month', String(filterMonth.value))
+    if (filterYear.value) query.set('tax_year', String(filterYear.value))
     return apiFetch<TaxInvoiceListResponse>(`/api/v1/faktur-keluaran?${query.toString()}`)
   },
-  { watch: [activeStatus, page, pageSize, filterBuyerIdentity, filterBuyerName, filterTransactionCode] }
+  { watch: [page, pageSize, filterBuyerIdentity, filterBuyerName, filterTransactionCode, filterStatusFaktur, filterMonth, filterYear] }
 )
 
-watch([activeStatus, pageSize, filterBuyerIdentity, filterBuyerName, filterTransactionCode], () => {
+watch([pageSize, filterBuyerIdentity, filterBuyerName, filterTransactionCode, filterStatusFaktur, filterMonth, filterYear], () => {
   page.value = 1
   selectedIds.value = new Set()
 })
@@ -72,26 +70,38 @@ function clearFilters() {
   filterBuyerIdentity.value = ''
   filterBuyerName.value = ''
   filterTransactionCode.value = undefined
+  filterStatusFaktur.value = defaultStatusFaktur()
+  filterMonth.value = now.getMonth() + 1
+  filterYear.value = now.getFullYear()
 }
 
+// Column order follows the reference list. Columns the simulator has no data
+// for show "-".
 const columns: TableColumn<TaxInvoiceRead>[] = [
   { id: 'select' },
   { accessorKey: 'buyer_identity_number', header: 'NPWP Pembeli / Identitas lainnya' },
   { accessorKey: 'buyer_name', header: 'Nama Pembeli' },
   { accessorKey: 'transaction_code', header: 'Kode Transaksi' },
-  { accessorKey: 'invoice_number', header: 'Nomor Faktur' },
-  { accessorKey: 'invoice_date', header: 'Tanggal Faktur' },
+  { accessorKey: 'invoice_number', header: 'Nomor Faktur Pajak' },
+  { accessorKey: 'invoice_date', header: 'Tanggal Faktur Pajak' },
   { accessorKey: 'tax_month', header: 'Masa Pajak' },
   { accessorKey: 'tax_year', header: 'Tahun' },
-  { accessorKey: 'status', header: 'Status' },
-  { accessorKey: 'total_dpp', header: 'Harga Jual/DPP (Rp)' },
-  { accessorKey: 'total_ppn', header: 'PPN (Rp)' },
-  { accessorKey: 'total_ppnbm', header: 'PPnBM (Rp)' },
+  { accessorKey: 'status_faktur', header: 'Status Faktur' },
+  { accessorKey: 'electronic_signature_status', header: 'ESignStatus' },
+  { accessorKey: 'total_dpp', header: 'Harga Jual/Penggantian/DPP' },
+  { accessorKey: 'total_dpp_other', header: 'DPP Nilai Lain/DPP' },
+  { accessorKey: 'total_ppn', header: 'PPN' },
+  { accessorKey: 'total_ppnbm', header: 'PPnBM' },
+  { accessorKey: 'signer_name', header: 'Penandatangan' },
+  { accessorKey: 'reference', header: 'Referensi' },
+  { id: 'input_method', header: 'Metode Input' },
+  { id: 'reported_by_seller', header: 'Dilaporkan oleh Penjual' },
+  { id: 'reported_by_collector', header: 'Dilaporkan oleh Pemungut PPN' },
   { id: 'actions' }
 ]
 
 async function refreshAll() {
-  await Promise.all([refreshList(), refreshSummary()])
+  await refreshList()
 }
 
 /** Upload Faktur — bulk-issues every selected draft after signing. */
@@ -132,7 +142,7 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
         title: `${result.issued} faktur diterbitkan`,
         description: result.skipped
           ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}`
-          : 'Dokumen masuk ke tab Telah Terbit.',
+          : 'Status faktur menjadi APPROVED.',
         color: result.issued ? 'success' : 'warning',
         icon: 'i-lucide-send'
       })
@@ -149,14 +159,13 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
       )
       toast.add({
         title: 'Faktur diterbitkan',
-        description: `Nomor faktur dibuat untuk ${pendingInvoice.value.buyer_name}. Dokumen masuk ke tab Telah Terbit.`,
+        description: `Nomor faktur dibuat untuk ${pendingInvoice.value.buyer_name}. Status faktur menjadi APPROVED.`,
         color: 'success',
         icon: 'i-lucide-check-circle'
       })
     }
     signOpen.value = false
     pendingInvoice.value = null
-    activeStatus.value = 'issued'
     await refreshAll()
   } catch (error) {
     toast.add({
@@ -213,9 +222,12 @@ async function deleteSelected() {
   }
 }
 
-const canActOnSelection = computed(
-  () => activeStatus.value === 'draft' && selectedIds.value.size > 0
-)
+// Upload/Hapus only apply to drafts (CREATED): every selected row must be one.
+const canActOnSelection = computed(() => {
+  if (!selectedIds.value.size) return false
+  const rows = invoiceList.value?.items ?? []
+  return [...selectedIds.value].every(id => rows.find(row => row.id === id)?.status === 'draft')
+})
 </script>
 
 <template>
@@ -229,30 +241,6 @@ const canActOnSelection = computed(
     </div>
 
     <div class="bupot-shell">
-      <aside class="bupot-side">
-        <div class="bupot-side__identity">
-          <strong>{{ auth.user.value?.tenant_id ?? '0000000000000000' }}</strong>
-          <span>{{ auth.user.value?.full_name }}</span>
-        </div>
-        <div class="bupot-side__title">
-          Faktur Pajak Keluaran
-        </div>
-        <nav class="bupot-side__tabs" aria-label="Status faktur">
-          <button
-            v-for="tab in statusTabs"
-            :key="tab.value"
-            type="button"
-            :class="{ active: activeStatus === tab.value }"
-            @click="activeStatus = tab.value"
-          >
-            <span>{{ tab.label }}</span>
-            <UBadge color="neutral" variant="subtle">
-              {{ summary[tab.value] }}
-            </UBadge>
-          </button>
-        </nav>
-      </aside>
-
       <section class="bupot-main">
         <div class="bupot-main__header">
           <h1>Pajak Keluaran</h1>
@@ -265,26 +253,22 @@ const canActOnSelection = computed(
             label="Buat Faktur"
             class="bupot-primary-button"
           />
-          <UButton
-            icon="i-lucide-upload"
-            trailing-icon="i-lucide-chevron-down"
-            label="Impor Data"
-            class="bupot-primary-button"
-            disabled
-          />
-          <UButton
-            icon="i-lucide-info"
-            trailing-icon="i-lucide-chevron-down"
-            label="Pemantauan" title="Segera hadir"
-            class="bupot-primary-button"
-            disabled
-          />
-          <UButton
-            icon="i-lucide-layers"
-            trailing-icon="i-lucide-chevron-down"
-            label="Proses Massal" title="Segera hadir"
-            class="bupot-primary-button"
-            disabled
+          <UTooltip text="Impor Data belum tersedia di simulator">
+            <span>
+              <UButton
+                icon="i-lucide-upload"
+                trailing-icon="i-lucide-chevron-down"
+                label="Impor Data"
+                class="bupot-primary-button"
+                disabled
+              />
+            </span>
+          </UTooltip>
+          <FakturListMenus
+            api-base="/api/v1/faktur-keluaran"
+            filename="faktur_keluaran_export.csv"
+            :tax-month="filterMonth"
+            :tax-year="filterYear"
           />
           <UIcon name="i-lucide-info" class="size-4 text-muted" />
           <UButton
@@ -304,24 +288,15 @@ const canActOnSelection = computed(
           />
         </div>
 
-        <div class="bupot-toolbar">
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="info"
-            variant="soft"
-            :loading="listStatus === 'pending'"
-            @click="refreshAll"
-          />
-          <UButton icon="i-lucide-file" color="neutral" variant="solid" disabled />
-          <UButton icon="i-lucide-file-spreadsheet" color="success" variant="solid" disabled />
-          <UButton icon="i-lucide-file-text" color="error" variant="solid" disabled />
-          <UButton
-            icon="i-lucide-filter-x"
-            color="neutral"
-            variant="soft"
-            @click="clearFilters"
-          />
-        </div>
+        <FakturTableIcons
+          api-base="/api/v1/faktur-keluaran"
+          filename="faktur_keluaran_export.csv"
+          :tax-month="filterMonth"
+          :tax-year="filterYear"
+          :loading="listStatus === 'pending'"
+          @refresh="refreshAll"
+          @reset="clearFilters"
+        />
 
         <div class="faktur-table__filters">
           <UInput
@@ -336,6 +311,23 @@ const canActOnSelection = computed(
             icon="i-lucide-search"
             size="xs"
           />
+          <USelectMenu
+            v-model="filterStatusFaktur"
+            :items="statusFakturOptions"
+            value-key="value"
+            multiple
+            placeholder="Status Faktur"
+            size="xs"
+            class="min-w-64"
+          />
+          <USelect
+            v-model="filterMonth"
+            :items="monthFilterOptions"
+            placeholder="Masa Pajak"
+            size="xs"
+            class="min-w-40"
+          />
+          <UInput v-model="filterYear" type="number" placeholder="Tahun" size="xs" class="w-28" />
           <USelect
             v-model="filterTransactionCode"
             :items="transactionCodeFilterOptions"
@@ -378,22 +370,50 @@ const canActOnSelection = computed(
               {{ monthLabels[row.original.tax_month] }}
             </template>
 
-            <template #status-cell="{ row }">
-              <UBadge :color="statusColor[row.original.status]" variant="subtle">
-                {{ statusLabel[row.original.status] }}
+            <template #status_faktur-cell="{ row }">
+              <UBadge :color="statusFakturColor[row.original.status_faktur]" variant="subtle">
+                {{ row.original.status_faktur }}
               </UBadge>
             </template>
 
+            <template #electronic_signature_status-cell="{ row }">
+              {{ esignLabel(row.original.electronic_signature_status) }}
+            </template>
+
             <template #total_dpp-cell="{ row }">
-              Rp {{ formatCurrency(row.original.total_dpp) }}
+              {{ formatCurrency(row.original.total_dpp) }}
+            </template>
+
+            <template #total_dpp_other-cell="{ row }">
+              {{ formatCurrency(row.original.total_dpp_other) }}
             </template>
 
             <template #total_ppn-cell="{ row }">
-              Rp {{ formatCurrency(row.original.total_ppn) }}
+              {{ formatCurrency(row.original.total_ppn) }}
             </template>
 
             <template #total_ppnbm-cell="{ row }">
-              Rp {{ formatCurrency(row.original.total_ppnbm) }}
+              {{ formatCurrency(row.original.total_ppnbm) }}
+            </template>
+
+            <template #signer_name-cell="{ row }">
+              {{ dashIfEmpty(row.original.signer_name) }}
+            </template>
+
+            <template #reference-cell="{ row }">
+              {{ dashIfEmpty(row.original.reference) }}
+            </template>
+
+            <template #input_method-cell>
+              Manual
+            </template>
+
+            <template #reported_by_seller-cell>
+              -
+            </template>
+
+            <template #reported_by_collector-cell>
+              -
             </template>
 
             <template #actions-cell="{ row }">
