@@ -1291,3 +1291,135 @@ export interface TaxReturRead {
 }
 
 export type TaxReturListResponse = Paginated<TaxReturRead>
+
+// ---- Role dashboards (GET /dashboard/guru|siswa|tenant|platform) -------------
+
+export interface GuruClassOption {
+  id: number
+  name: string
+  academic_year: string
+  archived: boolean
+  student_count: number
+  pending_grading: number
+}
+
+export interface GuruStudentProgress {
+  id: number
+  full_name: string
+  identifier: string | null
+  ebupot_issued: number
+  ebupot_draft: number
+  faktur_keluaran_issued: number
+  faktur_masukan_credited: number
+  spt_reported: number
+  spt_ppn: number
+  spt_pph_unifikasi: number
+  spt_pph_21_26: number
+  billing_paid: number
+  pending_grading: number
+  last_activity_at: string | null
+  has_activity: boolean
+}
+
+export interface GradingItem {
+  module: string
+  module_label: string
+  id: number
+  title: string
+  period: string | null
+  siswa_id: number
+  siswa_name: string
+  at: string | null
+}
+
+export interface GradingModuleCount {
+  module: string
+  module_label: string
+  count: number
+}
+
+export interface GuruDashboard {
+  classes: GuruClassOption[]
+  class_id: number | null
+  students: GuruStudentProgress[]
+  grading_total: number
+  grading_by_module: GradingModuleCount[]
+  grading_items: GradingItem[]
+}
+
+export interface DashStatusCounts {
+  draft: number
+  issued: number
+  invalid: number
+  total: number
+}
+
+export interface SiswaDocument {
+  module: string
+  module_label: string
+  id: number
+  title: string
+  period: string | null
+  status: string
+  amount: number | null
+  score: number | null
+  teacher_feedback: string | null
+  at: string | null
+}
+
+export interface SiswaTodo {
+  module: string
+  id: number | null
+  kind: 'draft' | 'spt' | 'billing' | 'masukan'
+  title: string
+  detail: string | null
+  module_label: string
+  at: string | null
+}
+
+export interface SiswaDashboard {
+  classes: number
+  ebupot: DashStatusCounts
+  ebupot_by_type: Record<string, DashStatusCounts>
+  faktur_keluaran: DashStatusCounts
+  faktur_masukan: { not_credited: number, credited: number, uncredited: number, total: number }
+  spt: { draft: number, awaiting_payment: number, reported: number, unreported: number, total: number }
+  billing: { unpaid: number, unpaid_amount: number, paid: number, tagihan_open: number }
+  grades: { reviewed: number, average: number | null }
+  todos: SiswaTodo[]
+  todo_total: number
+  recent: SiswaDocument[]
+  graded: SiswaDocument[]
+}
+
+export interface DashQuotaUsage {
+  used: number
+  limit: number | null
+  full: boolean
+}
+
+export interface TenantOverview {
+  tenant_id: number
+  name: string
+  slug: string
+  type: string
+  is_active: boolean
+  berlaku_dari: string | null
+  berlaku_sampai: string | null
+  days_remaining: number | null
+  expired: boolean
+  expired_soon: boolean
+  guru: DashQuotaUsage
+  siswa: DashQuotaUsage
+  kelas: DashQuotaUsage
+  active_classes: number
+}
+
+export interface PlatformDashboard {
+  tenants_total: number
+  tenants_active: number
+  tenants_expiring: number
+  users: number
+  classes: number
+  tenants: TenantOverview[]
+}

@@ -315,9 +315,9 @@ async function onLogout() {
           class="app-shell__nav"
           :ui="{
             root: 'w-full',
-            list: 'w-full justify-between gap-2',
+            list: 'w-full justify-between gap-0.5 min-[1500px]:gap-2',
             item: 'min-w-max',
-            link: 'h-11 px-5 text-[0.92rem] font-semibold rounded-lg text-default items-center',
+            link: 'h-11 px-2.5 min-[1500px]:px-5 text-[0.86rem] min-[1500px]:text-[0.92rem] font-semibold rounded-lg text-default items-center gap-1.5',
             linkLeadingIcon: 'size-5 text-default self-center',
             linkTrailingIcon: 'size-4 text-default self-center'
           }"
@@ -342,6 +342,7 @@ async function onLogout() {
 }
 
 .app-shell__header {
+  min-width: 0;
   position: sticky;
   z-index: 20;
   top: 0.75rem;
@@ -457,6 +458,8 @@ async function onLogout() {
 
 .app-shell__menubar {
   padding: 0.42rem 1rem 0.33rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .app-shell__nav {

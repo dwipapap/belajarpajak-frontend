@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type {
-  DashboardSummary,
+  PlatformDashboard,
   Role,
   Tenant,
   User,
@@ -15,28 +15,35 @@ const { apiFetch } = useApi()
 const toast = useToast()
 
 const isSuperadmin = computed(() => auth.user.value?.role === 'superadmin')
-// ---- Summary cards -------------------------------------------------------
-const { data: summary, refresh: refreshSummary } = useAsyncData(
-  'admin-summary',
-  () => apiFetch<DashboardSummary>('/api/v1/dashboard/summary')
+// ---- Top-of-page summaries (admin overview / superadmin platform) ---------
+const { data: platform, status: platformStatus, error: platformError, refresh: refreshPlatform } = useAsyncData(
+  'superadmin-platform',
+  async () => (isSuperadmin.value ? await apiFetch<PlatformDashboard>('/api/v1/dashboard/platform') : null)
 )
 
-const statCards = computed(() => {
-  const s = summary.value
-  if (!s) return []
-  if (isSuperadmin.value) {
-    return [
-      { label: 'Institusi', value: s.tenants ?? 0, icon: 'i-lucide-building-2' },
-      { label: 'Pengguna', value: s.users ?? 0, icon: 'i-lucide-users' },
-      { label: 'Kelas', value: s.classes ?? 0, icon: 'i-lucide-book-open' }
-    ]
-  }
+const platformStats = computed(() => {
+  const p = platform.value
+  if (!p) return []
   return [
-    { label: 'Guru', value: s.guru ?? 0, icon: 'i-lucide-user-check' },
-    { label: 'Siswa', value: s.siswa ?? 0, icon: 'i-lucide-graduation-cap' },
-    { label: 'Kelas', value: s.classes ?? 0, icon: 'i-lucide-book-open' }
+    { label: 'Institusi aktif', value: p.tenants_active, hint: `dari ${p.tenants_total} institusi` },
+    { label: 'Segera berakhir', value: p.tenants_expiring, hint: 'Masa berlaku 30 hari atau kurang' },
+    { label: 'Pengguna', value: p.users, hint: 'Semua institusi' },
+    { label: 'Kelas', value: p.classes, hint: 'Semua institusi' }
   ]
 })
+
+function refreshSummary() {
+  return Promise.all([
+    refreshNuxtData('admin-tenant-overview'),
+    isSuperadmin.value ? refreshPlatform() : Promise.resolve()
+  ])
+}
+
+// Superadmin: the cross-tenant user table is secondary (collapsed by default).
+const usersOpen = ref(!isSuperadmin.value)
+function toggleUsers() {
+  usersOpen.value = !usersOpen.value
+}
 
 // ---- Tenant switcher (superadmin only) ------------------------------------
 const selectedTenantId = ref<number | undefined>(undefined)
@@ -241,59 +248,84 @@ async function onRunAction() {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-semibold text-default">Dasbor Admin</h1>
-      <div class="flex flex-wrap items-center gap-2">
-        <UButton
-          to="/admin/audit"
-          icon="i-lucide-scroll-text"
-          label="Log Audit"
-          color="neutral"
-          variant="soft"
-        />
+  <div class="dash-page">
+    <div class="dash-head">
+      <div>
+        <h1>{{ isSuperadmin ? 'Dasbor Superadmin' : 'Dasbor Admin' }}</h1>
+        <p>{{ isSuperadmin ? 'Kelola institusi, masa berlaku, dan kuota di seluruh platform.' : 'Pantau kuota dan masa berlaku institusi, lalu kelola akun pengguna.' }}</p>
+      </div>
+      <div class="dash-head__actions">
+        <UButton to="/admin/audit" icon="i-lucide-scroll-text" label="Log Audit" color="neutral" variant="outline" />
         <UButton
           v-if="isSuperadmin"
           to="/admin/tarif-pajak"
           icon="i-lucide-percent"
           label="Kelola Tarif Pajak"
           color="neutral"
-          variant="soft"
-        />
-        <USelect
-          v-if="isSuperadmin"
-          v-model="selectedTenantId"
-          :items="tenantOptions"
-          placeholder="Pilih institusi"
-          class="w-56"
+          variant="outline"
         />
       </div>
     </div>
 
-    <!-- Superadmin: institution lifecycle -->
-    <AdminInstanceManager v-if="isSuperadmin" @changed="refreshSummary" />
+    <!-- Admin: institution overview -->
+    <AdminTenantOverview v-if="!isSuperadmin" />
 
-    <!-- Stat cards -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <UCard v-for="card in statCards" :key="card.label">
-        <div class="flex items-center gap-4">
-          <div class="rounded-lg bg-primary/10 p-3">
-            <UIcon :name="card.icon" class="size-6 text-primary" />
+    <!-- Superadmin: platform stats, then institution cards -->
+    <template v-else>
+      <UAlert
+        v-if="platformError"
+        color="error"
+        variant="subtle"
+        icon="i-lucide-circle-alert"
+        title="Statistik platform gagal dimuat."
+        :description="apiErrorMessage(platformError, 'Coba lagi beberapa saat.')"
+        :actions="[{ label: 'Coba lagi', color: 'neutral', variant: 'outline', onClick: () => refreshPlatform() }]"
+      />
+      <div v-else class="dash-stats" aria-label="Statistik platform">
+        <template v-if="platformStatus === 'pending' && !platform">
+          <div v-for="n in 4" :key="n" class="dash-stat">
+            <USkeleton class="h-3 w-24" />
+            <USkeleton class="mt-1 h-7 w-12" />
           </div>
-          <div>
-            <p class="text-sm text-muted">{{ card.label }}</p>
-            <p class="text-2xl font-semibold text-default">{{ card.value }}</p>
-          </div>
+        </template>
+        <div v-for="st in platformStats" :key="st.label" class="dash-stat">
+          <span class="dash-stat__label">{{ st.label }}</span>
+          <span class="dash-stat__value">{{ st.value }}</span>
+          <span class="dash-stat__hint">{{ st.hint }}</span>
         </div>
-      </UCard>
-    </div>
+      </div>
 
-    <!-- Users table -->
-    <UCard>
+      <AdminInstanceManager :overview="platform?.tenants" @changed="refreshSummary" />
+    </template>
+
+    <!-- Users: below the overview for admin; collapsible and secondary for superadmin -->
+    <div v-if="isSuperadmin" class="flex items-center justify-between gap-3">
+      <div>
+        <h2 class="text-base font-extrabold text-highlighted">Pengguna lintas institusi</h2>
+        <p class="text-xs dash-muted">Tabel akun seluruh institusi. Gunakan filter institusi untuk mempersempit.</p>
+      </div>
+      <UButton
+        color="neutral"
+        variant="outline"
+        :icon="usersOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+        :label="usersOpen ? 'Sembunyikan' : 'Tampilkan'"
+        :aria-expanded="usersOpen"
+        aria-controls="admin-users-panel"
+        @click="toggleUsers"
+      />
+    </div>
+    <UCard v-if="usersOpen" id="admin-users-panel">
       <template #header>
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <h2 class="font-semibold text-default">Pengguna</h2>
-          <div class="flex items-center gap-2">
+          <h2 class="font-semibold text-default">{{ isSuperadmin ? 'Pengguna' : 'Manajemen Pengguna' }}</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <USelect
+              v-if="isSuperadmin"
+              v-model="selectedTenantId"
+              :items="tenantOptions"
+              placeholder="Semua Institusi"
+              class="w-52"
+            />
             <USelect v-model="roleFilter" :items="roleFilterOptions" class="w-40" />
             <AdminBulkCreateUsers
               :tenants="isSuperadmin ? tenants.map(t => ({ id: t.id, name: t.name })) : undefined"
