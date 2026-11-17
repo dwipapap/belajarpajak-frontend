@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type {
+  StatusFaktur,
   TaxInputBulkCreditResult,
   TaxInputBulkDecisionResult,
   TaxInputBulkDeleteResult,
   TaxInputBulkUncreditResult,
-  TaxInputCreditStatus,
   TaxInputListResponse,
-  TaxInputRead,
-  TaxInputSummary
+  TaxInputRead
 } from '~/types/api'
-import { creditStatusColor, creditStatusLabel, creditTabs } from '~/utils/faktur'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -18,45 +16,40 @@ const auth = useAuth()
 const { apiFetch } = useApi()
 const toast = useToast()
 
-const activeCreditStatus = ref<TaxInputCreditStatus>('not_credited')
+const now = new Date()
 const page = ref(1)
 const pageSize = ref(50)
 
 const filterSellerName = ref('')
 const filterInvoiceNumber = ref('')
 const filterTransactionCode = ref<string | undefined>(undefined)
-const filterTaxMonth = ref<number | undefined>(undefined)
-const filterTaxYear = ref<number | undefined>(undefined)
+const filterStatusFaktur = ref<StatusFaktur[]>(defaultStatusFaktur())
+const filterTaxMonth = ref<number | undefined>(now.getMonth() + 1)
+const filterTaxYear = ref<number | undefined>(now.getFullYear())
 
 const selectedIds = ref(new Set<number>())
 const confirmDeleteOpen = ref(false)
 const busy = ref(false)
 
-const { data: summary, refresh: refreshSummary } = useAsyncData(
-  'siswa-faktur-masukan-summary',
-  () => apiFetch<TaxInputSummary>('/api/v1/faktur-masukan/summary'),
-  { default: () => ({ draft: 0, credited: 0, not_credited: 0, uncredited: 0, invalid: 0, total: 0 }) }
-)
-
 const { data: invoiceList, status: listStatus, refresh: refreshList } = useAsyncData(
   'siswa-faktur-masukan-list',
   () => {
     const query = new URLSearchParams({
-      credit_status: activeCreditStatus.value,
       page: String(page.value),
       size: String(pageSize.value)
     })
     if (filterSellerName.value) query.set('seller_name', filterSellerName.value)
     if (filterInvoiceNumber.value) query.set('invoice_number', filterInvoiceNumber.value)
     if (filterTransactionCode.value) query.set('transaction_code', filterTransactionCode.value)
+    for (const value of filterStatusFaktur.value) query.append('status_faktur', value)
     if (filterTaxMonth.value) query.set('tax_month', String(filterTaxMonth.value))
     if (filterTaxYear.value) query.set('tax_year', String(filterTaxYear.value))
     return apiFetch<TaxInputListResponse>(`/api/v1/faktur-masukan?${query.toString()}`)
   },
-  { watch: [activeCreditStatus, page, pageSize, filterSellerName, filterInvoiceNumber, filterTransactionCode, filterTaxMonth, filterTaxYear] }
+  { watch: [filterStatusFaktur, page, pageSize, filterSellerName, filterInvoiceNumber, filterTransactionCode, filterTaxMonth, filterTaxYear] }
 )
 
-watch([activeCreditStatus, pageSize, filterSellerName, filterInvoiceNumber, filterTransactionCode, filterTaxMonth, filterTaxYear], () => {
+watch([filterStatusFaktur, pageSize, filterSellerName, filterInvoiceNumber, filterTransactionCode, filterTaxMonth, filterTaxYear], () => {
   page.value = 1
   selectedIds.value = new Set()
 })
@@ -76,27 +69,55 @@ function clearFilters() {
   filterSellerName.value = ''
   filterInvoiceNumber.value = ''
   filterTransactionCode.value = undefined
-  filterTaxMonth.value = undefined
-  filterTaxYear.value = undefined
+  filterStatusFaktur.value = defaultStatusFaktur()
+  filterTaxMonth.value = now.getMonth() + 1
+  filterTaxYear.value = now.getFullYear()
 }
 
+// Column order follows the reference list. Columns the simulator has no data
+// for show "-". Pengkreditan period = month/year the faktur was credited.
 const columns: TableColumn<TaxInputRead>[] = [
   { id: 'select' },
+  { accessorKey: 'seller_npwp', header: 'NPWP Penjual' },
   { accessorKey: 'seller_name', header: 'Nama Penjual' },
-  { accessorKey: 'transaction_code', header: 'Kode Transaksi' },
-  { accessorKey: 'invoice_number', header: 'Nomor Faktur' },
-  { accessorKey: 'invoice_date', header: 'Tanggal Faktur' },
+  { accessorKey: 'invoice_number', header: 'Nomor Faktur Pajak' },
+  { accessorKey: 'invoice_date', header: 'Tanggal Faktur Pajak' },
   { accessorKey: 'tax_month', header: 'Masa Pajak' },
   { accessorKey: 'tax_year', header: 'Tahun' },
-  { accessorKey: 'credit_status', header: 'Status Kredit' },
-  { accessorKey: 'total_dpp', header: 'Harga Jual/DPP (Rp)' },
-  { accessorKey: 'total_ppn', header: 'PPN (Rp)' },
-  { accessorKey: 'total_ppnbm', header: 'PPnBM (Rp)' },
+  { id: 'credit_month', header: 'Masa Pajak Pengkreditan' },
+  { id: 'credit_year', header: 'Tahun Pajak Pengkreditan' },
+  { accessorKey: 'status_faktur', header: 'Status Faktur' },
+  { accessorKey: 'total_dpp', header: 'Harga Jual/Penggantian/DPP' },
+  { accessorKey: 'total_dpp_other', header: 'DPP Nilai Lain/DPP' },
+  { accessorKey: 'total_ppn', header: 'PPN' },
+  { accessorKey: 'total_ppnbm', header: 'PPnBM' },
+  { id: 'recorder', header: 'Perekam' },
+  { accessorKey: 'reference', header: 'Referensi' },
+  { id: 'sp2d', header: 'Nomor SP2D' },
+  { id: 'valid', header: 'Valid' },
+  { id: 'reported', header: 'Dilaporkan' },
+  { id: 'reported_by_seller', header: 'Dilaporkan oleh Penjual' },
   { id: 'actions' }
 ]
 
+function creditPeriod(invoice: TaxInputRead) {
+  if (invoice.credit_status !== 'credited' || !invoice.credited_at) return null
+  const date = new Date(invoice.credited_at)
+  return { month: date.getMonth() + 1, year: date.getFullYear() }
+}
+
+function validLabel(invoice: TaxInputRead) {
+  if (invoice.status === 'draft') return '-'
+  return invoice.status === 'issued' ? 'Ya' : 'Tidak'
+}
+
+function reportedLabel(invoice: TaxInputRead) {
+  if (invoice.status === 'draft') return '-'
+  return invoice.spt_flag ? 'Ya' : 'Tidak'
+}
+
 async function refreshAll() {
-  await Promise.all([refreshList(), refreshSummary()])
+  await refreshList()
 }
 
 async function creditSelected() {
@@ -107,11 +128,10 @@ async function creditSelected() {
     const result = await apiFetch<TaxInputBulkCreditResult>('/api/v1/faktur-masukan/bulk-credit', { method: 'POST', body: { ids } })
     toast.add({
       title: `${result.credited} faktur dikreditkan`,
-      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Masuk ke tab Dikreditkan.',
+      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Status faktur menjadi CREDITED.',
       color: result.credited ? 'success' : 'warning',
       icon: 'i-lucide-check-circle'
     })
-    activeCreditStatus.value = 'credited'
     await refreshAll()
   } catch (error) {
     toast.add({ title: 'Gagal mengkreditkan', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
@@ -126,7 +146,7 @@ async function uncreditSelected() {
     const result = await apiFetch<TaxInputBulkUncreditResult>('/api/v1/faktur-masukan/bulk-uncredit', { method: 'POST', body: { ids } })
     toast.add({
       title: `${result.uncredited} batal kredit`,
-      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Kembali ke Belum Dikreditkan.',
+      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Status faktur kembali APPROVED.',
       color: result.uncredited ? 'success' : 'warning',
       icon: 'i-lucide-undo-2'
     })
@@ -144,11 +164,10 @@ async function tidakKreditkanSelected() {
     const result = await apiFetch<TaxInputBulkDecisionResult>('/api/v1/faktur-masukan/bulk-tidak-kreditkan', { method: 'POST', body: { ids } })
     toast.add({
       title: `${result.updated} faktur tidak dikreditkan`,
-      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Masuk ke tab Tidak Dikreditkan.',
+      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Status faktur menjadi UNCREDITED.',
       color: result.updated ? 'success' : 'warning',
       icon: 'i-lucide-circle-slash'
     })
-    activeCreditStatus.value = 'uncredited'
     await refreshAll()
   } catch (error) {
     toast.add({ title: 'Gagal memproses', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
@@ -163,11 +182,10 @@ async function kembaliApprovedSelected() {
     const result = await apiFetch<TaxInputBulkDecisionResult>('/api/v1/faktur-masukan/bulk-kembali-approved', { method: 'POST', body: { ids } })
     toast.add({
       title: `${result.updated} faktur kembali Approved`,
-      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Masuk ke tab Belum Dikreditkan.',
+      description: result.skipped ? `${result.skipped} dilewati: ${result.errors.slice(0, 2).join('; ')}` : 'Status faktur kembali APPROVED.',
       color: result.updated ? 'success' : 'warning',
       icon: 'i-lucide-undo-2'
     })
-    activeCreditStatus.value = 'not_credited'
     await refreshAll()
   } catch (error) {
     toast.add({ title: 'Gagal memproses', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
@@ -263,26 +281,6 @@ const canActOnSelection = computed(() => selectedIds.value.size > 0)
     </div>
 
     <div class="bupot-shell">
-      <aside class="bupot-side">
-        <div class="bupot-side__identity">
-          <strong>{{ auth.user.value?.tenant_id ?? '0000000000000000' }}</strong>
-          <span>{{ auth.user.value?.full_name }}</span>
-        </div>
-        <div class="bupot-side__title">Faktur Pajak Masukan</div>
-        <nav class="bupot-side__tabs" aria-label="Status kredit">
-          <button
-            v-for="tab in creditTabs"
-            :key="tab.value"
-            type="button"
-            :class="{ active: activeCreditStatus === tab.value }"
-            @click="activeCreditStatus = tab.value"
-          >
-            <span>{{ tab.label }}</span>
-            <UBadge color="neutral" variant="subtle">{{ summary[tab.value] }}</UBadge>
-          </button>
-        </nav>
-      </aside>
-
       <section class="bupot-main">
         <div class="bupot-main__header"><h1>Pajak Masukan</h1></div>
 
@@ -290,26 +288,33 @@ const canActOnSelection = computed(() => selectedIds.value.size > 0)
           <UButton icon="i-lucide-check-circle" label="Kreditkan Faktur" class="bupot-primary-button" :loading="busy" :disabled="!canActOnSelection" @click="creditSelected" />
           <UButton icon="i-lucide-circle-slash" label="Tidak Kreditkan Faktur" class="bupot-primary-button" :loading="busy" :disabled="!canActOnSelection" @click="tidakKreditkanSelected" />
           <UButton icon="i-lucide-undo-2" label="Kembali ke status Approved" class="bupot-primary-button" :loading="busy" :disabled="!canActOnSelection" @click="kembaliApprovedSelected" />
-          <UButton icon="i-lucide-info" trailing-icon="i-lucide-chevron-down" label="Monitoring" title="Segera hadir" class="bupot-primary-button" disabled />
-          <UButton icon="i-lucide-layers" trailing-icon="i-lucide-chevron-down" label="Bulk Process" title="Segera hadir" class="bupot-primary-button" disabled />
+          <FakturListMenus
+            api-base="/api/v1/faktur-masukan"
+            filename="faktur_masukan_export.csv"
+            :tax-month="filterTaxMonth"
+            :tax-year="filterTaxYear"
+          />
           <UButton icon="i-lucide-undo-2" label="Batal Kredit" color="neutral" variant="soft" :disabled="!canActOnSelection" @click="uncreditSelected" />
           <UButton icon="i-lucide-trash-2" label="Hapus Dokumen" color="error" :disabled="!canActOnSelection" @click="confirmDeleteOpen = true;" />
         </div>
 
-        <div class="bupot-toolbar">
-          <UButton icon="i-lucide-refresh-cw" color="info" variant="soft" :loading="listStatus === 'pending'" @click="refreshAll" />
-          <UButton icon="i-lucide-file" color="neutral" variant="solid" disabled />
-          <UButton icon="i-lucide-file-spreadsheet" color="success" variant="solid" disabled />
-          <UButton icon="i-lucide-file-text" color="error" variant="solid" disabled />
-          <UButton icon="i-lucide-filter-x" color="neutral" variant="soft" @click="clearFilters" />
-        </div>
+        <FakturTableIcons
+          api-base="/api/v1/faktur-masukan"
+          filename="faktur_masukan_export.csv"
+          :tax-month="filterTaxMonth"
+          :tax-year="filterTaxYear"
+          :loading="listStatus === 'pending'"
+          @refresh="refreshAll"
+          @reset="clearFilters"
+        />
 
         <div class="faktur-table__filters">
           <UInput v-model="filterSellerName" placeholder="Nama Penjual" icon="i-lucide-search" size="xs" />
           <UInput v-model="filterInvoiceNumber" placeholder="Nomor Faktur" icon="i-lucide-search" size="xs" />
+          <USelectMenu v-model="filterStatusFaktur" :items="statusFakturOptions" value-key="value" multiple placeholder="Status Faktur" size="xs" class="min-w-64" />
           <USelect v-model="filterTransactionCode" :items="transactionCodeFilterOptions" placeholder="Pilih Kode Transaksi" size="xs" class="min-w-56" />
-          <USelect v-model="filterTaxMonth" :items="monthFilterOptions" placeholder="Masa Pajak Pengkreditan" size="xs" class="min-w-56" />
-          <UInput v-model="filterTaxYear" type="number" placeholder="Tahun Pajak Pengkreditan" size="xs" class="w-44" />
+          <USelect v-model="filterTaxMonth" :items="monthFilterOptions" placeholder="Masa Pajak" size="xs" class="min-w-40" />
+          <UInput v-model="filterTaxYear" type="number" placeholder="Tahun" size="xs" class="w-28" />
         </div>
 
         <div class="faktur-table">
@@ -317,20 +322,28 @@ const canActOnSelection = computed(() => selectedIds.value.size > 0)
             <template #select-cell="{ row }">
               <UCheckbox :model-value="selectedIds.has(row.original.id)" @update:model-value="toggleSelected(row.original.id)" />
             </template>
-            <template #transaction_code-cell="{ row }">
-              <UBadge color="neutral" variant="subtle">{{ row.original.transaction_code }}</UBadge>
-            </template>
             <template #invoice_number-cell="{ row }">
               <span class="font-medium">{{ formatInvoiceNumber(row.original.invoice_number) }}</span>
             </template>
             <template #invoice_date-cell="{ row }">{{ formatInvoiceDate(row.original.invoice_date) }}</template>
             <template #tax_month-cell="{ row }">{{ monthLabels[row.original.tax_month] }}</template>
-            <template #credit_status-cell="{ row }">
-              <UBadge :color="creditStatusColor[row.original.credit_status]" variant="subtle">{{ creditStatusLabel[row.original.credit_status] }}</UBadge>
+            <template #credit_month-cell="{ row }">{{ creditPeriod(row.original) ? monthLabels[creditPeriod(row.original)!.month] : '-' }}</template>
+            <template #credit_year-cell="{ row }">{{ creditPeriod(row.original)?.year ?? '-' }}</template>
+            <template #status_faktur-cell="{ row }">
+              <UBadge :color="statusFakturColor[row.original.status_faktur]" variant="subtle">{{ row.original.status_faktur }}</UBadge>
             </template>
-            <template #total_dpp-cell="{ row }">Rp {{ formatCurrency(row.original.total_dpp) }}</template>
-            <template #total_ppn-cell="{ row }">Rp {{ formatCurrency(row.original.total_ppn) }}</template>
-            <template #total_ppnbm-cell="{ row }">Rp {{ formatCurrency(row.original.total_ppnbm) }}</template>
+            <template #total_dpp-cell="{ row }">{{ formatCurrency(row.original.total_dpp) }}</template>
+            <template #total_dpp_other-cell="{ row }">{{ formatCurrency(row.original.total_dpp_other) }}</template>
+            <template #total_ppn-cell="{ row }">{{ formatCurrency(row.original.total_ppn) }}</template>
+            <template #total_ppnbm-cell="{ row }">{{ formatCurrency(row.original.total_ppnbm) }}</template>
+            <template #reference-cell="{ row }">{{ dashIfEmpty(row.original.reference) }}</template>
+            <template #seller_npwp-cell="{ row }">{{ dashIfEmpty(row.original.seller_npwp) }}</template>
+            <!-- Metode Input: "Prepopulated" for copies made when a classmate issues a faktur to us. -->
+            <template #recorder-cell="{ row }">{{ taxInputOriginLabel[row.original.origin] }}</template>
+            <template #sp2d-cell>-</template>
+            <template #valid-cell="{ row }">{{ validLabel(row.original) }}</template>
+            <template #reported-cell="{ row }">{{ reportedLabel(row.original) }}</template>
+            <template #reported_by_seller-cell>-</template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">
                 <template v-if="row.original.credit_status === 'not_credited'">

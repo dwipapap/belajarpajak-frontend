@@ -22,6 +22,10 @@ function modulePath(slug: string) {
   }
 }
 
+function efakturHeading(label: string) {
+  return { label, disabled: true, class: 'efaktur-heading' }
+}
+
 const moduleItems = computed<NavigationMenuItem[]>(() => {
   // Superadmin is a platform operator, not a taxpayer: show only the
   // platform-management menu (all point at routes that exist today).
@@ -86,12 +90,19 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
     icon: 'i-lucide-receipt-text',
     active: route.path.includes('/e-faktur'),
     children: [
-      { label: 'Dashboard e-Faktur', icon: 'i-lucide-layout-dashboard', to: modulePath('e-faktur') },
+      // Group headings mirror the reference sidebar (disabled, heading-styled rows).
+      efakturHeading('Dasbor e-Faktur'),
+      { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', to: modulePath('e-faktur'), exact: true },
+      efakturHeading('e-Faktur'),
       { label: 'Pajak Keluaran', icon: 'i-lucide-file-output', to: modulePath('e-faktur/keluaran') },
       { label: 'Pajak Masukan', icon: 'i-lucide-file-input', to: modulePath('e-faktur/masukan') },
-      { label: 'Retur', icon: 'i-lucide-undo-2', disabled: true },
-      { label: 'Dokumen Lain — Pajak Masukan', icon: 'i-lucide-files', to: modulePath('e-faktur/masukan/create') },
-      { label: 'Prepopulated', icon: 'i-lucide-database', disabled: true }
+      { label: 'Retur Pajak Keluaran', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-keluaran') },
+      { label: 'Retur Pajak Masukan', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-masukan') },
+      efakturHeading('Dokumen Lain'),
+      { label: 'Pajak Keluaran', icon: 'i-lucide-files', to: modulePath('e-faktur/dokumen-lain-keluaran') },
+      { label: 'Pajak Masukan', icon: 'i-lucide-files', to: modulePath('e-faktur/dokumen-lain-masukan') },
+      { label: 'Retur Dokumen Lain Keluaran', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-dokumen-lain-keluaran') },
+      { label: 'Retur Dokumen Lain Masukan', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-dokumen-lain-masukan') }
     ]
   },
   {
@@ -465,6 +476,16 @@ async function onLogout() {
 
 .app-shell__nav :deep(span) {
   line-height: 1;
+}
+
+.app-shell__nav :deep(.efaktur-heading) {
+  opacity: 1 !important;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: oklch(0.45 0.05 265);
+  pointer-events: none;
 }
 
 .app-shell__nav :deep([aria-disabled="true"]),

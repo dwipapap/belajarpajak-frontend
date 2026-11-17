@@ -3,6 +3,7 @@
 // reused here — a faktur has the same draft/issued/invalid lifecycle as a bupot.
 import type {
   BuyerIdentityType,
+  StatusFaktur,
   TaxInputCreditStatus,
   TaxInputOrigin,
   TaxInvoiceKind,
@@ -10,29 +11,31 @@ import type {
   TaxInvoiceLineType
 } from '~/types/api'
 
+// Labels follow the reference list: only proper nouns keep their capitals
+// (verified for 01; the rest follow the same lowercase pattern).
 export const transactionCodeOptions: { label: string, value: string }[] = [
-  { label: '01 - Kepada Selain Pemungut PPN', value: '01' },
-  { label: '02 - Kepada Pemungut PPN Instansi Pemerintah', value: '02' },
-  { label: '03 - Kepada Pemungut PPN Selain Instansi Pemerintah', value: '03' },
+  { label: '01 - kepada selain Pemungut PPN', value: '01' },
+  { label: '02 - kepada Pemungut PPN Instansi Pemerintah', value: '02' },
+  { label: '03 - kepada Pemungut PPN selain Instansi Pemerintah', value: '03' },
   { label: '04 - DPP Nilai Lain', value: '04' },
   { label: '05 - Besaran Tertentu', value: '05' },
   {
-    label: '06 - Kepada Orang Pribadi Pemegang Paspor Luar Negeri (16E UU PPN)',
+    label: '06 - kepada orang pribadi pemegang paspor luar negeri (16E UU PPN)',
     value: '06'
   },
   {
-    label: '07 - Penyerahan dengan Fasilitas PPN atau PPN dan PPnBM Tidak Dipungut/Ditanggung Pemerintah',
+    label: '07 - penyerahan dengan fasilitas PPN atau PPN dan PPnBM tidak dipungut/ditanggung pemerintah',
     value: '07'
   },
   {
-    label: '08 - Penyerahan dengan Fasilitas Dibebaskan PPN atau PPN dan PPnBM',
+    label: '08 - penyerahan dengan fasilitas dibebaskan PPN atau PPN dan PPnBM',
     value: '08'
   },
   {
-    label: '09 - Penyerahan Aktiva yang Menurut Tujuan Semula Tidak Diperjualbelikan (16D UU PPN)',
+    label: '09 - penyerahan aktiva yang menurut tujuan semula tidak diperjualbelikan (16D UU PPN)',
     value: '09'
   },
-  { label: '10 - Penyerahan Lainnya', value: '10' }
+  { label: '10 - penyerahan lainnya', value: '10' }
 ]
 
 export const transactionCodeLabel: Record<string, string> = Object.fromEntries(
@@ -334,4 +337,44 @@ export function validateFakturLine(state: {
     }
   }
   return errors
+}
+
+// ---- "Status Faktur" (reference list filter) --------------------------------
+// The API derives `status_faktur` from our storage (backend
+// app/services/faktur_status.py). Mapping, first match wins:
+//   Keluaran: draft -> CREATED; issued -> APPROVED (REPORTED once in a filed SPT,
+//             CANCELED when kind = dibatalkan); invalid -> CANCELED
+//   Masukan : invalid -> CANCELED; in filed SPT -> REPORTED; credited -> CREDITED;
+//             uncredited -> UNCREDITED; draft -> CREATED; issued -> APPROVED
+// The other statuses have no counterpart in the simulator and match nothing.
+export const statusFakturOptions: { label: string, value: StatusFaktur }[] = [
+  'AMENDED', 'APPROVED', 'CANCELED', 'CREATED', 'CREDITED', 'DELETED', 'REPORTED',
+  'SAVED_INVALID', 'SIGNING_IN_PROGRESS', 'UNCREDITED', 'WAITING_FOR_AMENDMENT',
+  'WAITING_FOR_CANCELLATION'
+].map(value => ({ label: value, value: value as StatusFaktur }))
+
+export const defaultStatusFaktur = (): StatusFaktur[] => ['CREATED', 'APPROVED', 'SAVED_INVALID']
+
+export const statusFakturColor: Record<StatusFaktur, 'neutral' | 'success' | 'warning' | 'error' | 'info'> = {
+  AMENDED: 'info',
+  APPROVED: 'success',
+  CANCELED: 'error',
+  CREATED: 'warning',
+  CREDITED: 'success',
+  DELETED: 'neutral',
+  REPORTED: 'info',
+  SAVED_INVALID: 'error',
+  SIGNING_IN_PROGRESS: 'warning',
+  UNCREDITED: 'neutral',
+  WAITING_FOR_AMENDMENT: 'warning',
+  WAITING_FOR_CANCELLATION: 'warning'
+}
+
+export function esignLabel(status: string | null | undefined) {
+  if (!status) return '-'
+  return status === 'signed' ? 'Sudah Ditandatangani' : 'Belum Ditandatangani'
+}
+
+export function dashIfEmpty(value: string | number | null | undefined) {
+  return value === null || value === undefined || value === '' ? '-' : String(value)
 }

@@ -220,3 +220,24 @@ export function validateBupotCreate(state: {
   }
   return errors
 }
+
+/** Foreign taxpayer TIN (BPNR): 1-30 chars, alphanumeric plus - / . */
+export const FOREIGN_TIN_PATTERN = /^[A-Za-z0-9\-/.]{1,30}$/
+
+/**
+ * BPNR validation: same as the shared eBupot rules, but the recipient is a
+ * foreign taxpayer so the 16-digit NPWP/NIK rule is replaced by a free TIN.
+ */
+export function validateBpnrCreate(state: Parameters<typeof validateBupotCreate>[0]) {
+  const errors = validateBupotCreate(state).filter(e => e.name !== 'recipient_identity_number')
+  const ident = (state.recipient_identity_number || '').trim()
+  if (!ident) {
+    errors.push({ name: 'recipient_identity_number', message: 'Nomor identitas wajib diisi' })
+  } else if (!FOREIGN_TIN_PATTERN.test(ident)) {
+    errors.push({
+      name: 'recipient_identity_number',
+      message: 'TIN asing 1–30 karakter: huruf, angka, atau tanda - / .'
+    })
+  }
+  return errors
+}
