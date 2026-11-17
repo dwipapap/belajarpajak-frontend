@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Panduan Uji PajakSim</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: light single look. Hero with a 3-step quick start, then a role switcher; each role shows its accounts and step-by-step scenarios with direct "Buka halaman" links. */
+:root {
+  color-scheme: light;
+  --bg: oklch(0.985 0.004 250);
+  --surface: oklch(1 0 0);
+  --tint: oklch(0.965 0.012 255);
+  --ink: oklch(0.25 0.06 268);
+  --muted: oklch(0.5 0.03 265);
+  --line: oklch(0.91 0.012 258);
+  --navy: oklch(0.33 0.12 268);
+  --navy-soft: oklch(0.94 0.03 268);
+  --gold: oklch(0.84 0.15 86);
+  --gold-ink: oklch(0.45 0.1 75);
+  --gold-soft: oklch(0.97 0.04 90);
+  --ok: oklch(0.56 0.14 152);
+  --ok-soft: oklch(0.96 0.04 152);
+  --warn-ink: oklch(0.47 0.12 55);
+  --warn-soft: oklch(0.97 0.035 70);
+  --on-navy: oklch(0.97 0.01 260);
+  --f-body: "Plus Jakarta Sans", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15.5px; line-height: 1.6; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.25; margin: 0; }
+p { margin: 0; }
+a { color: var(--navy); }
+.muted { color: var(--muted); }
+.eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-ink); }
+button { font-family: var(--f-body); }
+:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+
+.band { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.inner { max-width: 1040px; margin: 0 auto; }
+
+.hero { background: var(--navy); color: var(--on-navy); padding-block: 28px 32px; border-bottom: 4px solid var(--gold); }
+.hero .inner { display: grid; gap: 22px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem; color: var(--on-navy); opacity: 0.85; }
+.crest { width: 32px; height: 32px; border-radius: 8px; background: oklch(0.42 0.12 268); display: grid; place-items: center; flex: none; }
+.crest svg { width: 18px; height: 18px; }
+.hero h1 { font-size: clamp(1.7rem, 3.6vw, 2.3rem); font-weight: 800; letter-spacing: -0.01em; color: var(--surface); }
+.hero .lede { max-width: 62ch; color: var(--on-navy); opacity: 0.9; }
+.quick { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.q { background: var(--surface); color: var(--ink); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.q .num { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: var(--navy); font-weight: 800; font-size: 0.85rem; display: grid; place-items: center; }
+.q h3 { font-size: 1rem; }
+.q p { font-size: 0.9rem; color: var(--muted); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; padding: 9px 14px; font-weight: 700; font-size: 0.9rem; text-decoration: none; border: 1px solid transparent; cursor: pointer; justify-self: start; }
+.btn-primary { background: var(--navy); color: var(--surface); }
+.btn-primary:hover { background: oklch(0.28 0.12 268); }
+.btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--navy); color: var(--navy); }
+.btn-sm { padding: 5px 10px; font-size: 0.8rem; border-radius: 6px; }
+.code-pill { font-family: var(--f-mono); font-weight: 600; background: var(--gold-soft); color: var(--gold-ink); border-radius: 6px; padding: 2px 8px; }
+
+.switch-wrap { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); padding-block: 10px; box-shadow: 0 6px 16px -14px oklch(0.3 0.05 265 / 0.5); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.switch-wrap .inner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; justify-content: space-between; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.tab:hover { border-color: var(--navy); }
+.tab[aria-selected="true"] { background: var(--navy); border-color: var(--navy); color: var(--surface); }
+.tab .count { font-family: var(--f-mono); font-size: 0.75rem; font-weight: 600; opacity: 0.8; }
+.overall { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; color: var(--muted); min-width: 0; font-variant-numeric: tabular-nums; }
+.bar { width: 140px; height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; flex: none; }
+.bar span { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 99px; transition: width .25s; }
+@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
+
+main.band { padding-block: 28px 56px; }
+main .inner { display: grid; gap: 32px; }
+.panel { display: grid; gap: 20px; }
+.panel-head { display: grid; gap: 6px; }
+.panel-head h2 { font-size: 1.45rem; font-weight: 800; }
+.panel-head p { max-width: 70ch; color: var(--muted); }
+
+.accounts { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.accounts > header { padding: 12px 18px; background: var(--tint); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: baseline; }
+.accounts > header h3 { font-size: 1rem; }
+.acc-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.acc-groups:has(> .acc-group:only-child) { grid-template-columns: minmax(0, 1fr); }
+.acc-group { padding: 14px 18px; display: grid; gap: 8px; align-content: start; min-width: 0; background: var(--surface); }
+.acc-group h4 { margin: 0; font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.acc { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; border-radius: 8px; background: var(--bg); min-width: 0; }
+.acc .who { display: grid; min-width: 0; }
+.acc .email { font-family: var(--f-mono); font-size: 0.86rem; font-weight: 600; overflow-wrap: anywhere; }
+.acc .sub { font-size: 0.76rem; color: var(--muted); }
+.copy { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 4px 10px; font-weight: 600; font-size: 0.78rem; cursor: pointer; flex: none; }
+.copy:hover { border-color: var(--navy); }
+.copy.done, .btn.done { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+
+.callout { border-radius: 12px; padding: 14px 18px; display: grid; gap: 4px; }
+.callout.tip { background: var(--gold-soft); border: 1px solid oklch(0.9 0.07 88); }
+.callout.warn { background: var(--warn-soft); border: 1px solid oklch(0.88 0.06 65); color: var(--warn-ink); }
+
+.scenario { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.scenario > header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; padding: 16px 20px; border-bottom: 1px solid var(--line); align-items: center; }
+.scenario h3 { font-size: 1.08rem; font-weight: 800; }
+.scenario .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.82rem; color: var(--muted); font-weight: 600; grid-column: 1; }
+.state { grid-row: 1 / span 2; grid-column: 2; font-size: 0.78rem; font-weight: 700; border-radius: 99px; padding: 4px 12px; background: var(--tint); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.state.done { background: var(--ok-soft); color: var(--ok); }
+ol.steps { list-style: none; margin: 0; padding: 4px 0; }
+.step { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 20px; border-bottom: 1px dashed var(--line); }
+.step:last-child { border-bottom: 0; }
+.check { width: 24px; height: 24px; margin-top: 2px; }
+.check input { appearance: none; -webkit-appearance: none; width: 24px; height: 24px; margin: 0; border: 2px solid oklch(0.82 0.02 260); border-radius: 7px; background: var(--surface); cursor: pointer; display: grid; place-items: center; }
+.check input:hover { border-color: var(--navy); }
+.check input:checked { background: var(--ok); border-color: var(--ok); }
+.check input:checked::after { content: ""; width: 10px; height: 6px; border: solid var(--surface); border-width: 0 0 2.5px 2.5px; transform: rotate(-45deg) translate(1px, -1px); }
+.step .body { display: grid; gap: 4px; min-width: 0; cursor: pointer; }
+.step .what { font-weight: 600; }
+.step .hint { font-size: 0.86rem; color: var(--muted); }
+.step.is-done .what { color: var(--muted); text-decoration: line-through; text-decoration-color: oklch(0.75 0.02 260); }
+.step .go { margin-top: 1px; white-space: nowrap; }
+.who-tag { display: inline-block; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; border-radius: 4px; padding: 1px 6px; margin-right: 6px; vertical-align: 1px; text-decoration: none; }
+.who-tag.jual { background: var(--navy-soft); color: var(--navy); }
+.who-tag.beli { background: var(--gold-soft); color: var(--gold-ink); }
+.expect { margin: 0; padding: 12px 20px; background: var(--ok-soft); font-size: 0.9rem; border-top: 1px solid oklch(0.9 0.05 152); }
+.expect b { color: var(--ok); }
+
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card h4 { margin: 0; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.93rem; }
+.report { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+pre.template { margin: 0; white-space: pre-wrap; font: 0.86rem/1.7 var(--f-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+footer.band { padding-block: 18px 32px; border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--muted); }
+
+@media (max-width: 700px) {
+  .step { grid-template-columns: 30px minmax(0, 1fr); }
+  .step .go { grid-column: 2; justify-self: start; }
+  .report { grid-template-columns: minmax(0, 1fr); }
+  .bar { width: 90px; }
+  .acc-groups { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<section class="hero band">
+  <div class="inner">
+    <div class="brand">
+      <span class="crest" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="oklch(0.86 0.14 86)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10M19 21V10M9 21v-7M15 21v-7M3 10l9-6 9 6"/></svg></span>
+      Sistem Pembelajaran Pajak Online
+    </div>
+    <div style="display:grid;gap:10px">
+      <h1>Panduan Uji Demo</h1>
+      <p class="lede">Pilih peran Anda di bawah, ikuti langkahnya satu per satu, lalu centang yang sudah dicoba. Setiap langkah punya tombol untuk langsung membuka halaman yang dimaksud.</p>
+    </div>
+    <div class="quick">
+      <div class="q">
+        <span class="num">1</span>
+        <h3>Buka demo</h3>
+        <p>Pakai Chrome, Edge, atau Firefox di laptop.</p>
+        <a class="btn btn-primary" href="/login" target="_blank" rel="noopener">Buka demo ↗</a>
+      </div>
+      <div class="q">
+        <span class="num">2</span>
+        <h3>Masuk dengan akun Anda</h3>
+        <p>Satu orang satu akun. Kata sandinya kami kirim lewat WhatsApp, sama untuk semua akun.</p>
+      </div>
+      <div class="q">
+        <span class="num">3</span>
+        <h3>Saat diminta tanda tangan</h3>
+        <p>Isi Kode Otorisasi <span class="code-pill">123456</span> (boleh 6 karakter apa saja). Passphrase SPT = kata sandi akun.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="switch-wrap band">
+  <div class="inner">
+    <div class="tabs" role="tablist" aria-label="Pilih peran">
+      <button class="tab" role="tab" id="tab-siswa" data-role="siswa" aria-controls="panel-siswa">Siswa <span class="count" data-count="siswa"></span></button>
+      <button class="tab" role="tab" id="tab-guru" data-role="guru" aria-controls="panel-guru">Guru <span class="count" data-count="guru"></span></button>
+      <button class="tab" role="tab" id="tab-admin" data-role="admin" aria-controls="panel-admin">Admin instansi <span class="count" data-count="admin"></span></button>
+      <button class="tab" role="tab" id="tab-super" data-role="super" aria-controls="panel-super">Pemilik</button>
+    </div>
+    <div class="overall"><span id="overall-text">0 dari 0 langkah</span><span class="bar" aria-hidden="true"><span id="overall-bar"></span></span></div>
+  </div>
+</div>
+
+<main class="band">
+  <div class="inner">
+
+    <section class="panel" id="panel-siswa" role="tabpanel" aria-labelledby="tab-siswa">
+      <div class="panel-head">
+        <span class="eyebrow">Peran siswa · sekitar 40 menit</span>
+        <h2>Alur belajar siswa</h2>
+        <p>Kerjakan berurutan: bukti potong, lalu faktur dengan teman sekelas, lalu SPT. Untuk skenario faktur Anda perlu satu teman sebagai pembeli.</p>
+      </div>
+
+      <div class="accounts">
+        <header><h3>Akun siswa</h3><span class="muted" style="font-size:.85rem">Bisa masuk dengan email atau NIS</span></header>
+        <div class="acc-groups">
+          <div class="acc-group"><h4>SMK Negeri 1 Pekanbaru · XII Akuntansi 1</h4>
+            <div class="acc"><span class="who"><span class="email">siswa1@smkn1-pku.local</span><span class="sub">NIS00000001</span></span><button class="copy" data-copy="siswa1@smkn1-pku.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">siswa2@smkn1-pku.local</span><span class="sub">NIS00000002</span></span><button class="copy" data-copy="siswa2@smkn1-pku.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">siswa3@smkn1-pku.local</span><span class="sub">NIS00000003</span></span><button class="copy" data-copy="siswa3@smkn1-pku.local">Salin</button></div>
+          </div>
+          <div class="acc-group"><h4>SMK Negeri 1 Pekanbaru · XII Akuntansi 2</h4>
+            <div class="acc"><span class="who"><span class="email">siswa4@smkn1-pku.local</span><span class="sub">NIS00000004</span></span><button class="copy" data-copy="siswa4@smkn1-pku.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">siswa5@smkn1-pku.local</span><span class="sub">NIS00000005</span></span><button class="copy" data-copy="siswa5@smkn1-pku.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">siswa6@smkn1-pku.local</span><span class="sub">NIS00000006</span></span><button class="copy" data-copy="siswa6@smkn1-pku.local">Salin</button></div>
+          </div>
+          <div class="acc-group"><h4>Politeknik Caltex Riau · XII Akuntansi 1</h4>
+            <div class="acc"><span class="who"><span class="email">siswa1@pcr.local</span><span class="sub">NIS00000007</span></span><button class="copy" data-copy="siswa1@pcr.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">siswa2@pcr.local</span><span class="sub">NIS00000008</span></span><button class="copy" data-copy="siswa2@pcr.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">siswa3@pcr.local</span><span class="sub">NIS00000009</span></span><button class="copy" data-copy="siswa3@pcr.local">Salin</button></div>
+          </div>
+          <div class="acc-group"><h4>Politeknik Caltex Riau · XII Akuntansi 2</h4>
+            <div class="acc"><span class="who"><span class="email">siswa4@pcr.local</span><span class="sub">NIS00000010</span></span><button class="copy" data-copy="siswa4@pcr.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">siswa5@pcr.local</span><span class="sub">NIS00000011</span></span><button class="copy" data-copy="siswa5@pcr.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">siswa6@pcr.local</span><span class="sub">NIS00000012</span></span><button class="copy" data-copy="siswa6@pcr.local">Salin</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout tip"><strong>Berpasangan untuk skenario faktur.</strong><span>Pilih dua akun dari kotak yang sama (satu kelas), misalnya siswa1 sebagai penjual dan siswa2 sebagai pembeli. Faktur hanya bisa dikirim ke teman satu kelas.</span></div>
+
+      <article class="scenario" data-role="siswa">
+        <header><h3>A. Bukti potong PPh 23 lewat BPPU</h3><span class="state"></span><div class="meta"><span>⏱ 10 menit</span><span>1 akun siswa</span></div></header>
+        <ol class="steps">
+          <li class="step"><span class="check"><input type="checkbox" id="sa-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buat bukti potong BPPU baru.</span><span class="hint">Menu eBUPOT › BPPU, lalu klik Create eBupot BPU.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa/bppu/create" target="_blank" rel="noopener">Buka halaman ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sa-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Isi NPWP lawan transaksi (16 digit bebas), lalu cari Nama Objek Pajak, misalnya ketik "konsultan".</span><span class="hint">Jenis Pajak, Kode Objek, Sifat, Tarif, dan KAP terisi sendiri.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sa-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Isi DPP dan Dokumen Referensi, lalu klik Submit dan masukkan Kode Otorisasi.</span><span class="hint">PPh dihitung otomatis dari DPP × tarif.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sa-4" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Unduh PDF bukti potongnya di Dokumen Saya.</span><span class="hint">Portal Saya › Dokumen Saya, tab Bukti Potong.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa/dokumen-saya" target="_blank" rel="noopener">Buka halaman ↗</a></li>
+        </ol>
+        <p class="expect"><b>Berhasil jika:</b> bukti potong pindah ke tab Telah Terbit dengan nomor dokumen, dan PDF-nya memuat kode serta nama objek pajak yang benar.</p>
+      </article>
+
+      <article class="scenario" data-role="siswa">
+        <header><h3>B. Faktur pajak antar teman sekelas</h3><span class="state"></span><div class="meta"><span>⏱ 15 menit</span><span>2 akun siswa, satu kelas</span></div></header>
+        <ol class="steps">
+          <li class="step"><span class="check"><input type="checkbox" id="sb-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what"><span class="who-tag jual">Penjual</span>Buat faktur keluaran baru; pilih Kode Transaksi dan tanggal.</span><span class="hint">Menu e-Faktur › Pajak Keluaran › Buat Faktur.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa/e-faktur/keluaran/create" target="_blank" rel="noopener">Buka halaman ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sb-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what"><span class="who-tag jual">Penjual</span>Di Informasi Pembeli, pilih teman sekelas sebagai pembeli.</span><span class="hint">NPWP, nama, dan alamat pembeli terisi otomatis.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sb-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what"><span class="who-tag jual">Penjual</span>Klik Tambah Transaksi, cari Kode Barang/Jasa (misalnya "kertas"), isi harga dan jumlah, lalu Simpan.</span><span class="hint">Coba juga Kode Transaksi 04 untuk melihat DPP Nilai Lain 11/12.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sb-4" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what"><span class="who-tag jual">Penjual</span>Klik Submit dan tanda tangani dengan Kode Otorisasi.</span><span class="hint">Status faktur berubah dari CREATED menjadi APPROVED.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sb-5" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what"><span class="who-tag beli">Pembeli</span>Buka Pajak Masukan; faktur dari teman muncul sendiri. Centang lalu klik Kreditkan Faktur.</span><span class="hint">Statusnya menjadi CREDITED.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa/e-faktur/masukan" target="_blank" rel="noopener">Buka halaman ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sb-6" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what"><span class="who-tag beli">Pembeli</span>Opsional: klik Buat Retur pada faktur yang sama, isi nomor retur dan jumlah yang dikembalikan, lalu Submit.</span><span class="hint">Penjual akan melihatnya di e-Faktur › Retur Pajak Keluaran.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa/e-faktur/retur-keluaran" target="_blank" rel="noopener">Sisi penjual ↗</a></li>
+        </ol>
+        <p class="expect"><b>Berhasil jika:</b> faktur yang sama terlihat di Pajak Keluaran penjual (APPROVED) dan Pajak Masukan pembeli (CREDITED setelah dikreditkan).</p>
+      </article>
+
+      <article class="scenario" data-role="siswa">
+        <header><h3>C. SPT Masa, bayar, lalu lapor</h3><span class="state"></span><div class="meta"><span>⏱ 15 menit</span><span>setelah skenario A atau B</span></div></header>
+        <ol class="steps">
+          <li class="step"><span class="check"><input type="checkbox" id="sc-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buat Konsep SPT: pilih PPN (untuk faktur) atau PPh Unifikasi (untuk BPPU), dengan masa pajak yang sama.</span><span class="hint">Menu SPT › Surat Pemberitahuan (SPT) › Buat Konsep SPT.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa/spt/create" target="_blank" rel="noopener">Buka halaman ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sc-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka konsepnya, lakukan Posting, lalu periksa angka yang ditarik dari faktur atau bukti potong.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sc-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Isi bagian Pernyataan, klik Simpan Konsep, lalu Bayar dan Lapor dengan passphrase (kata sandi akun).</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sc-4" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Jika kurang bayar, bayar kode billing-nya dengan kanal simulasi.</span><span class="hint">Menu Pembayaran.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa/pembayaran" target="_blank" rel="noopener">Buka halaman ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sc-5" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Unduh BPE (bukti penerimaan) di Dokumen Saya, lalu lihat dashboard siswa.</span><span class="hint">"Langkah belajar" di dashboard tercentang sampai Bayar.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa" target="_blank" rel="noopener">Dashboard ↗</a></li>
+        </ol>
+        <p class="expect"><b>Berhasil jika:</b> SPT berstatus Dilaporkan dan BPE bisa diunduh.</p>
+      </article>
+    </section>
+
+    <section class="panel" id="panel-guru" role="tabpanel" aria-labelledby="tab-guru" hidden>
+      <div class="panel-head">
+        <span class="eyebrow">Peran guru · sekitar 15 menit</span>
+        <h2>Memantau dan menilai siswa</h2>
+        <p>Paling terasa setelah siswa di kelas Anda mencoba skenario siswa. Guru 1 mengampu XII Akuntansi 1, Guru 2 mengampu XII Akuntansi 2.</p>
+      </div>
+      <div class="accounts">
+        <header><h3>Akun guru</h3></header>
+        <div class="acc-groups">
+          <div class="acc-group"><h4>SMK Negeri 1 Pekanbaru</h4>
+            <div class="acc"><span class="who"><span class="email">guru1@smkn1-pku.local</span><span class="sub">XII Akuntansi 1</span></span><button class="copy" data-copy="guru1@smkn1-pku.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">guru2@smkn1-pku.local</span><span class="sub">XII Akuntansi 2</span></span><button class="copy" data-copy="guru2@smkn1-pku.local">Salin</button></div>
+          </div>
+          <div class="acc-group"><h4>Politeknik Caltex Riau</h4>
+            <div class="acc"><span class="who"><span class="email">guru1@pcr.local</span><span class="sub">XII Akuntansi 1</span></span><button class="copy" data-copy="guru1@pcr.local">Salin</button></div>
+            <div class="acc"><span class="who"><span class="email">guru2@pcr.local</span><span class="sub">XII Akuntansi 2</span></span><button class="copy" data-copy="guru2@pcr.local">Salin</button></div>
+          </div>
+        </div>
+      </div>
+      <article class="scenario" data-role="guru">
+        <header><h3>D. Dashboard guru dan penilaian</h3><span class="state"></span><div class="meta"><span>⏱ 15 menit</span><span>1 akun guru</span></div></header>
+        <ol class="steps">
+          <li class="step"><span class="check"><input type="checkbox" id="gd-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Lihat tabel Progres Siswa: siapa yang sudah membuat bukti potong, faktur, SPT, dan membayar.</span><span class="hint">Siswa yang belum beraktivitas ditandai kuning.</span></div><a class="btn btn-ghost btn-sm go" href="/guru" target="_blank" rel="noopener">Dashboard ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="gd-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Di panel Perlu Dinilai, klik salah satu dokumen siswa.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="gd-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Beri nilai dan komentar, lalu simpan.</span><span class="hint">Dokumen itu hilang dari antrean Perlu Dinilai.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="gd-4" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Minta siswa yang dinilai membuka dashboard-nya.</span><span class="hint">Nilai dan komentar muncul di bagian Nilai &amp; umpan balik guru.</span></div></li>
+        </ol>
+        <p class="expect"><b>Berhasil jika:</b> nilai yang Anda berikan terlihat di dashboard siswa.</p>
+      </article>
+    </section>
+
+    <section class="panel" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
+      <div class="panel-head">
+        <span class="eyebrow">Peran admin instansi · sekitar 10 menit</span>
+        <h2>Mengelola akun dan kelas</h2>
+        <p>Admin mengatur guru, siswa, dan kelas di instansinya sendiri.</p>
+      </div>
+      <div class="accounts">
+        <header><h3>Akun admin</h3></header>
+        <div class="acc-groups">
+          <div class="acc-group"><h4>SMK Negeri 1 Pekanbaru</h4><div class="acc"><span class="who"><span class="email">admin@smkn1-pku.local</span></span><button class="copy" data-copy="admin@smkn1-pku.local">Salin</button></div></div>
+          <div class="acc-group"><h4>Politeknik Caltex Riau</h4><div class="acc"><span class="who"><span class="email">admin@pcr.local</span></span><button class="copy" data-copy="admin@pcr.local">Salin</button></div></div>
+        </div>
+      </div>
+      <article class="scenario" data-role="admin">
+        <header><h3>E. Kuota, pengguna, dan kelas</h3><span class="state"></span><div class="meta"><span>⏱ 10 menit</span><span>1 akun admin</span></div></header>
+        <ol class="steps">
+          <li class="step"><span class="check"><input type="checkbox" id="ae-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Periksa Ringkasan Institusi: kuota guru/siswa/kelas dan sisa masa berlaku.</span></div><a class="btn btn-ghost btn-sm go" href="/admin" target="_blank" rel="noopener">Dashboard ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="ae-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Klik Tambah User dan buat satu akun siswa baru.</span><span class="hint">Pemakaian kuota siswa bertambah satu.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="ae-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka menu Kelas dan masukkan siswa baru ke salah satu kelas.</span></div><a class="btn btn-ghost btn-sm go" href="/admin/kelas" target="_blank" rel="noopener">Kelola Kelas ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="ae-4" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Login sebagai siswa baru itu dan pastikan kelasnya terlihat di dashboard.</span></div></li>
+        </ol>
+        <p class="expect"><b>Berhasil jika:</b> siswa baru bisa masuk dan langsung terdaftar di kelasnya.</p>
+      </article>
+    </section>
+
+    <section class="panel" id="panel-super" role="tabpanel" aria-labelledby="tab-super" hidden>
+      <div class="panel-head">
+        <span class="eyebrow">Khusus pemilik platform</span>
+        <h2>Superadmin</h2>
+      </div>
+      <div class="callout warn"><strong>Mohon akun ini tidak dibagikan ke penguji lain.</strong><span>Superadmin bisa menonaktifkan dan menghapus instansi beserta seluruh datanya.</span></div>
+      <div class="accounts">
+        <header><h3>Akun superadmin</h3></header>
+        <div class="acc-groups"><div class="acc-group"><h4>Platform</h4><div class="acc"><span class="who"><span class="email">super@pajaksim.local</span></span><button class="copy" data-copy="super@pajaksim.local">Salin</button></div></div></div>
+      </div>
+      <div class="card"><h4>Yang bisa dicoba</h4><ul class="plain"><li>Membuat instansi baru beserta admin pertamanya</li><li>Mengatur kuota dan masa berlaku instansi</li><li>Melihat Tarif Pajak dan Log Audit</li></ul></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-belum">
+      <div class="panel-head">
+        <span class="eyebrow">Supaya tidak dilaporkan sebagai bug</span>
+        <h2 id="h-belum">Yang belum tersedia</h2>
+        <p>Menu berikut sengaja sudah tampil supaya susunannya sama dengan aplikasi asli; isinya menyusul.</p>
+      </div>
+      <div class="grid3">
+        <div class="card"><h4>e-Faktur</h4><ul class="plain"><li>Dokumen Lain (4 menu) masih kosong</li><li>Monitoring XML, Ekspor Excel/PDF</li><li>Submit by Period</li></ul></div>
+        <div class="card"><h4>eBupot</h4><ul class="plain"><li>BP A1/A2 baru bisa dilihat, belum diterbitkan</li><li>Dokumen yang Dipersamakan</li></ul></div>
+        <div class="card"><h4>Lainnya</h4><ul class="plain"><li>Buku Besar</li><li>Profil WP dan Permohonan</li><li>Restitusi dan Imbalan Bunga</li></ul></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-lapor">
+      <div class="panel-head">
+        <span class="eyebrow">Ada kendala?</span>
+        <h2 id="h-lapor">Cara melapor</h2>
+        <p>Kirim ke WhatsApp kami dengan format ini dan sertakan screenshot. Satu pesan untuk satu masalah supaya mudah ditelusuri.</p>
+      </div>
+      <div class="report">
+        <pre class="template" id="tpl">Akun      : (contoh: siswa2@smkn1-pku.local)
+Halaman   : (contoh: e-Faktur › Pajak Masukan)
+Langkah   : 1. ...  2. ...  3. ...
+Hasilnya  : (apa yang terjadi)
+Harapannya: (apa yang seharusnya terjadi)
+Screenshot: (lampirkan)</pre>
+        <div class="card">
+          <h4>Tips</h4>
+          <ul class="plain"><li>Semua data di demo adalah data latihan; jangan memakai NPWP atau data pribadi asli.</li><li>Data demo bisa dikembalikan ke awal, jadi silakan dicoba sebebas-bebasnya.</li><li>Centang di halaman ini hanya tersimpan di browser Anda sendiri.</li></ul>
+          <div class="actions"><button class="btn btn-primary btn-sm" type="button" id="copy-tpl">Salin format laporan</button><button class="btn btn-ghost btn-sm" type="button" id="reset-checks">Hapus semua centang</button></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="band"><div class="inner">Sistem Pembelajaran Pajak Online · Panduan ini diperbarui setiap ada fitur baru.</div></footer>
+
+<script>
+(function () {
+  var KEY = 'panduan-uji-v2';
+  var ROLES = ['siswa', 'guru', 'admin', 'super'];
+  var store = { checks: {}, role: 'siswa' };
+  try { var raw = JSON.parse(localStorage.getItem(KEY) || 'null'); if (raw && typeof raw === 'object') { store.checks = raw.checks || {}; store.role = raw.role || 'siswa'; } } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+
+  var tabs = document.querySelectorAll('.tab');
+  function showRole(role) {
+    store.role = role; save();
+    tabs.forEach(function (t) { var on = t.dataset.role === role; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; });
+    ROLES.forEach(function (r) { document.getElementById('panel-' + r).hidden = r !== role; });
+    update();
+  }
+  tabs.forEach(function (t) { t.addEventListener('click', function () { showRole(t.dataset.role); }); });
+
+  function update() {
+    document.querySelectorAll('.scenario').forEach(function (sc) {
+      var boxes = sc.querySelectorAll('input[type=checkbox]'); var done = 0;
+      boxes.forEach(function (b) { if (b.checked) done++; b.closest('.step').classList.toggle('is-done', b.checked); });
+      var s = sc.querySelector('.state');
+      s.textContent = done === boxes.length ? 'Selesai ✓' : done + ' / ' + boxes.length;
+      s.classList.toggle('done', done === boxes.length);
+    });
+    ['siswa', 'guru', 'admin'].forEach(function (r) {
+      var all = document.querySelectorAll('.scenario[data-role="' + r + '"] input'); var d = 0;
+      all.forEach(function (b) { if (b.checked) d++; });
+      var c = document.querySelector('[data-count="' + r + '"]'); if (c) c.textContent = d + '/' + all.length;
+    });
+    var text = document.getElementById('overall-text'); var bar = document.getElementById('overall-bar');
+    if (store.role === 'super') { text.textContent = 'Tanpa checklist'; bar.style.width = '0'; return; }
+    var inRole = document.querySelectorAll('.scenario[data-role="' + store.role + '"] input'); var dn = 0;
+    inRole.forEach(function (b) { if (b.checked) dn++; });
+    text.textContent = dn + ' dari ' + inRole.length + ' langkah';
+    bar.style.width = (inRole.length ? Math.round(dn / inRole.length * 100) : 0) + '%';
+  }
+
+  document.querySelectorAll('.step input').forEach(function (b) {
+    b.checked = !!store.checks[b.id];
+    b.addEventListener('change', function () { store.checks[b.id] = b.checked; save(); update(); });
+    var body = b.closest('.step').querySelector('.body');
+    body.addEventListener('click', function () { b.checked = !b.checked; b.dispatchEvent(new Event('change')); });
+  });
+  document.getElementById('reset-checks').addEventListener('click', function () {
+    store.checks = {}; save();
+    document.querySelectorAll('.step input').forEach(function (b) { b.checked = false; });
+    update();
+  });
+
+  function copyText(text, btn, fallbackEl) {
+    var label = btn.textContent;
+    var finish = function (msg) { btn.textContent = msg; btn.classList.add('done'); setTimeout(function () { btn.textContent = label; btn.classList.remove('done'); }, 1500); };
+    var p = (navigator.clipboard && navigator.clipboard.writeText) ? navigator.clipboard.writeText(text) : Promise.reject();
+    p.then(function () { finish('Tersalin'); }).catch(function () {
+      if (fallbackEl) { var r = document.createRange(); r.selectNodeContents(fallbackEl); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+      finish('Tekan Ctrl+C');
+    });
+  }
+  document.querySelectorAll('.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () { copyText(btn.dataset.copy, btn, btn.parentElement.querySelector('.email')); });
+  });
+  document.getElementById('copy-tpl').addEventListener('click', function (e) { copyText(document.getElementById('tpl').textContent, e.currentTarget, document.getElementById('tpl')); });
+
+  showRole(ROLES.indexOf(store.role) >= 0 ? store.role : 'siswa');
+})();
+</script>
+</body>
+</html>
