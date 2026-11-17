@@ -394,7 +394,7 @@ async function confirmSign(payload: { signer_name?: string; kode_otorisasi: stri
         color="info"
         variant="subtle"
         icon="i-lucide-info"
-        title="Simpan Konsep menyimpan draf yang masih bisa diubah di tab Belum Terbit; Submit menerbitkan dokumen ke tab Telah Terbit."
+        title="Simpan Konsep menyimpan faktur berstatus CREATED yang masih bisa diubah; Submit menandatangani dan menerbitkan faktur menjadi APPROVED."
         class="mb-1"
       />
 
