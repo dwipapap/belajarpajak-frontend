@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { TaxInvoiceLineCreate } from '~/types/api'
+import type { TaxInvoiceLineCreate, TaxInvoiceLineType } from '~/types/api'
+import type { ItemCodeOption } from '~/utils/faktur'
 
 const props = defineProps<{
   /** Existing row when editing; null adds a new one. */
@@ -17,7 +18,7 @@ type LineFormState = Omit<TaxInvoiceLineCreate, 'item_code'> & { item_code: stri
 function emptyLine(): LineFormState {
   return {
     line_type: 'barang',
-    item_code: '000000',
+    item_code: GENERAL_ITEM_CODE,
     item_name: '',
     unit: 'Unit',
     unit_price: 0,
@@ -38,7 +39,7 @@ watch(open, (isOpen) => {
   if (!isOpen) return
   Object.assign(
     formState,
-    props.line ? { ...props.line, item_code: props.line.item_code ?? '000000' } : emptyLine()
+    props.line ? { ...props.line, item_code: props.line.item_code ?? GENERAL_ITEM_CODE } : emptyLine()
   )
   if (dppOtherLocked.value) formState.use_dpp_other = true
 })
@@ -48,6 +49,36 @@ watch(dppOtherLocked, (locked) => {
 })
 
 const calculated = computed(() => calculateLine(formState))
+
+/** Searchable Kode Barang/Jasa, filtered by the chosen Tipe. */
+const itemCodes = ref<Record<TaxInvoiceLineType, ItemCodeOption[]>>({ barang: [], jasa: [] })
+onMounted(async () => {
+  itemCodes.value = await loadItemCodeOptions()
+})
+const codeItems = computed(() => itemCodes.value[formState.line_type])
+
+// Switching Tipe invalidates a code picked from the other list; fall back to 000000.
+watch(() => formState.line_type, () => {
+  if (!codeItems.value.some(item => item.value === formState.item_code)) {
+    formState.item_code = GENERAL_ITEM_CODE
+  }
+})
+
+function downloadCodes() {
+  const rows = [['Tipe', 'Kode', 'Nama']]
+  for (const type of ['barang', 'jasa'] as const) {
+    for (const item of itemCodes.value[type]) {
+      rows.push([lineTypeLabel[type], item.value, item.label.slice(item.value.length + 3)])
+    }
+  }
+  const csv = rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n')
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'kode_barang_jasa.csv'
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 function onSubmit() {
   emit('save', { ...formState })
@@ -80,17 +111,24 @@ function onSubmit() {
             </UFormField>
             <UButton
               icon="i-lucide-download"
-              label="Unduh Kode (segera hadir)" title="Segera hadir"
+              label="Unduh Kode"
               color="neutral"
               variant="soft"
               size="xs"
-              disabled
+              @click="downloadCodes"
             />
           </div>
 
           <div class="grid gap-3 sm:grid-cols-3">
             <UFormField name="item_code" label="Kode">
-              <USelect v-model="formState.item_code" :items="itemCodeOptions" class="w-full" />
+              <USelectMenu
+                v-model="formState.item_code"
+                :items="codeItems"
+                value-key="value"
+                placeholder="Pilih kode"
+                search-input-placeholder="Cari kode atau nama..."
+                class="w-full"
+              />
             </UFormField>
 
             <UFormField name="item_name" label="Nama" required>
@@ -98,7 +136,7 @@ function onSubmit() {
             </UFormField>
 
             <UFormField name="unit" label="Satuan" required>
-              <USelect v-model="formState.unit" :items="unitOptions" class="w-full" />
+              <USelectMenu v-model="formState.unit" :items="unitOptions" placeholder="Pilih satuan" class="w-full" />
             </UFormField>
           </div>
         </section>
@@ -124,7 +162,7 @@ function onSubmit() {
             <UInput :model-value="formatCurrency(calculated.total_price)" disabled class="w-full" />
           </UFormField>
 
-          <UFormField name="discount" label="Potongan harga">
+          <UFormField name="discount" label="Diskon">
             <UInput v-model.number="formState.discount" type="number" min="0" class="w-full" />
           </UFormField>
         </section>

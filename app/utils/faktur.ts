@@ -11,31 +11,24 @@ import type {
   TaxInvoiceLineType
 } from '~/types/api'
 
-// Labels follow the reference list: only proper nouns keep their capitals
-// (verified for 01; the rest follow the same lowercase pattern).
+// Labels follow the official user manual (Membuat e-Faktur Pajak Keluaran, Kode Transaksi).
 export const transactionCodeOptions: { label: string, value: string }[] = [
-  { label: '01 - kepada selain Pemungut PPN', value: '01' },
-  { label: '02 - kepada Pemungut PPN Instansi Pemerintah', value: '02' },
-  { label: '03 - kepada Pemungut PPN selain Instansi Pemerintah', value: '03' },
-  { label: '04 - DPP Nilai Lain', value: '04' },
+  { label: '01 - Kepada Selain Pemungut PPN', value: '01' },
+  { label: '02 - Kepada Pemungut PPN Instansi Pemerintah', value: '02' },
+  { label: '03 - Kepada Pemungut PPN Selain Pemerintah', value: '03' },
+  { label: '04 - Dasar Pengenaan Pajak Nilai Lain', value: '04' },
   { label: '05 - Besaran Tertentu', value: '05' },
+  { label: '06 - Orang Pribadi Pemegang Paspor Luar Negeri (16E UU PPN)', value: '06' },
   {
-    label: '06 - kepada orang pribadi pemegang paspor luar negeri (16E UU PPN)',
-    value: '06'
-  },
-  {
-    label: '07 - penyerahan dengan fasilitas PPN atau PPN dan PPnBM tidak dipungut/ditanggung pemerintah',
+    label: '07 - Penyerahan Dengan Fasilitas PPN / PPN dan PPnBM Tidak Dipungut/Ditanggung Pemerintah',
     value: '07'
   },
+  { label: '08 - Penyerahan Dengan Fasilitas Dibebaskan PPN / PPN dan PPnBM', value: '08' },
   {
-    label: '08 - penyerahan dengan fasilitas dibebaskan PPN atau PPN dan PPnBM',
-    value: '08'
-  },
-  {
-    label: '09 - penyerahan aktiva yang menurut tujuan semula tidak diperjualbelikan (16D UU PPN)',
+    label: '09 - Penyerahan Aktiva Yang Menurut Tujuan Semula Tidak Diperjualbelikan (16D UU PPN)',
     value: '09'
   },
-  { label: '10 - penyerahan lainnya', value: '10' }
+  { label: '10 - Penyerahan Lainnya', value: '10' }
 ]
 
 export const transactionCodeLabel: Record<string, string> = Object.fromEntries(
@@ -76,14 +69,14 @@ export const lineTypeLabel = {
 } satisfies Record<TaxInvoiceLineType, string>
 
 export const buyerIdentityOptions: { label: string, value: BuyerIdentityType }[] = [
-  { label: 'Nomor Identitas WP', value: 'npwp' },
-  { label: 'NIK', value: 'nik' },
+  { label: 'NPWP/TIN', value: 'npwp' },
   { label: 'Paspor', value: 'paspor' },
+  { label: 'NIK', value: 'nik' },
   { label: 'Identitas Lain', value: 'identitas_lain' }
 ]
 
-/** Paspor / Identitas Lain are the identities that need a document number. */
-export const DOCUMENT_NUMBER_IDENTITIES: BuyerIdentityType[] = ['paspor', 'identitas_lain']
+/** Every non-NPWP identity enables Nomor Dokumen; only Paspor / Identitas Lain require it. */
+export const DOCUMENT_NUMBER_IDENTITIES: BuyerIdentityType[] = ['paspor', 'nik', 'identitas_lain']
 
 export const countryOptions = [
   { label: 'Indonesia', value: 'ID' },
@@ -95,30 +88,33 @@ export const countryOptions = [
 ]
 
 export const unitOptions = [
-  'Bulan',
-  'Tahun',
-  'Hari',
-  'Jam',
-  'Unit',
-  'Buah',
-  'Paket',
-  'Kg',
-  'Liter',
-  'Meter'
+  'Bulan', 'Tahun', 'Hari', 'Jam', 'Unit', 'Buah', 'Paket', 'Box', 'Kg', 'Gram', 'Ton',
+  'Liter', 'Meter', 'Meter Persegi', 'Meter Kubik', 'Lusin', 'Set', 'Lembar', 'Ampere'
 ]
 
-export const itemCodeOptions = [
-  { label: '000000 - Barang / Jasa Lainnya', value: '000000' },
-  { label: '010000 - Barang Kena Pajak Umum', value: '010000' },
-  { label: '020000 - Bahan Bangunan', value: '020000' },
-  { label: '030000 - Kendaraan Bermotor', value: '030000' },
-  { label: '040000 - Hasil Pertanian', value: '040000' },
-  { label: '050000 - Jasa Konstruksi', value: '050000' },
-  { label: '060000 - Jasa Angkutan Barang', value: '060000' },
-  { label: '070000 - Jasa Sewa', value: '070000' },
-  { label: '080000 - Jasa Perawatan dan Perbaikan', value: '080000' },
-  { label: '090000 - Jasa Konsultasi', value: '090000' }
-]
+/** Kode Barang/Jasa from the manual's lampiran; "000000" is the general fallback for both. */
+export const GENERAL_ITEM_CODE = '000000'
+
+export interface ItemCodeOption {
+  label: string
+  value: string
+}
+
+type RawItemCodes = [kind: 'b' | 'j', code: string, name: string][]
+
+let itemCodeCache: Record<TaxInvoiceLineType, ItemCodeOption[]> | null = null
+
+/** Lazy-loads the (large) kode list once and groups it by Barang/Jasa. */
+export async function loadItemCodeOptions(): Promise<Record<TaxInvoiceLineType, ItemCodeOption[]>> {
+  if (itemCodeCache) return itemCodeCache
+  const raw = (await import('~/utils/kodeBarangJasa.json')).default as RawItemCodes
+  const grouped: Record<TaxInvoiceLineType, ItemCodeOption[]> = { barang: [], jasa: [] }
+  for (const [kind, code, name] of raw) {
+    grouped[kind === 'b' ? 'barang' : 'jasa'].push({ value: code, label: `${code} - ${name}` })
+  }
+  itemCodeCache = grouped
+  return grouped
+}
 
 export const ppnRateOptions = [
   { label: '12%', value: 12 },

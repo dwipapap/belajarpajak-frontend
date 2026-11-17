@@ -3,5 +3,5 @@ definePageMeta({ middleware: 'role', roles: ['siswa'] })
 </script>
 
 <template>
-  <FakturPlaceholderList slug="retur-keluaran" />
+  <FakturReturList side="keluaran" />
 </template>
