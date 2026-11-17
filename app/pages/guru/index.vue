@@ -1,240 +1,308 @@
 <script setup lang="ts">
-import type { ClassDetail, DashboardSummary, SchoolClass, TaxReturnSummary } from '~/types/api'
+import type { GuruDashboard } from '~/types/api'
 
 definePageMeta({ middleware: 'role', roles: ['guru'] })
 
 const { apiFetch } = useApi()
 
-const { data: summary } = useAsyncData(
-  'guru-summary',
-  () => apiFetch<DashboardSummary>('/api/v1/dashboard/summary')
+// ---- Class selector + per-class dashboard ----------------------------------
+const classId = ref<number | undefined>(undefined)
+
+const { data: dash, status: dashStatus, error: dashError, refresh: refreshDash } = useAsyncData(
+  'guru-dashboard-main',
+  () => apiFetch<GuruDashboard>('/api/v1/dashboard/guru', {
+    query: classId.value === undefined ? {} : { class_id: classId.value }
+  }),
+  { watch: [classId] }
 )
 
-/** Rekap pembayaran yang perlu perhatian — dihitung di client dari list tenant. */
-interface PbkMini { status: string }
-interface TagihanMini { status: string }
-interface AngsuranMini { status: string }
-const { data: pbkList } = useAsyncData(
-  'guru-dashboard-pbk',
-  () => apiFetch<{ items: PbkMini[]; total: number }>('/api/v1/pbk', { query: { page: 1, size: 100 } }),
-  { default: () => ({ items: [], total: 0 }) }
-)
-const { data: tagihanList } = useAsyncData(
-  'guru-dashboard-tagihan',
-  () => apiFetch<{ items: TagihanMini[]; total: number }>('/api/v1/tagihan', { query: { page: 1, size: 100 } }),
-  { default: () => ({ items: [], total: 0 }) }
-)
-const { data: angsuranList } = useAsyncData(
-  'guru-dashboard-angsuran',
-  () => apiFetch<{ items: AngsuranMini[]; total: number }>('/api/v1/angsuran', { query: { page: 1, size: 100 } }),
-  { default: () => ({ items: [], total: 0 }) }
-)
-const pbkMenunggu = computed(() => pbkList.value.items.filter(i => i.status === 'diajukan').length)
-const tagihanBelum = computed(() => tagihanList.value.items.filter(i => i.status === 'belum').length)
-const angsuranBerjalan = computed(() => angsuranList.value.items.filter(i => i.status === 'berjalan').length)
+const selectedClassId = computed<number | undefined>({
+  get: () => classId.value ?? dash.value?.class_id ?? undefined,
+  set: (value) => { classId.value = value }
+})
 
-/** SPT dilaporkan yang belum diberi nilai — antrean penilaian guru. */
-const { data: sptSummary } = useAsyncData(
-  'guru-dashboard-spt-summary',
-  () => apiFetch<TaxReturnSummary>('/api/v1/spt/summary'),
-  { default: () => ({ draft: 0, awaiting_payment: 0, reported: 0, total: 0 }) }
+const classOptions = computed(() =>
+  (dash.value?.classes ?? []).map(c => ({
+    label: `${c.name} (${c.academic_year})${c.archived ? ' - arsip' : ''}${c.pending_grading ? ` - ${c.pending_grading} perlu dinilai` : ''}`,
+    value: c.id
+  }))
 )
+const selectedClass = computed(() => dash.value?.classes.find(c => c.id === dash.value?.class_id))
 
-const { data: classes, status: classesStatus } = useAsyncData(
-  'guru-classes',
-  () => apiFetch<SchoolClass[]>('/api/v1/classes'),
-  { default: () => [] as SchoolClass[] }
-)
+const loading = computed(() => dashStatus.value === 'pending' && !dash.value)
+const students = computed(() => dash.value?.students ?? [])
+const idleCount = computed(() => students.value.filter(s => !s.has_activity).length)
+const sptTotal = computed(() => students.value.reduce((n, s) => n + s.spt_reported, 0))
 
-const statCards = computed(() => [
-  { label: 'Kelas Saya', value: summary.value?.classes ?? 0, icon: 'i-lucide-book-open' },
-  { label: 'Siswa Terdaftar', value: summary.value?.siswa ?? 0, icon: 'i-lucide-graduation-cap' }
+// ---- Perlu perhatian: payment-side queues -----------------------------------
+interface StatusRow { status: string }
+interface QueueList { items: StatusRow[], total: number }
+
+function queueFetch(path: string) {
+  return apiFetch<QueueList>(path, { query: { page: 1, size: 100 } })
+}
+const { data: pbkList, error: pbkError } = useAsyncData('guru-dashboard-pbk', () => queueFetch('/api/v1/pbk'))
+const { data: tagihanList, error: tagihanError } = useAsyncData('guru-dashboard-tagihan', () => queueFetch('/api/v1/tagihan'))
+const { data: angsuranList, error: angsuranError } = useAsyncData('guru-dashboard-angsuran', () => queueFetch('/api/v1/angsuran'))
+
+function countOf(list: QueueList | null | undefined, status: string): number | null {
+  return list ? list.items.filter(i => i.status === status).length : null
+}
+
+const attention = computed(() => [
+  { label: 'Pbk menunggu', to: '/guru/pbk', value: countOf(pbkList.value, 'diajukan'), failed: !!pbkError.value },
+  { label: 'Tagihan belum dibilling', to: '/guru/tagihan', value: countOf(tagihanList.value, 'belum'), failed: !!tagihanError.value },
+  { label: 'Angsuran berjalan', to: '/guru/angsuran', value: countOf(angsuranList.value, 'berjalan'), failed: !!angsuranError.value }
 ])
 
-// ---- Class detail (enrolled students) --------------------------------------
-const selectedClassId = ref<number | null>(null)
-
-const { data: classDetail, status: detailStatus } = useAsyncData(
-  'guru-class-detail',
-  async () =>
-    selectedClassId.value === null
-      ? null
-      : await apiFetch<ClassDetail>(`/api/v1/classes/${selectedClassId.value}`),
-  { watch: [selectedClassId] }
-)
-
-function selectClass(id: number) {
-  selectedClassId.value = selectedClassId.value === id ? null : id
-}
+const monitorGroups = [
+  {
+    title: 'eBupot',
+    links: [
+      { label: 'BP21', to: '/guru/bp21' },
+      { label: 'BPPU', to: '/guru/bppu' },
+      { label: 'BP26', to: '/guru/bp26' },
+      { label: 'BPNR', to: '/guru/bpnr' },
+      { label: 'SP', to: '/guru/sp' },
+      { label: 'CY', to: '/guru/cy' },
+      { label: 'BPMP', to: '/guru/bpmp' }
+    ]
+  },
+  {
+    title: 'e-Faktur',
+    links: [
+      { label: 'Faktur Keluaran', to: '/guru/e-faktur/keluaran' },
+      { label: 'Faktur Masukan', to: '/guru/e-faktur/masukan' }
+    ]
+  },
+  { title: 'SPT', links: [{ label: 'SPT Masa', to: '/guru/spt' }] }
+]
 </script>
 
 <template>
-  <div class="space-y-6">
-    <h1 class="text-2xl font-semibold text-default">Dasbor Guru</h1>
-
-    <!-- Perlu perhatian: rekap pembayaran -->
-    <UCard>
-      <template #header>
-        <h2 class="font-semibold text-default">Perlu Perhatian</h2>
-      </template>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div class="flex items-center justify-between gap-2 rounded-lg bg-elevated/50 px-4 py-3">
-          <div>
-            <p class="text-sm text-muted">Pbk menunggu</p>
-            <p class="text-2xl font-semibold text-default">{{ pbkMenunggu }}</p>
-          </div>
-          <UButton to="/guru/pbk" size="sm" color="neutral" variant="ghost" icon="i-lucide-arrow-right" label="Pbk" />
-        </div>
-        <div class="flex items-center justify-between gap-2 rounded-lg bg-elevated/50 px-4 py-3">
-          <div>
-            <p class="text-sm text-muted">Tagihan belum dibilling</p>
-            <p class="text-2xl font-semibold text-default">{{ tagihanBelum }}</p>
-          </div>
-          <UButton to="/guru/tagihan" size="sm" color="neutral" variant="ghost" icon="i-lucide-arrow-right" label="Tagihan" />
-        </div>
-        <div class="flex items-center justify-between gap-2 rounded-lg bg-elevated/50 px-4 py-3">
-          <div>
-            <p class="text-sm text-muted">Angsuran berjalan</p>
-            <p class="text-2xl font-semibold text-default">{{ angsuranBerjalan }}</p>
-          </div>
-          <UButton to="/guru/angsuran" size="sm" color="neutral" variant="ghost" icon="i-lucide-arrow-right" label="Angsuran" />
-        </div>
+  <div class="dash-page">
+    <div class="dash-head">
+      <div>
+        <h1>Dasbor Guru</h1>
+        <p>Pantau progres belajar siswa dan nilai dokumen yang sudah terbit.</p>
       </div>
-      <div class="mt-3">
-        <UButton to="/guru/deposit" size="sm" color="neutral" variant="outline" icon="i-lucide-wallet" label="Rekap Deposit" />
+      <div v-if="dash && dash.classes.length" class="dash-head__actions">
+        <label for="guru-class-select" class="text-sm font-bold text-highlighted">Kelas</label>
+        <USelect
+          v-if="dash.classes.length > 1"
+          id="guru-class-select"
+          v-model="selectedClassId"
+          :items="classOptions"
+          class="w-full min-w-0 sm:w-80"
+        />
+        <span v-else class="text-sm font-semibold">{{ selectedClass?.name }} ({{ selectedClass?.academic_year }})</span>
       </div>
-    </UCard>
-
-    <!-- Stat cards -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <UCard v-for="card in statCards" :key="card.label">
-        <div class="flex items-center gap-4">
-          <div class="rounded-lg bg-primary/10 p-3">
-            <UIcon :name="card.icon" class="size-6 text-primary" />
-          </div>
-          <div>
-            <p class="text-sm text-muted">{{ card.label }}</p>
-            <p class="text-2xl font-semibold text-default">{{ card.value }}</p>
-          </div>
-        </div>
-      </UCard>
-
-      <UCard>
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <div class="rounded-lg bg-warning/10 p-3">
-              <UIcon name="i-lucide-clipboard-check" class="size-6 text-warning" />
-            </div>
-            <div>
-              <p class="text-sm text-muted">Perlu dinilai</p>
-              <p class="text-2xl font-semibold text-default">{{ sptSummary.reported }}</p>
-              <p class="text-xs text-muted">SPT dilaporkan menunggu penilaian. Antrean per modul: SPT, BP21, BPPU, BP26.</p>
-            </div>
-          </div>
-          <UButton to="/guru/spt" icon="i-lucide-arrow-right" color="neutral" variant="ghost" label="Nilai SPT" />
-        </div>
-      </UCard>
-      
-      <UCard>
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <div class="rounded-lg bg-primary/10 p-3">
-              <UIcon name="i-lucide-scroll-text" class="size-6 text-primary" />
-            </div>
-            <div>
-              <p class="text-sm text-muted">Monitoring e-Bupot</p>
-              <p class="text-lg font-semibold text-default">BP21 Siswa</p>
-            </div>
-          </div>
-          <UButton to="/guru/bp21" icon="i-lucide-arrow-right" color="neutral" variant="ghost" />
-        </div>
-      </UCard>
-
-      <UCard>
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <div class="rounded-lg bg-primary/10 p-3">
-              <UIcon name="i-lucide-file-signature" class="size-6 text-primary" />
-            </div>
-            <div>
-              <p class="text-sm text-muted">Monitoring e-Bupot</p>
-              <p class="text-lg font-semibold text-default">BPPU Siswa</p>
-            </div>
-          </div>
-          <UButton to="/guru/bppu" icon="i-lucide-arrow-right" color="neutral" variant="ghost" />
-        </div>
-      </UCard>
-
-      <UCard>
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <div class="rounded-lg bg-primary/10 p-3">
-              <UIcon name="i-lucide-globe" class="size-6 text-primary" />
-            </div>
-            <div>
-              <p class="text-sm text-muted">Monitoring e-Bupot</p>
-              <p class="text-lg font-semibold text-default">BP26 Siswa</p>
-            </div>
-          </div>
-          <UButton to="/guru/bp26" icon="i-lucide-arrow-right" color="neutral" variant="ghost" />
-        </div>
-      </UCard>
     </div>
 
-    <!-- Class list -->
-    <UCard>
-      <template #header>
-        <h2 class="font-semibold text-default">Kelas Saya</h2>
-      </template>
+    <!-- Whole-dashboard error / empty -->
+    <UAlert
+      v-if="dashError"
+      color="error"
+      variant="subtle"
+      icon="i-lucide-circle-alert"
+      title="Dasbor kelas gagal dimuat."
+      :description="apiErrorMessage(dashError, 'Periksa koneksi lalu coba lagi.')"
+      :actions="[{ label: 'Coba lagi', color: 'neutral', variant: 'outline', onClick: () => refreshDash() }]"
+    />
 
-      <div v-if="classesStatus === 'pending'" class="py-6 text-center text-sm text-muted">
-        Memuat…
+    <section v-else-if="dash && !dash.classes.length" class="dash-panel">
+      <div class="dash-state">
+        <UIcon name="i-lucide-book-open" class="size-7" />
+        <strong>Belum ada kelas</strong>
+        <span>Anda belum menjadi pengajar kelas mana pun. Minta admin institusi menautkan kelas ke akun Anda.</span>
       </div>
-      <div v-else-if="classes.length === 0" class="py-6 text-center text-sm text-muted">
-        Belum ada kelas.
-      </div>
-      <ul v-else class="divide-y divide-default">
-        <li v-for="c in classes" :key="c.id">
-          <button
-            type="button"
-            class="flex w-full items-center justify-between gap-3 px-2 py-3 text-left hover:bg-elevated/50"
-            @click="selectClass(c.id)"
-          >
-            <div>
-              <p class="font-medium text-default">{{ c.name }}</p>
-              <p class="text-sm text-muted">Tahun Ajaran {{ c.academic_year }}</p>
-            </div>
-            <UIcon
-              :name="selectedClassId === c.id ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-5 text-muted"
-            />
-          </button>
+    </section>
 
-          <!-- Enrolled students -->
-          <div v-if="selectedClassId === c.id" class="px-2 pb-4">
-            <div v-if="detailStatus === 'pending'" class="py-3 text-sm text-muted">Memuat…</div>
-            <template v-else-if="classDetail">
-              <p class="mb-2 text-sm font-medium text-muted">
-                Siswa terdaftar ({{ classDetail.students.length }})
-              </p>
-              <ul class="space-y-1">
-                <li
-                  v-for="s in classDetail.students"
-                  :key="s.id"
-                  class="flex items-center gap-2 rounded-md bg-elevated/50 px-3 py-2"
-                >
-                  <UIcon name="i-lucide-user" class="size-4 text-muted" />
-                  <span class="text-sm text-default">{{ s.full_name }}</span>
-                  <span class="text-xs text-muted">{{ s.email }}</span>
-                </li>
-              </ul>
-              <p v-if="classDetail.students.length === 0" class="text-sm text-muted">
-                Belum ada siswa terdaftar.
-              </p>
-            </template>
+    <template v-else>
+      <!-- Stat strip -->
+      <div class="dash-stats" aria-label="Ringkasan kelas">
+        <template v-if="loading">
+          <div v-for="n in 4" :key="n" class="dash-stat">
+            <USkeleton class="h-3 w-24" />
+            <USkeleton class="mt-1 h-7 w-12" />
           </div>
-        </li>
-      </ul>
-    </UCard>
+        </template>
+        <template v-else>
+          <div class="dash-stat">
+            <span class="dash-stat__label">Siswa di kelas</span>
+            <span class="dash-stat__value">{{ students.length }}</span>
+            <span class="dash-stat__hint">{{ selectedClass?.name }}</span>
+          </div>
+          <div class="dash-stat">
+            <span class="dash-stat__label">Perlu dinilai</span>
+            <span class="dash-stat__value">{{ dash?.grading_total ?? 0 }}</span>
+            <span class="dash-stat__hint">Dokumen terbit tanpa nilai</span>
+          </div>
+          <div class="dash-stat">
+            <span class="dash-stat__label">Belum ada aktivitas</span>
+            <span class="dash-stat__value">{{ idleCount }}</span>
+            <span class="dash-stat__hint">Siswa belum membuat dokumen</span>
+          </div>
+          <div class="dash-stat">
+            <span class="dash-stat__label">SPT dilaporkan</span>
+            <span class="dash-stat__value">{{ sptTotal }}</span>
+            <span class="dash-stat__hint">PPN, PPh Unifikasi, PPh 21/26</span>
+          </div>
+        </template>
+      </div>
+
+      <div class="dash-grid dash-grid--main">
+        <!-- Progress table -->
+        <section class="dash-panel" aria-labelledby="guru-progress-title">
+          <div class="dash-panel__head">
+            <h2 id="guru-progress-title">Progres Siswa</h2>
+            <small>Jumlah dokumen per langkah belajar</small>
+          </div>
+          <div v-if="loading" class="dash-panel__body space-y-3">
+            <USkeleton v-for="n in 5" :key="n" class="h-8 w-full" />
+          </div>
+          <div v-else-if="!students.length" class="dash-state">
+            <UIcon name="i-lucide-users" class="size-7" />
+            <strong>Belum ada siswa terdaftar</strong>
+            <span>Siswa ditambahkan ke kelas ini oleh admin institusi.</span>
+          </div>
+          <div v-else class="dash-table-wrap">
+            <table class="dash-table">
+              <caption class="sr-only">Progres tiap siswa pada kelas terpilih</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Siswa</th>
+                  <th scope="col" class="is-num" title="eBupot berstatus Telah Terbit (semua jenis)">eBupot terbit</th>
+                  <th scope="col" class="is-num" title="Faktur pajak keluaran berstatus Telah Terbit">Faktur keluaran</th>
+                  <th scope="col" class="is-num" title="Faktur pajak masukan yang sudah dikreditkan">Faktur masukan</th>
+                  <th scope="col" class="is-num" title="SPT Masa berstatus Dilaporkan">SPT lapor</th>
+                  <th scope="col" class="is-num" title="Kode billing berstatus Sudah Dibayar">Billing bayar</th>
+                  <th scope="col">Aktivitas terakhir</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in students" :key="s.id" :class="{ 'is-idle': !s.has_activity }">
+                  <th scope="row" class="font-semibold">
+                    <div class="min-w-40">
+                      {{ s.full_name }}
+                      <div class="text-xs font-normal dash-muted">{{ s.identifier }}</div>
+                    </div>
+                  </th>
+                  <td class="is-num">
+                    <span :class="s.ebupot_issued ? 'dash-cell-count' : 'dash-cell-zero'">{{ s.ebupot_issued || '-' }}</span>
+                    <div v-if="s.ebupot_draft" class="text-xs dash-muted">+{{ s.ebupot_draft }} konsep</div>
+                  </td>
+                  <td class="is-num"><span :class="s.faktur_keluaran_issued ? 'dash-cell-count' : 'dash-cell-zero'">{{ s.faktur_keluaran_issued || '-' }}</span></td>
+                  <td class="is-num"><span :class="s.faktur_masukan_credited ? 'dash-cell-count' : 'dash-cell-zero'">{{ s.faktur_masukan_credited || '-' }}</span></td>
+                  <td class="is-num">
+                    <span :class="s.spt_reported ? 'dash-cell-count' : 'dash-cell-zero'">{{ s.spt_reported || '-' }}</span>
+                    <div v-if="s.spt_reported" class="text-xs dash-muted">
+                      {{ [s.spt_ppn && `PPN ${s.spt_ppn}`, s.spt_pph_unifikasi && `Unif. ${s.spt_pph_unifikasi}`, s.spt_pph_21_26 && `21/26 ${s.spt_pph_21_26}`].filter(Boolean).join(' · ') }}
+                    </div>
+                  </td>
+                  <td class="is-num"><span :class="s.billing_paid ? 'dash-cell-count' : 'dash-cell-zero'">{{ s.billing_paid || '-' }}</span></td>
+                  <td>
+                    <UBadge v-if="!s.has_activity" color="warning" variant="subtle" icon="i-lucide-circle-alert">Belum ada aktivitas</UBadge>
+                    <span v-else class="whitespace-nowrap text-sm">{{ formatRelative(s.last_activity_at) }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Grading queue -->
+        <section class="dash-panel" aria-labelledby="guru-queue-title">
+          <div class="dash-panel__head">
+            <h2 id="guru-queue-title">Perlu Dinilai</h2>
+            <small v-if="dash">{{ dash.grading_total }} dokumen</small>
+          </div>
+          <div v-if="loading" class="dash-panel__body space-y-3">
+            <USkeleton v-for="n in 4" :key="n" class="h-10 w-full" />
+          </div>
+          <div v-else-if="!dash?.grading_items.length" class="dash-state">
+            <UIcon name="i-lucide-circle-check" class="size-7" />
+            <strong>Semua sudah dinilai</strong>
+            <span>Tidak ada dokumen terbit atau SPT dilaporkan yang menunggu nilai di kelas ini.</span>
+          </div>
+          <template v-else>
+            <div class="flex flex-wrap gap-1.5 border-b border-default px-4 py-3">
+              <NuxtLink
+                v-for="m in dash.grading_by_module"
+                :key="m.module"
+                :to="guruMonitorPath(m.module)"
+                class="dash-tag hover:bg-elevated"
+                :title="`Buka monitor ${m.module_label}`"
+              >
+                {{ m.module_label }} · {{ m.count }}
+              </NuxtLink>
+            </div>
+            <ul class="dash-rows">
+              <li v-for="item in dash.grading_items" :key="`${item.module}-${item.id}`">
+                <NuxtLink :to="guruMonitorPath(item.module)" class="dash-row">
+                  <span class="dash-tag">{{ item.module_label }}</span>
+                  <span class="dash-row__main">
+                    <span class="dash-row__title">{{ item.title }}</span>
+                    <span class="dash-row__sub">{{ item.siswa_name }}<template v-if="item.period"> · {{ item.period }}</template> · {{ formatRelative(item.at) }}</span>
+                  </span>
+                  <UIcon name="i-lucide-chevron-right" class="size-4 shrink-0 dash-muted" />
+                </NuxtLink>
+              </li>
+            </ul>
+            <p v-if="dash.grading_total > dash.grading_items.length" class="border-t border-default px-4 py-2 text-xs dash-muted">
+              Menampilkan {{ dash.grading_items.length }} terbaru dari {{ dash.grading_total }}. Buka monitor modul untuk daftar lengkap.
+            </p>
+          </template>
+        </section>
+      </div>
+    </template>
+
+    <!-- Perlu perhatian (compact) -->
+    <section class="dash-panel" aria-labelledby="guru-attention-title">
+      <div class="dash-panel__head">
+        <h2 id="guru-attention-title">Perlu Perhatian</h2>
+        <UButton to="/guru/deposit" size="xs" color="neutral" variant="outline" icon="i-lucide-wallet" label="Rekap Deposit" />
+      </div>
+      <div class="dash-grid p-0 sm:grid-cols-3">
+        <NuxtLink
+          v-for="a in attention"
+          :key="a.label"
+          :to="a.to"
+          class="dash-row border-b-0 hover:bg-elevated"
+        >
+          <span class="dash-row__main">
+            <span class="dash-row__sub">{{ a.label }}</span>
+            <span v-if="a.failed" class="text-sm font-semibold text-error">Gagal dimuat</span>
+            <USkeleton v-else-if="a.value === null" class="h-6 w-8" />
+            <span v-else class="text-xl font-extrabold">{{ a.value }}</span>
+          </span>
+          <UIcon name="i-lucide-arrow-right" class="size-4 shrink-0 dash-muted" />
+        </NuxtLink>
+      </div>
+    </section>
+
+    <!-- Monitor quick links -->
+    <section class="dash-panel" aria-labelledby="guru-monitor-title">
+      <div class="dash-panel__head">
+        <h2 id="guru-monitor-title">Monitor Modul</h2>
+        <small>Buka daftar dokumen siswa untuk menilai</small>
+      </div>
+      <div class="dash-panel__body grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+        <div v-for="g in monitorGroups" :key="g.title">
+          <p class="mb-1.5 text-xs font-extrabold uppercase tracking-wide dash-muted">{{ g.title }}</p>
+          <div class="flex flex-wrap gap-1.5">
+            <UButton
+              v-for="l in g.links"
+              :key="l.to"
+              :to="l.to"
+              size="sm"
+              color="neutral"
+              variant="outline"
+              :label="l.label"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>

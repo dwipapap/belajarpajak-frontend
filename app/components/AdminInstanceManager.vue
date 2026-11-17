@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Tenant, TenantCreate, TenantSummary, TenantUpdate, User, UserListResponse } from '~/types/api'
+import type { Tenant, TenantCreate, TenantOverview, TenantSummary, TenantUpdate, User, UserListResponse } from '~/types/api'
 
 /**
  * Superadmin console for the institution lifecycle: create (+ first admin),
@@ -10,11 +10,23 @@ const emit = defineEmits<{ changed: [] }>()
 const { apiFetch } = useApi()
 const toast = useToast()
 
-const { data: tenants, refresh: refreshTenants } = useAsyncData(
+const props = defineProps<{ overview?: TenantOverview[] }>()
+
+const {
+  data: tenants,
+  status: tenantsStatus,
+  error: tenantsError,
+  refresh: refreshTenants
+} = useAsyncData(
   'admin-instance-list',
   () => apiFetch<Tenant[]>('/api/v1/tenants'),
   { default: () => [] as Tenant[] }
 )
+const tenantsPending = computed(() => tenantsStatus.value === 'pending')
+
+function usageOf(id: number): TenantOverview | undefined {
+  return props.overview?.find(o => o.tenant_id === id)
+}
 
 const typeOptions = [
   { label: 'SMK', value: 'smk' },
@@ -582,58 +594,62 @@ function formatDate(iso: string | null) {
 </script>
 
 <template>
-  <UCard>
-    <template #header>
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="font-semibold text-default">Instansi</h2>
-        <UButton icon="i-lucide-plus" label="Buat Instansi" @click="openCreate" />
-      </div>
-    </template>
+  <section aria-labelledby="admin-instances-title">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <h2 id="admin-instances-title" class="text-base font-extrabold text-highlighted">Institusi</h2>
+      <UButton icon="i-lucide-plus" label="Buat Instansi" @click="openCreate" />
+    </div>
 
-    <div class="space-y-3">
-      <div
-        v-for="tenant in tenants"
-        :key="tenant.id"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 p-3"
-      >
-        <div class="min-w-0">
-          <div class="flex flex-wrap items-center gap-2">
-            <strong class="text-default">{{ tenant.name }}</strong>
-            <UBadge color="neutral" variant="subtle">{{ typeLabel[tenant.type] ?? tenant.type }}</UBadge>
+    <UAlert
+      v-if="tenantsError"
+      color="error"
+      variant="subtle"
+      icon="i-lucide-circle-alert"
+      title="Daftar institusi gagal dimuat."
+      :description="apiErrorMessage(tenantsError, 'Coba lagi beberapa saat.')"
+      :actions="[{ label: 'Coba lagi', color: 'neutral', variant: 'outline', onClick: () => refreshTenants() }]"
+    />
+    <div v-else-if="tenantsPending && !tenants.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <USkeleton v-for="n in 3" :key="n" class="h-64 w-full" />
+    </div>
+    <div v-else-if="!tenants.length" class="dash-panel">
+      <div class="dash-state">
+        <UIcon name="i-lucide-building-2" class="size-7" />
+        <strong>Belum ada institusi</strong>
+        <span>Buat institusi pertama beserta akun admin-nya.</span>
+      </div>
+    </div>
+    <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <article v-for="tenant in tenants" :key="tenant.id" class="dash-panel flex flex-col">
+        <div class="dash-panel__head">
+          <div class="min-w-0">
+            <h3 class="truncate text-base font-extrabold text-highlighted">{{ tenant.name }}</h3>
+            <p class="text-xs dash-muted">{{ typeLabel[tenant.type] ?? tenant.type }} · Kode {{ tenant.slug }}</p>
+          </div>
+          <div class="flex flex-wrap gap-1">
             <UBadge :color="tenant.is_active ? 'success' : 'error'" variant="subtle">
               {{ tenant.is_active ? 'Aktif' : 'Nonaktif' }}
             </UBadge>
-            <UBadge
-              v-if="tenant.berlaku_sampai && daysRemaining(tenant.berlaku_sampai) !== null && (daysRemaining(tenant.berlaku_sampai) ?? 0) < 0"
-              color="error"
-              variant="subtle"
-            >
-              Masa Berlaku Habis
-            </UBadge>
-            <UBadge
-              v-else-if="tenant.berlaku_sampai && (daysRemaining(tenant.berlaku_sampai) ?? 999) <= 30"
-              color="warning"
-              variant="subtle"
-            >
-              Sisa {{ daysRemaining(tenant.berlaku_sampai) }} hari
-            </UBadge>
-            <UBadge
-              v-if="(tenant.max_guru !== null && tenant.max_guru <= 0) || (tenant.max_siswa !== null && tenant.max_siswa <= 0) || (tenant.max_kelas !== null && tenant.max_kelas <= 0)"
-              color="warning"
-              variant="subtle"
-            >
-              Kuota Penuh
-            </UBadge>
+            <UBadge :color="expiryBadge(tenant).color" variant="subtle">{{ expiryBadge(tenant).label }}</UBadge>
           </div>
-          <p class="text-xs text-muted">
-            Kode: {{ tenant.slug }} · WA: {{ tenant.contact_wa || '-' }} · {{ periodText(tenant.berlaku_dari, tenant.berlaku_sampai) }} · Kuota
-            G{{ tenant.max_guru ?? '∞' }} / S{{ tenant.max_siswa ?? '∞' }} / K{{ tenant.max_kelas ?? '∞' }}
+        </div>
+        <div class="dash-panel__body grid flex-1 content-start gap-3">
+          <p class="text-sm">
+            <span class="font-semibold">{{ periodText(tenant.berlaku_dari, tenant.berlaku_sampai) }}</span>
           </p>
+          <template v-if="usageOf(tenant.id)">
+            <DashQuotaMeter label="Guru" :usage="usageOf(tenant.id)!.guru" />
+            <DashQuotaMeter label="Siswa" :usage="usageOf(tenant.id)!.siswa" />
+            <DashQuotaMeter label="Kelas" :usage="usageOf(tenant.id)!.kelas" />
+            <p class="text-xs dash-muted">{{ usageOf(tenant.id)!.active_classes }} kelas aktif</p>
+          </template>
+          <p v-else class="text-xs dash-muted">Pemakaian kuota belum tersedia.</p>
+          <p class="text-xs dash-muted">WA: {{ tenant.contact_wa || '-' }}</p>
           <p v-if="!tenant.is_active" class="text-xs text-error">
-            Alasan: {{ tenant.deactivated_reason || '—' }}
+            Alasan: {{ tenant.deactivated_reason || '-' }}
           </p>
         </div>
-        <div class="flex flex-wrap gap-1">
+        <div class="flex flex-wrap gap-1 border-t border-default p-3">
           <UButton icon="i-lucide-eye" size="xs" color="neutral" variant="soft" label="Detail" @click="openDetail(tenant)" />
           <UButton icon="i-lucide-settings-2" size="xs" label="Atur" @click="openEdit(tenant)" />
           <UButton
@@ -647,8 +663,7 @@ function formatDate(iso: string | null) {
           <UButton icon="i-lucide-download" size="xs" color="neutral" variant="soft" label="Backup" @click="openBackup(tenant)" />
           <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="soft" label="Hapus" @click="openDelete(tenant)" />
         </div>
-      </div>
-      <p v-if="!tenants.length" class="py-4 text-center text-sm text-muted">Belum ada instansi.</p>
+      </article>
     </div>
 
     <!-- Create modal -->
@@ -919,5 +934,5 @@ function formatDate(iso: string | null) {
         </div>
       </template>
     </UModal>
-  </UCard>
+  </section>
 </template>
