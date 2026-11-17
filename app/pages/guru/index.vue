@@ -128,7 +128,7 @@ function selectClass(id: number) {
             <div>
               <p class="text-sm text-muted">Perlu dinilai</p>
               <p class="text-2xl font-semibold text-default">{{ sptSummary.reported }}</p>
-              <p class="text-xs text-muted">SPT dilaporkan menunggu penilaian. Antrean per modul: SPT, BP21, BP23, BP26.</p>
+              <p class="text-xs text-muted">SPT dilaporkan menunggu penilaian. Antrean per modul: SPT, BP21, BPPU, BP26.</p>
             </div>
           </div>
           <UButton to="/guru/spt" icon="i-lucide-arrow-right" color="neutral" variant="ghost" label="Nilai SPT" />
@@ -158,10 +158,10 @@ function selectClass(id: number) {
             </div>
             <div>
               <p class="text-sm text-muted">Monitoring e-Bupot</p>
-              <p class="text-lg font-semibold text-default">BP23 Siswa</p>
+              <p class="text-lg font-semibold text-default">BPPU Siswa</p>
             </div>
           </div>
-          <UButton to="/guru/bp23" icon="i-lucide-arrow-right" color="neutral" variant="ghost" />
+          <UButton to="/guru/bppu" icon="i-lucide-arrow-right" color="neutral" variant="ghost" />
         </div>
       </UCard>
 

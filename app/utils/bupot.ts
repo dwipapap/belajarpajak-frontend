@@ -1,10 +1,10 @@
-// Shared labels/formatters for the e-Bupot modules (BP21, BP23, BP26, BPPU, ...).
+// Shared labels/formatters for the e-Bupot modules (BP21, BP26, BPPU, ...).
 import type { Bp21Status, Bp21TaxFacility, Bp26SptFlag } from '~/types/api'
 
-export type BupotModule = 'bppu' | 'bpnr' | 'bp21' | 'bp26' | 'sp' | 'cy' | 'bpmp' | 'bp23'
+export type BupotModule = 'bppu' | 'bpnr' | 'bp21' | 'bp26' | 'sp' | 'cy' | 'bpmp'
 export type BupotToolbarAction = 'create' | 'delete' | 'issue' | 'monitoring' | 'import' | 'bulk' | 'cancel' | 'refresh'
 export const bupotCode: Record<BupotModule, string> = {
-  bppu: 'BPU', bpnr: 'BPNR', bp21: 'BP21', bp26: 'BP26', sp: 'SP', cy: 'CY', bpmp: 'MP', bp23: 'BP23'
+  bppu: 'BPU', bpnr: 'BPNR', bp21: 'BP21', bp26: 'BP26', sp: 'SP', cy: 'CY', bpmp: 'MP'
 }
 export function bupotTitle(module: BupotModule, status: Bp21Status): string {
   const phase = { draft: 'NOT ISSUED', issued: 'ISSUED', invalid: 'TIDAK VALID' }[status]
@@ -132,7 +132,7 @@ export function formatPeriod(row: { tax_month: number, tax_year: number }) {
   return `${monthLabels[row.tax_month]} ${row.tax_year}`
 }
 
-/** Client-side validation shared by the BP21/BP23/BP26 create forms. */
+/** Client-side validation shared by the BP21/BP26 create forms. */
 // SP (setor sendiri) / CY (digunggung): no counterparty, DPP entered directly.
 export function validateSetorCreate(state: {
   class_id?: number
@@ -183,8 +183,8 @@ export function validateBupotCreate(state: {
   if (!ident) {
     errors.push({ name: 'recipient_identity_number', message: 'Nomor identitas wajib diisi' })
   } else if (!/^\d{16}$/.test(ident) && ident !== '0000000000000000') {
-    // BP23 tanpa NPWP memakai 16 nol; BP26 TIN/paspor ditoleransi bila bukan 16 digit?
-    // Untuk belajar: ingatkan format 16 digit, kecuali 16 nol khusus BP23.
+    // BPPU Pasal 23 tanpa NPWP memakai 16 nol; BP26 TIN/paspor ditoleransi bila bukan 16 digit?
+    // Untuk belajar: ingatkan format 16 digit, kecuali 16 nol khusus BPPU objek Pasal 23.
     errors.push({ name: 'recipient_identity_number', message: 'Harus 16 digit (NPWP 16 / NIK)' })
   }
   if (!state.recipient_name) errors.push({ name: 'recipient_name', message: 'Nama wajib diisi' })

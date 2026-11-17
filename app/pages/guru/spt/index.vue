@@ -148,7 +148,7 @@ const columns: TableColumn<TaxReturnRead>[] = [
 
       <section class="bupot-main">
         <div class="bupot-main__header"><h1>SPT Siswa</h1></div>
-        <p class="text-xs text-muted">Nilai = memberi skor dan umpan balik pada SPT. Buka antrean tiap modul (SPT, BP21, BP23, BP26) untuk menilai dokumen yang telah terbit.</p>
+        <p class="text-xs text-muted">Nilai = memberi skor dan umpan balik pada SPT. Buka antrean tiap modul (SPT, BP21, BPPU, BP26) untuk menilai dokumen yang telah terbit.</p>
 
         <div class="bupot-toolbar">
           <UButton icon="i-lucide-refresh-cw" color="info" variant="soft" :loading="listStatus === 'pending'" @click="refreshAll" />

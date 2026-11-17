@@ -1,6 +1,6 @@
 # Simulator Pajak — Frontend
 
-Nuxt 4 + Nuxt UI 4 frontend for the multi-tenant **tax administration learning simulator**. The app covers authentication, role-based dashboards, institution/user/class management, tariff management, national tax portal-inspired e-Bupot BP21/BP23/BP26/BPPU/BPNR/SP/CY + BPMP → BP A1/A2 screens, Bukti Potong Saya, e-Faktur Keluaran/Masukan, SPT Masa (PPN + PPh Unifikasi + PPh 21/26), and Pembayaran (kode billing, Layanan Mandiri, Deposit, Pemindahbukuan, Tagihan, Angsuran).
+Nuxt 4 + Nuxt UI 4 frontend for the multi-tenant **tax administration learning simulator**. The app covers authentication, role-based dashboards, institution/user/class management, tariff management, national tax portal-inspired e-Bupot BP21/BP26/BPPU/BPNR/SP/CY + BPMP → BP A1/A2 screens, Bukti Potong Saya, e-Faktur Keluaran/Masukan, SPT Masa (PPN + PPh Unifikasi + PPh 21/26), and Pembayaran (kode billing, Layanan Mandiri, Deposit, Pemindahbukuan, Tagihan, Angsuran).
 
 The backend lives in a **separate repository**: `../backend` in the workspace (GitHub `belajarpajak-backend`, FastAPI). Start it first. See its README for the database bootstrap and seed credentials.
 
@@ -67,8 +67,8 @@ app/
 - Role dashboards for superadmin/admin/guru/siswa + change-password page. Siswa dashboard has a *Langkah belajar* guide; guru dashboard has *Perlu dinilai* and *Perlu Perhatian* queues.
 - Superadmin institution manager: create institution + first admin, dossier (quotas, countdown, admin reset, history), active-period calendar, export/delete. Tariff management (PTKP + Pasal 17) and audit-log viewer.
 - Admin user management (single + bulk) and *Kelola Kelas* (create, enroll, archive).
-- Guru document monitoring via `DocumentGuruMonitor` (bp21/bp23/bp26/bppu/bpnr/sp/cy/bpmp, e-faktur keluaran/masukan, spt) with score + feedback review; payment-side review of Pbk, Tagihan, Angsuran, and class deposits.
-- Siswa e-Bupot BP21/BP23/BP26/BPPU/BPNR/SP/CY: list, create, issue (signer + Kode Otorisasi simulasi), cancel own, BPE-SIM PDF, import/export, bulk issue. BP21 supports SIM-TER A/B/C (Jan–Nov) vs progresif Desember.
+- Guru document monitoring via `DocumentGuruMonitor` (bp21/bp26/bppu/bpnr/sp/cy/bpmp, e-faktur keluaran/masukan, spt) with score + feedback review; payment-side review of Pbk, Tagihan, Angsuran, and class deposits.
+- Siswa e-Bupot BP21/BP26/BPPU/BPNR/SP/CY: list, create, issue (signer + Kode Otorisasi simulasi), cancel own, BPE-SIM PDF, import/export, bulk issue. BP21 supports SIM-TER A/B/C (Jan–Nov) vs progresif Desember.
 - Siswa BPMP (monthly permanent-employee slips) and read-only BP A1/A2 yearly aggregates. Known issue: the BPMP page does not send a Kode Otorisasi yet, so issuing fails (bug B1 in `../docs/AUDIT_FIDELITAS_ALUR.md`).
 - Siswa Bukti Potong Saya: aggregate of issued slips across e-Bupot types with BPE download.
 - Siswa e-Faktur Keluaran/Masukan: list, create, detail `[id]`, issue (NSFP 17 digit) / credit, lifecycle views.

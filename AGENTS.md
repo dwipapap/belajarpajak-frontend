@@ -5,7 +5,7 @@ Strategic/design context lives in [PRODUCT.md](PRODUCT.md) and [DESIGN.md](DESIG
 
 ## 1. What this project is
 
-**PajakSim** (display name: **"Sistem Pembelajaran Pajak Online"**, operated by *Konsultan Bisnis Sudarno*) is a multi-tenant **tax administration learning simulator** for Indonesian schools (SMK), universities, and training institutions. Students (siswa) practice creating simulated tax documents with dummy data: e-Bupot BP21/BP23/BP26/BPPU/BPNR/SP/CY, BPMP (Bulanan Pegawai Tetap) → BP A1/A2, Bukti Potong Saya, e-Faktur Keluaran/Masukan, SPT Masa PPN + PPh Unifikasi + PPh 21/26, and Pembayaran (kode billing with NTPN/kanal, Layanan Mandiri, Deposit Pajak, Pemindahbukuan, Tagihan SKP/STP, Angsuran). Teachers (guru) monitor, grade, and decide Pbk/Tagihan. Admins manage users and classes per institution (tenant). The superadmin manages institutions (period, quotas, first admin) and tax tariffs.
+**PajakSim** (display name: **"Sistem Pembelajaran Pajak Online"**, operated by *Konsultan Bisnis Sudarno*) is a multi-tenant **tax administration learning simulator** for Indonesian schools (SMK), universities, and training institutions. Students (siswa) practice creating simulated tax documents with dummy data: e-Bupot BP21/BP26/BPPU/BPNR/SP/CY, BPMP (Bulanan Pegawai Tetap) → BP A1/A2, Bukti Potong Saya, e-Faktur Keluaran/Masukan, SPT Masa PPN + PPh Unifikasi + PPh 21/26, and Pembayaran (kode billing with NTPN/kanal, Layanan Mandiri, Deposit Pajak, Pemindahbukuan, Tagihan SKP/STP, Angsuran). Teachers (guru) monitor, grade, and decide Pbk/Tagihan. Admins manage users and classes per institution (tenant). The superadmin manages institutions (period, quotas, first admin) and tax tariffs.
 
 Roadmap and fidelity gaps vs the reference portal: `../docs/AUDIT_FIDELITAS_ALUR.md` and `../plans/README.md` (workspace root, outside this repo).
 
@@ -22,7 +22,7 @@ The UI deliberately **mimics the look, layout, and workflow of Indonesia's natio
 | Operator brand (login page) | Konsultan Bisnis Sudarno |
 | Logo | Generic `i-lucide-landmark` crest, navy + gold |
 
-Generic tax terms that also exist in the real system (BP21, BP23, BP26, BPPU, BPNR, SP, CY, eBupot, e-Faktur, SPT, NPWP, NITKU, DPP, PPh, KAP-KJS, faktur, billing) are domain vocabulary, not branding — use them freely.
+Generic tax terms that also exist in the real system (BP21, BP26, BPPU, BPNR, SP, CY, eBupot, e-Faktur, SPT, NPWP, NITKU, DPP, PPh, KAP-KJS, faktur, billing) are domain vocabulary, not branding — use them freely.
 
 ## 2. Tech stack
 
@@ -53,7 +53,7 @@ app/
 ├── app.config.ts               # Nuxt UI theme: primary=indigo, neutral=slate
 ├── assets/css/main.css         # Tailwind/Nuxt UI imports + shared .bupot-* page shell classes
 ├── components/
-│   ├── DocumentGuruMonitor.vue # Generic guru review table, prop `module` (bp21/bp23/bp26/bppu/bpnr/sp/cy/faktur-keluaran/faktur-masukan/spt)
+│   ├── DocumentGuruMonitor.vue # Generic guru review table, prop `module` (bp21/bp26/bppu/bpnr/sp/cy/faktur-keluaran/faktur-masukan/spt)
 │   ├── DocumentSignModal.vue   # Shared Tanda Tangan Dokumen modal (signer + Kode Otorisasi); emits confirm({ signer_name, kode_otorisasi })
 │   ├── FakturKeluaranForm.vue  # Siswa e-Faktur Keluaran create/edit form
 │   ├── FakturMasukanForm.vue   # Siswa e-Faktur Masukan create/edit form
@@ -77,12 +77,12 @@ app/
 │   ├── admin/tarif-pajak.vue   # Superadmin-only PTKP + progresif management
 │   ├── admin/audit.vue         # Admin/superadmin audit-log viewer
 │   ├── guru/index.vue          # Guru dashboard: Perlu dinilai + Perlu Perhatian (Pbk/tagihan/angsuran/deposit)
-│   ├── guru/bp21|bp23|bp26|bppu|bpnr|sp|cy|bpmp/ # DocumentGuruMonitor thin pages
+│   ├── guru/bp21|bp26|bppu|bpnr|sp|cy|bpmp/ # DocumentGuruMonitor thin pages
 │   ├── guru/a1|a2/             # Read-only A1/A2 per identity
 │   ├── guru/e-faktur/          # Guru e-Faktur monitor (index + keluaran + masukan)
 │   ├── guru/spt/index.vue      # Guru SPT monitor
 │   ├── guru/pbk|tagihan|angsuran|deposit.vue # Guru payment-side review (decide Pbk, issue tagihan, class deposit recap)
-│   └── siswa/                  # Siswa dashboard + bp21/bp23/bp26/bppu/bpnr/sp/cy/bpmp + a1/a2 + bukti-potong-saya + dokumen-saya
+│   └── siswa/                  # Siswa dashboard + bp21/bp26/bppu/bpnr/sp/cy/bpmp + a1/a2 + bukti-potong-saya + dokumen-saya
 │                               #   + e-faktur keluaran/masukan + spt + pembayaran (index, mandiri, deposit, pbk, tagihan, angsuran)
 ├── types/
 │   ├── api.ts                  # ALL API contract types — mirrors backend Pydantic schemas
@@ -121,7 +121,7 @@ Data fetching in pages uses `useAsyncData` with a unique string key per role/pag
 | classes | `GET /classes`, `GET /classes/{id}`, `POST /classes`, `POST /classes/{id}/enrollments`, `DELETE /classes/{id}/enrollments/{siswa_id}`, `PATCH /classes/{id}/archive` (superadmin may read across tenants) |
 | a1 / a2 | `GET /a1`, `GET /a1/{identity}` (same for `/a2`) — read-only yearly aggregate of issued BPMP |
 | dashboard | `GET /dashboard/summary` — role-shaped counts |
-| bp21 / bp23 / bp26 / bppu / bpmp / bpnr / sp / cy | Same 17-endpoint set via `make_slip_router` + `GET /{t}/{id}/pdf` (BPE-SIM): `GET /{t}`, `GET /{t}/summary`, `GET/PATCH /{t}/{id}`, `POST /{t}`, `DELETE /{t}/{id}`, `POST /{t}/{id}/issue` (signer + Kode Otorisasi simulasi, required for **every** slip type incl. BPMP, min 6 chars; same for `bulk-issue`; `SIM-` number), `POST /{t}/{id}/cancel`, `POST /{t}/{id}/invalidate`, `PATCH /{t}/{id}/spt-flag`, `PATCH /{t}/{id}/review` (guru grading), `POST /{t}/import-xml` (plus converter aliases) + `GET /{t}/import-template`, `POST /{t}/bulk-issue`, `GET /{t}/export-csv`, `GET /{t}/export-xml`. BP21 adds `ter_category` A/B/C + `calculation_method` |
+| bp21 / bp26 / bppu / bpmp / bpnr / sp / cy | Same 17-endpoint set via `make_slip_router` + `GET /{t}/{id}/pdf` (BPE-SIM): `GET /{t}`, `GET /{t}/summary`, `GET/PATCH /{t}/{id}`, `POST /{t}`, `DELETE /{t}/{id}`, `POST /{t}/{id}/issue` (signer + Kode Otorisasi simulasi, required for **every** slip type incl. BPMP, min 6 chars; same for `bulk-issue`; `SIM-` number), `POST /{t}/{id}/cancel`, `POST /{t}/{id}/invalidate`, `PATCH /{t}/{id}/spt-flag`, `PATCH /{t}/{id}/review` (guru grading), `POST /{t}/import-xml` (plus converter aliases) + `GET /{t}/import-template`, `POST /{t}/bulk-issue`, `GET /{t}/export-csv`, `GET /{t}/export-xml`. BP21 adds `ter_category` A/B/C + `calculation_method` |
 | faktur-keluaran | `GET /faktur-keluaran`, `GET /faktur-keluaran/summary`, `POST /faktur-keluaran`, `GET/PATCH/DELETE /faktur-keluaran/{id}`, `POST /faktur-keluaran/{id}/issue` (body `{signer_name?, kode_otorisasi}` wajib, via `DocumentSignModal`), `POST /faktur-keluaran/{id}/cancel`, `PATCH /faktur-keluaran/{id}/review`, line CRUD `/{id}/lines`, `POST /faktur-keluaran/bulk-issue` (body `{ids, signer_name?, kode_otorisasi}` wajib) |
 | faktur-masukan | `GET /faktur-masukan`, `POST /faktur-masukan`, `POST /faktur-masukan/{id}/credit\|uncredit`, `POST /faktur-masukan/bulk-credit\|bulk-uncredit\|bulk-delete`, `POST /faktur-masukan/{id}/cancel` (admin-only), `PATCH /faktur-masukan/{id}/review` |
 | spt | `GET /spt`, `GET /spt/summary`, `POST /spt`, `GET /spt/{id}`, `POST /spt/{id}/posting`, `POST /spt/{id}/pernyataan`, `POST /spt/{id}/submit?metode=billing\|deposit` (body `{passphrase}`), `POST /spt/{id}/pembetulan`, `GET /spt/{id}/billing`, `GET /spt/{id}/bpe` (PDF BPE, reported only), `PATCH /spt/{id}/review` — types `ppn` / `pph_unifikasi` / `pph_21_26` (BPMP aggregate) / `pph21_26` (SIM-TER/progresif); `TaxReturnRead` carries `bpe_number` + `received_at` |
@@ -150,9 +150,9 @@ Response conventions: lists are `Paginated<T>` (`{ items, total, page, size }`),
 
 ## 8. Recipe: adding a new document module (e.g. BPPU, retur)
 
-Follow the BP21/BP23/BP26 pattern exactly — the reference implementation is `pages/siswa/bp21/`:
+Follow the BP21/BP26 pattern exactly — the reference implementation is `pages/siswa/bp21/`:
 
-1. **Types:** add `XxxRead`, `XxxCreate`, `XxxStatus`, `XxxListResponse = Paginated<XxxRead>`, `XxxSummary` to `types/api.ts`, mirroring the backend schema. Alias shared shapes (like `Bp23Status = Bp21Status`) instead of duplicating.
+1. **Types:** add `XxxRead`, `XxxCreate`, `XxxStatus`, `XxxListResponse = Paginated<XxxRead>`, `XxxSummary` to `types/api.ts`, mirroring the backend schema. Alias shared shapes (like `Bp26Status = Bp21Status`) instead of duplicating.
 2. **Siswa list page** `pages/siswa/xxx/index.vue`: `definePageMeta({ middleware: 'role', roles: ['siswa'] })`, `.bupot-page`/`.bupot-shell` layout, side status tabs from `statusTabs` + summary counts, `UTable` list, issue action with success/error toasts.
 3. **Siswa create page** `pages/siswa/xxx/create.vue`: `.bupot-create` form sections, `validateBupotCreate` (extend in `utils/bupot.ts` if fields differ; faktur uses `utils/faktur.ts`, SPT uses `utils/spt.ts`), submit → toast → navigate back to list.
 4. **Guru monitor:** if the module fits the shared row shape, reuse `DocumentGuruMonitor` with a new `module` prop value and a thin page in `pages/guru/xxx/index.vue`; otherwise generalize the component, don't fork it.
@@ -175,5 +175,5 @@ Follow the BP21/BP23/BP26 pattern exactly — the reference implementation is `p
 - [PRODUCT.md](PRODUCT.md) — register, users, brand personality, anti-references, design principles.
 - [DESIGN.md](DESIGN.md) — visual system: OKLCH palette, typography, elevation, component specs, do's/don'ts. Machine-readable tokens in its YAML frontmatter; extended tokens in `.impeccable/design.json`.
 - [README.md](README.md) — human-facing setup/runbook.
-- Historical spec: `KICKSTART_SPEC.md` (Phase 1 scope) if present at repo root; later phases already shipped (faktur, BP23, kode billing, SPT, PDF, grading, BPMP/A1/A2, pembayaran lanjutan). See current coverage above.
+- Historical spec: `KICKSTART_SPEC.md` (Phase 1 scope) if present at repo root; later phases already shipped (faktur, kode billing, SPT, PDF, grading, BPMP/A1/A2, pembayaran lanjutan). See current coverage above.
 - Next work: `../plans/README.md` (plans 007–011) and `../docs/AUDIT_FIDELITAS_ALUR.md`.

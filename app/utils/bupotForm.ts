@@ -93,7 +93,7 @@ export const facilityCodeByChoice: Record<BupotFacilityChoice, string> = {
   rate_0: '9'
 }
 
-/** BPPU / SP / CY / BP23 (and BP21). */
+/** BPPU / SP / CY (and BP21). */
 export const bupotFacilityChoices: { label: string, value: BupotFacilityChoice }[] = [
   { label: 'Tanpa Fasilitas', value: 'none' },
   { label: 'PPh Ditanggung Pemerintah (DTP)', value: 'dtp' },

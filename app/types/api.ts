@@ -281,19 +281,14 @@ export interface Bp21Summary {
   invalid: number
   total: number
 }
-// BP23 and BP26 share the BP21 slip lifecycle; only the SPT flag is BP26-specific.
-export type Bp23Status = Bp21Status
-export type Bp23TaxNature = Bp21TaxNature
-export type Bp23TaxFacility = Bp21TaxFacility
-
+// BP26 shares the BP21 slip lifecycle; only the SPT flag is BP26-specific.
 export type Bp26Status = Bp21Status
 export type Bp26TaxNature = Bp21TaxNature
 export type Bp26TaxFacility = Bp21TaxFacility
 
-export type Bp23Create = Omit<Bp21Create, 'ptkp_status' | 'negara_treaty' | 'pasal_treaty' | 'nomor_skd' | 'tarif_treaty_basis_points'>
-export type Bp23Read = Omit<Bp21Read, 'ptkp_status'> & { ptkp_status: string | null }
-export type Bp23ListResponse = Paginated<Bp23Read>
-export type Bp23Summary = Bp21Summary
+// Base shape for SP/CY (no treaty fields).
+export type SetorBaseCreate = Omit<Bp21Create, 'ptkp_status' | 'negara_treaty' | 'pasal_treaty' | 'nomor_skd' | 'tarif_treaty_basis_points'>
+export type SetorBaseRead = Omit<Bp21Read, 'ptkp_status'> & { ptkp_status: string | null }
 
 // Unifikasi (Fase 5): BPNR/SP/CY reuse shared slip shapes via aliases.
 // BPPU uses the full interface below (tax_type + tax_object_name + income_type).
@@ -309,12 +304,12 @@ export type SpTaxNature = Bp21TaxNature
 export type SpTaxFacility = Bp21TaxFacility
 // SP/CY have no counterparty: recipient fields are always null and DPP is
 // entered directly (PPh = DPP x tarif), mirroring backend NO_COUNTERPARTY_TYPES.
-export type SetorRead = Omit<Bp23Read, 'recipient_identity_number' | 'recipient_name'> & {
+export type SetorRead = Omit<SetorBaseRead, 'recipient_identity_number' | 'recipient_name'> & {
   recipient_identity_number: string | null
   recipient_name: string | null
 }
 export type SetorCreate = Omit<
-  Bp23Create,
+  SetorBaseCreate,
   | 'recipient_identity_number'
   | 'recipient_name'
   | 'recipient_address'
@@ -345,7 +340,6 @@ export type Bp26SptFlag =
   | 'spt_legal_process'
 
 export type Bp21SptFlag = Bp26SptFlag
-export type Bp23SptFlag = Bp26SptFlag
 
 export interface Bp26Read {
   id: number
@@ -443,8 +437,6 @@ export interface Bp26BulkIssueResult {
 
 export type Bp21ImportResult = Bp26ImportResult
 export type Bp21BulkIssueResult = Bp26BulkIssueResult
-export type Bp23ImportResult = Bp26ImportResult
-export type Bp23BulkIssueResult = Bp26BulkIssueResult
 
 /* --- BPPU: Bukti Pemotongan PPh Unifikasi (WPDN/BUT: PPh 4(2)/15/22/23) --- */
 

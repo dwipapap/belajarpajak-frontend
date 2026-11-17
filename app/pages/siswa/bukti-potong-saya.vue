@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Bp21ListResponse, Bp21Read, Bp23ListResponse, Bp23Read, Bp26ListResponse, Bp26Read, BppuListResponse, BppuRead, BpnrListResponse, BpnrRead, SpListResponse, SpRead, CyListResponse, CyRead } from '~/types/api'
+import type { Bp21ListResponse, Bp21Read, Bp26ListResponse, Bp26Read, BppuListResponse, BppuRead, BpnrListResponse, BpnrRead, SpListResponse, SpRead, CyListResponse, CyRead } from '~/types/api'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
@@ -20,11 +20,6 @@ const { data: bp21, refresh: refresh21 } = useAsyncData(
   'siswa-bukti-saya-bp21',
   () => apiFetch<Bp21ListResponse>(`/api/v1/bp21?${issuedQuery()}`),
   { default: () => ({ items: [], total: 0, page: 1, size: 100 }) as Bp21ListResponse, watch: [filterMonth, filterYear] }
-)
-const { data: bp23, refresh: refresh23 } = useAsyncData(
-  'siswa-bukti-saya-bp23',
-  () => apiFetch<Bp23ListResponse>(`/api/v1/bp23?${issuedQuery()}`),
-  { default: () => ({ items: [], total: 0, page: 1, size: 100 }) as Bp23ListResponse, watch: [filterMonth, filterYear] }
 )
 const { data: bp26, refresh: refresh26 } = useAsyncData(
   'siswa-bukti-saya-bp26',
@@ -52,15 +47,11 @@ const { data: cy, refresh: refreshCy } = useAsyncData(
   { default: () => ({ items: [], total: 0, page: 1, size: 100 }) as CyListResponse, watch: [filterMonth, filterYear] }
 )
 
-type Row = { kind: 'BP21' | 'BP23' | 'BP26' | 'BPPU' | 'BPNR' | 'SP' | 'CY', id: number, period: string, number: string | null, name: string, tax: number, signer: string | null }
+type Row = { kind: 'BP21' | 'BP26' | 'BPPU' | 'BPNR' | 'SP' | 'CY', id: number, period: string, number: string | null, name: string, tax: number, signer: string | null }
 
 const rows = computed<Row[]>(() => [
   ...(bp21.value.items as Bp21Read[]).map(i => ({
     kind: 'BP21' as const, id: i.id, period: formatPeriod(i), number: i.withholding_number,
-    name: i.recipient_name, tax: i.income_tax, signer: (i as never as { signer_name: string | null }).signer_name || null
-  })),
-  ...(bp23.value.items as Bp23Read[]).map(i => ({
-    kind: 'BP23' as const, id: i.id, period: formatPeriod(i), number: i.withholding_number,
     name: i.recipient_name, tax: i.income_tax, signer: (i as never as { signer_name: string | null }).signer_name || null
   })),
   ...(bp26.value.items as Bp26Read[]).map(i => ({
@@ -96,7 +87,7 @@ async function download(kind: Row['kind'], id: number) {
 }
 
 async function refreshAll() {
-  await Promise.all([refresh21(), refresh23(), refresh26(), refreshBppu(), refreshBpnr(), refreshSp(), refreshCy()])
+  await Promise.all([refresh21(), refresh26(), refreshBppu(), refreshBpnr(), refreshSp(), refreshCy()])
 }
 </script>
 
@@ -122,7 +113,7 @@ async function refreshAll() {
         </div>
 
         <p class="text-sm text-muted mb-3">
-          Agregat dokumen Telah Terbit milik sendiri (BP21/BP23/BP26/BPPU/BPNR/SP/CY). Unduh BPE-SIM PDF per baris.
+          Agregat dokumen Telah Terbit milik sendiri (BP21/BP26/BPPU/BPNR/SP/CY). Unduh BPE-SIM PDF per baris.
         </p>
 
         <div class="bupot-table table-sticky-actions" tabindex="0" role="region" aria-label="Tabel bukti potong, geser ke kanan untuk melihat semua kolom">

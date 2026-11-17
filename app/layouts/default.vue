@@ -97,7 +97,7 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
   {
     label: 'eBUPOT',
     icon: 'i-lucide-scroll-text',
-    active: route.path.includes('/bp21') || route.path.includes('/bp23') || route.path.includes('/bp26') || route.path.includes('/bppu') || route.path.includes('/bpnr') || route.path.includes('/bukti-potong') || route.path.includes('/sp') || route.path.includes('/cy') || route.path.includes('/bpmp') || route.path.includes('/a1') || route.path.includes('/a2'),
+    active: route.path.includes('/bp21') || route.path.includes('/bp26') || route.path.includes('/bppu') || route.path.includes('/bpnr') || route.path.includes('/bukti-potong') || route.path.includes('/sp') || route.path.includes('/cy') || route.path.includes('/bpmp') || route.path.includes('/a1') || route.path.includes('/a2'),
     children: [
       { label: 'Bukti Potong Saya', icon: 'i-lucide-file-user', to: modulePath('bukti-potong-saya') },
       { label: 'BPPU', icon: 'i-lucide-files', to: modulePath('bppu') },
@@ -106,7 +106,6 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
       { label: 'Pemotongan Secara Digunggung', icon: 'i-lucide-layers-3', to: modulePath('cy') },
       { label: 'Dokumen yang Dipersamakan dengan Bukti Potong', icon: 'i-lucide-file-check-2', disabled: true, badge: 'Segera hadir' },
       { label: 'BP 21 - Bukti Pemotongan Selain Pegawai Tetap', icon: 'i-lucide-file-text', to: modulePath('bp21') },
-      { label: 'BP 23 - Bukti Pemotongan PPh Pasal 23', icon: 'i-lucide-file-signature', to: modulePath('bp23') },
       { label: 'BP 26 - Bukti Pemotongan Wajib Pajak Luar Negeri', icon: 'i-lucide-globe', to: modulePath('bp26') },
       { label: 'BP A1 - Bukti Pemotongan A1 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', to: modulePath('a1') },
       { label: 'BP A2 - Bukti Pemotongan A2 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', to: modulePath('a2') },
