@@ -59,9 +59,10 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
         {
           label: 'Portal Saya',
           icon: 'i-lucide-shield-user',
-          active: route.path === homePath.value || route.path.includes('/dokumen-saya'),
+          active: route.path === homePath.value || route.path.includes('/dokumen-saya') || route.path.includes('/siswa/tugas'),
           children: [
             { label: 'Dasbor', icon: 'i-lucide-layout-dashboard', to: homePath.value, active: route.path === homePath.value },
+            { label: 'Tugas', icon: 'i-lucide-clipboard-check', to: '/siswa/tugas', active: route.path.includes('/siswa/tugas') },
             { label: 'Dokumen Saya', icon: 'i-lucide-folder-open', to: '/siswa/dokumen-saya', active: route.path.includes('/dokumen-saya') },
             { label: 'Profil Saya', icon: 'i-lucide-id-card', disabled: true, badge: 'Segera hadir' }
           ]
@@ -75,6 +76,16 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
           active: route.path === homePath.value
         }
       ]),
+  ...(auth.user.value?.role === 'guru'
+    ? [
+        {
+          label: 'Tugas',
+          icon: 'i-lucide-clipboard-check',
+          to: '/guru/tugas',
+          active: route.path.includes('/guru/tugas')
+        }
+      ]
+    : []),
   ...(auth.user.value?.role === 'admin'
     ? [
         {
