@@ -6,6 +6,7 @@ import type {
 } from '~/types/api'
 import { formatCurrency } from '~/utils/bupot'
 import {
+  docStatusLabel,
   assignmentStatusColor,
   assignmentStatusLabel,
   docTypeLabel,
@@ -45,7 +46,7 @@ watch(
       if (sub?.doc_id) {
         selectedDocId.value = sub.doc_id
       } else if (list && list.length > 0) {
-        selectedDocId.value = list[0]?.doc_id
+        selectedDocId.value = list[0]?.id
       }
     }
   },
@@ -247,32 +248,32 @@ async function onSubmitDoc() {
               <div v-else class="space-y-2">
                 <label
                   v-for="doc in candidates"
-                  :key="doc.doc_id"
+                  :key="doc.id"
                   class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 transition"
-                  :class="selectedDocId === doc.doc_id ? 'border-primary bg-primary/5' : 'border-default hover:bg-elevated/40'"
+                  :class="selectedDocId === doc.id ? 'border-primary bg-primary/5' : 'border-default hover:bg-elevated/40'"
                 >
                   <div class="flex items-start gap-3">
                     <input
                       v-model="selectedDocId"
                       type="radio"
-                      :value="doc.doc_id"
+                      :value="doc.id"
                       :disabled="!canSubmit"
                       class="mt-1"
                     >
                     <div>
                       <div class="flex flex-wrap items-center gap-2">
                         <span class="font-mono text-sm font-semibold text-highlighted">
-                          {{ doc.number ?? `Draf #${doc.doc_id}` }}
+                          {{ doc.number ?? `Konsep (belum bernomor) · ID ${doc.id}` }}
                         </span>
                         <UBadge
                           :color="doc.status === 'issued' || doc.status === 'reported' || doc.status === 'credited' ? 'success' : 'warning'"
                           variant="subtle"
                           size="xs"
                         >
-                          {{ doc.status }}
+                          {{ docStatusLabel(doc.status) }}
                         </UBadge>
                         <UBadge
-                          v-if="mySub?.doc_id === doc.doc_id"
+                          v-if="mySub?.doc_id === doc.id"
                           color="primary"
                           variant="subtle"
                           size="xs"
@@ -281,8 +282,8 @@ async function onSubmitDoc() {
                         </UBadge>
                       </div>
                       <div class="mt-0.5 text-xs text-muted">
-                        Masa Pajak: <strong class="text-default">{{ doc.period }}</strong>
-                        <span v-if="doc.counterparty"> &middot; Lawan Transaksi: {{ doc.counterparty }}</span>
+                        Masa Pajak: <strong class="text-default">{{ String(doc.tax_month).padStart(2, '0') }}/{{ doc.tax_year }}</strong>
+                        <span v-if="doc.counterparty_name"> &middot; Lawan Transaksi: {{ doc.counterparty_name }}</span>
                       </div>
                     </div>
                   </div>

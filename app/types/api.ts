@@ -1454,14 +1454,16 @@ export interface AutoCheckRead {
 }
 
 export interface CandidateDocRead {
-  doc_id: number
+  id: number
   doc_type: AssignmentDocType
   number: string | null
-  period: string
   status: string
-  counterparty: string | null
+  tax_month: number
+  tax_year: number
+  counterparty_name: string | null
+  dpp_amount: number
   tax_amount: number
-  created_at: string | null
+  created_at: string
 }
 
 export interface SubmissionRead {
@@ -1469,12 +1471,14 @@ export interface SubmissionRead {
   assignment_id: number
   siswa_id: number
   siswa_name: string
-  siswa_identifier: string | null
+  siswa_nis: string | null
+  siswa_email: string
   submitted: boolean
   doc_id: number | null
   doc_number: string | null
   doc_period: string | null
   doc_status: string | null
+  doc_tax_amount: number | null
   submitted_at: string | null
   is_late: boolean
   auto_score: number | null

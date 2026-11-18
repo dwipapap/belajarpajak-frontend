@@ -6,6 +6,7 @@ import type {
   SubmissionRead
 } from '~/types/api'
 import {
+  docStatusLabel,
   assignmentStatusColor,
   assignmentStatusLabel,
   DOC_TYPE_OPTIONS,
@@ -497,7 +498,7 @@ async function onSaveGrade() {
               >
                 <td class="py-3 pr-3">
                   <div class="font-medium text-highlighted">{{ sub.siswa_name }}</div>
-                  <div class="font-mono text-xs text-muted">{{ sub.siswa_identifier ?? '—' }}</div>
+                  <div class="font-mono text-xs text-muted">{{ sub.siswa_nis ?? sub.siswa_email }}</div>
                 </td>
 
                 <td class="px-3 py-3">
@@ -543,7 +544,7 @@ async function onSaveGrade() {
                       {{ sub.doc_number ?? `Dokumen #${sub.doc_id}` }}
                     </div>
                     <div class="text-xs text-muted">
-                      Masa {{ sub.doc_period ?? '—' }} &middot; {{ sub.doc_status ?? '—' }}
+                      Masa {{ sub.doc_period ?? '—' }} &middot; {{ sub.doc_status ? docStatusLabel(sub.doc_status) : '—' }}
                     </div>
                   </template>
                   <span v-else class="text-xs text-muted">—</span>

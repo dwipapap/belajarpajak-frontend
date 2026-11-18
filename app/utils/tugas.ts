@@ -103,6 +103,24 @@ export function guruDocMonitorPath(docType: AssignmentDocType | string, docId?: 
   }
 }
 
+const DOC_STATUS_LABELS: Record<string, string> = {
+  draft: 'Konsep',
+  issued: 'Terbit',
+  invalid: 'Dibatalkan',
+  dibatalkan: 'Dibatalkan',
+  approved: 'Disetujui',
+  submitted: 'Dilaporkan',
+  reported: 'Dilaporkan',
+  credited: 'Dikreditkan',
+  uncredited: 'Tidak dikreditkan',
+  posted: 'Diposting'
+}
+
+export function docStatusLabel(status: string | null | undefined): string {
+  if (!status) return '—'
+  return DOC_STATUS_LABELS[status.toLowerCase()] ?? status
+}
+
 export function assignmentStatusLabel(status: AssignmentStatus | string): string {
   switch (status) {
     case 'draft':
