@@ -11,7 +11,8 @@ const MONITOR_PATHS: Record<string, string> = {
   cy: '/guru/cy',
   'faktur-keluaran': '/guru/e-faktur/keluaran',
   'faktur-masukan': '/guru/e-faktur/masukan',
-  spt: '/guru/spt'
+  spt: '/guru/spt',
+  tugas: '/guru/tugas'
 }
 
 /** Guru monitor page for a dashboard module key. */
@@ -30,13 +31,14 @@ const SISWA_PATHS: Record<string, string> = {
   cy: '/siswa/cy',
   'faktur-keluaran': '/siswa/e-faktur/keluaran',
   'faktur-masukan': '/siswa/e-faktur/masukan',
-  spt: '/siswa/spt'
+  spt: '/siswa/spt',
+  tugas: '/siswa/tugas'
 }
 
 /** Siswa list/detail page for a document of a dashboard module. */
 export function siswaDocumentPath(module: string, id?: number): string {
   const base = SISWA_PATHS[module] ?? '/siswa'
-  if (id !== undefined && (module === 'faktur-keluaran' || module === 'faktur-masukan' || module === 'spt')) {
+  if (id !== undefined && (module === 'faktur-keluaran' || module === 'faktur-masukan' || module === 'spt' || module === 'tugas')) {
     return `${base}/${id}`
   }
   return base

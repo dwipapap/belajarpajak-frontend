@@ -230,6 +230,8 @@ async function onUnenroll(siswa: User) {
   }
 }
 
+import { downloadBlob } from '~/utils/tugas'
+
 async function onToggleArchive(row: SchoolClass) {
   archiveBusy.value = true
   try {
@@ -249,6 +251,35 @@ async function onToggleArchive(row: SchoolClass) {
     toast.add({ title: 'Gagal mengubah arsip kelas', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
   } finally {
     archiveBusy.value = false
+  }
+}
+
+const exportBusyKey = ref<string | null>(null)
+
+async function exportClassRekap(row: SchoolClass, format: 'xlsx' | 'csv') {
+  const key = `${row.id}-${format}`
+  exportBusyKey.value = key
+  try {
+    const blob = await apiFetch<Blob>(
+      `/api/v1/tugas/rekap-kelas/${row.id}/export?format=${format}`,
+      { responseType: 'blob' }
+    )
+    const safeName = row.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    downloadBlob(blob, `rekap-nilai-${safeName}.${format}`)
+    toast.add({
+      title: `Rekap nilai ${row.name} (${format.toUpperCase()}) diunduh`,
+      color: 'success',
+      icon: 'i-lucide-download'
+    })
+  } catch (error) {
+    toast.add({
+      title: 'Gagal mengunduh rekap nilai kelas',
+      description: apiErrorMessage(error),
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  } finally {
+    exportBusyKey.value = null
   }
 }
 </script>
@@ -321,7 +352,25 @@ async function onToggleArchive(row: SchoolClass) {
             </UBadge>
           </template>
           <template #actions-cell="{ row }">
-            <div class="flex justify-end gap-1">
+            <div class="flex flex-wrap justify-end gap-1">
+              <UButton
+                icon="i-lucide-file-spreadsheet"
+                size="xs"
+                color="neutral"
+                variant="soft"
+                label="Rekap (.xlsx)"
+                :loading="exportBusyKey === `${row.original.id}-xlsx`"
+                @click="exportClassRekap(row.original, 'xlsx')"
+              />
+              <UButton
+                icon="i-lucide-file-down"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                label="CSV"
+                :loading="exportBusyKey === `${row.original.id}-csv`"
+                @click="exportClassRekap(row.original, 'csv')"
+              />
               <UButton
                 icon="i-lucide-users"
                 size="xs"

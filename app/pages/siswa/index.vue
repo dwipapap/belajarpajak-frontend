@@ -22,7 +22,8 @@ const { data: classes, status: classesStatus, error: classesError } = useAsyncDa
 const loading = computed(() => dashStatus.value === 'pending' && !dash.value)
 
 const quickActions = [
-  { label: 'Buat Faktur', to: '/siswa/e-faktur/keluaran/create', primary: true },
+  { label: 'Tugas Kelas', to: '/siswa/tugas', primary: true },
+  { label: 'Buat Faktur', to: '/siswa/e-faktur/keluaran/create' },
   { label: 'Buat BPPU', to: '/siswa/bppu/create' },
   { label: 'Buat BP21', to: '/siswa/bp21/create' },
   { label: 'Buat SPT', to: '/siswa/spt/create' }
@@ -80,6 +81,12 @@ const stats = computed(() => {
   const d = dash.value
   if (!d) return []
   return [
+    {
+      label: 'Tugas aktif',
+      value: d.open_tugas_count ?? 0,
+      hint: 'Tugas kelas belum dikumpulkan',
+      to: '/siswa/tugas'
+    },
     { label: 'eBupot', value: d.ebupot.total, hint: `${d.ebupot.issued} terbit, ${d.ebupot.draft} konsep`, to: '/siswa/bp21' },
     {
       label: 'e-Faktur',
@@ -110,6 +117,7 @@ const stats = computed(() => {
 
 function todoLink(t: SiswaTodo): string {
   if (t.kind === 'billing') return '/siswa/pembayaran'
+  if (t.kind === 'tugas') return t.id ? `/siswa/tugas/${t.id}` : '/siswa/tugas'
   return siswaDocumentPath(t.module, t.id ?? undefined)
 }
 
@@ -117,7 +125,8 @@ const todoIcon: Record<SiswaTodo['kind'], string> = {
   draft: 'i-lucide-file-pen-line',
   spt: 'i-lucide-clipboard-list',
   billing: 'i-lucide-wallet',
-  masukan: 'i-lucide-receipt-text'
+  masukan: 'i-lucide-receipt-text',
+  tugas: 'i-lucide-clipboard-check'
 }
 
 function docStatusLabel(module: string, status: string): string {

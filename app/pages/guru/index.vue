@@ -50,12 +50,20 @@ function countOf(list: QueueList | null | undefined, status: string): number | n
 }
 
 const attention = computed(() => [
+  { label: 'Tugas perlu dinilai', to: '/guru/tugas', value: dash.value?.tugas_pending_grading ?? 0, failed: false },
   { label: 'Pbk menunggu', to: '/guru/pbk', value: countOf(pbkList.value, 'diajukan'), failed: !!pbkError.value },
   { label: 'Tagihan belum dibilling', to: '/guru/tagihan', value: countOf(tagihanList.value, 'belum'), failed: !!tagihanError.value },
   { label: 'Angsuran berjalan', to: '/guru/angsuran', value: countOf(angsuranList.value, 'berjalan'), failed: !!angsuranError.value }
 ])
 
 const monitorGroups = [
+  {
+    title: 'Tugas',
+    links: [
+      { label: 'Kelola Tugas', to: '/guru/tugas' },
+      { label: 'Buat Tugas', to: '/guru/tugas/create' }
+    ]
+  },
   {
     title: 'eBupot',
     links: [
@@ -122,7 +130,7 @@ const monitorGroups = [
       <!-- Stat strip -->
       <div class="dash-stats" aria-label="Ringkasan kelas">
         <template v-if="loading">
-          <div v-for="n in 4" :key="n" class="dash-stat">
+          <div v-for="n in 5" :key="n" class="dash-stat">
             <USkeleton class="h-3 w-24" />
             <USkeleton class="mt-1 h-7 w-12" />
           </div>
@@ -133,6 +141,11 @@ const monitorGroups = [
             <span class="dash-stat__value">{{ students.length }}</span>
             <span class="dash-stat__hint">{{ selectedClass?.name }}</span>
           </div>
+          <NuxtLink to="/guru/tugas" class="dash-stat hover:bg-elevated">
+            <span class="dash-stat__label">Tugas perlu dinilai</span>
+            <span class="dash-stat__value">{{ dash?.tugas_pending_grading ?? 0 }}</span>
+            <span class="dash-stat__hint">Pengumpulan tugas menunggu nilai guru</span>
+          </NuxtLink>
           <div class="dash-stat">
             <span class="dash-stat__label">Perlu dinilai</span>
             <span class="dash-stat__value">{{ dash?.grading_total ?? 0 }}</span>

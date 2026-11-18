@@ -1343,6 +1343,7 @@ export interface GuruDashboard {
   class_id: number | null
   students: GuruStudentProgress[]
   grading_total: number
+  tugas_pending_grading?: number
   grading_by_module: GradingModuleCount[]
   grading_items: GradingItem[]
 }
@@ -1370,7 +1371,7 @@ export interface SiswaDocument {
 export interface SiswaTodo {
   module: string
   id: number | null
-  kind: 'draft' | 'spt' | 'billing' | 'masukan'
+  kind: 'draft' | 'spt' | 'billing' | 'masukan' | 'tugas'
   title: string
   detail: string | null
   module_label: string
@@ -1379,6 +1380,7 @@ export interface SiswaTodo {
 
 export interface SiswaDashboard {
   classes: number
+  open_tugas_count?: number
   ebupot: DashStatusCounts
   ebupot_by_type: Record<string, DashStatusCounts>
   faktur_keluaran: DashStatusCounts
@@ -1423,3 +1425,114 @@ export interface PlatformDashboard {
   classes: number
   tenants: TenantOverview[]
 }
+
+// ---- Tugas (Assignments & Auto-Grading) ------------------------------------
+
+export type AssignmentStatus = 'draft' | 'published' | 'closed'
+
+export type AssignmentDocType =
+  | 'bp21'
+  | 'bp26'
+  | 'bppu'
+  | 'bpmp'
+  | 'bpnr'
+  | 'sp'
+  | 'cy'
+  | 'faktur_keluaran'
+  | 'faktur_masukan'
+  | 'spt_ppn'
+  | 'spt_pph_unifikasi'
+  | 'spt_pph_21_26'
+  | 'spt_pph21_26'
+
+export interface AutoCheckRead {
+  code: string
+  label: string
+  passed: boolean
+  message: string
+  weight: number
+}
+
+export interface CandidateDocRead {
+  id: number
+  doc_type: AssignmentDocType
+  number: string | null
+  status: string
+  tax_month: number
+  tax_year: number
+  counterparty_name: string | null
+  dpp_amount: number
+  tax_amount: number
+  created_at: string
+}
+
+export interface SubmissionRead {
+  id: number | null
+  assignment_id: number
+  siswa_id: number
+  siswa_name: string
+  siswa_nis: string | null
+  siswa_email: string
+  submitted: boolean
+  doc_id: number | null
+  doc_number: string | null
+  doc_period: string | null
+  doc_status: string | null
+  doc_tax_amount: number | null
+  submitted_at: string | null
+  is_late: boolean
+  auto_score: number | null
+  auto_checks: AutoCheckRead[]
+  final_score: number | null
+  displayed_score: number | null
+  teacher_feedback: string | null
+  graded_by: number | null
+  graded_at: string | null
+}
+
+export interface AssignmentRead {
+  id: number
+  tenant_id: number
+  class_id: number
+  class_name: string | null
+  created_by: number
+  creator_name: string | null
+  title: string
+  instructions: string
+  doc_type: AssignmentDocType
+  due_at: string | null
+  status: AssignmentStatus
+  created_at: string | null
+  updated_at: string | null
+  enrolled_count: number
+  submitted_count: number
+  graded_count: number
+  my_submission: SubmissionRead | null
+}
+
+export interface AssignmentDetailRead extends AssignmentRead {
+  submissions: SubmissionRead[]
+}
+
+export interface AssignmentCreate {
+  class_id: number
+  title: string
+  instructions: string
+  doc_type: AssignmentDocType
+  due_at?: string | null
+  publish?: boolean
+}
+
+export interface AssignmentUpdate {
+  title?: string
+  instructions?: string
+  doc_type?: AssignmentDocType
+  due_at?: string | null
+  class_id?: number
+}
+
+export interface SubmissionGradeRequest {
+  final_score: number
+  teacher_feedback?: string | null
+}
+
