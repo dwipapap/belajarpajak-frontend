@@ -262,17 +262,28 @@ footer.band { padding-block: 18px 32px; border-top: 1px solid var(--line); font-
           <li class="step"><span class="check"><input type="checkbox" id="sc-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka konsepnya, lakukan Posting, lalu periksa angka yang ditarik dari faktur atau bukti potong.</span></div></li>
           <li class="step"><span class="check"><input type="checkbox" id="sc-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Isi bagian Pernyataan, klik Simpan Konsep, lalu Bayar dan Lapor dengan passphrase (kata sandi akun).</span></div></li>
           <li class="step"><span class="check"><input type="checkbox" id="sc-4" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Jika kurang bayar, bayar kode billing-nya dengan kanal simulasi.</span><span class="hint">Menu Pembayaran.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa/pembayaran" target="_blank" rel="noopener">Buka halaman ↗</a></li>
-          <li class="step"><span class="check"><input type="checkbox" id="sc-5" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Unduh BPE (bukti penerimaan) di Dokumen Saya, lalu lihat dashboard siswa.</span><span class="hint">"Langkah belajar" di dashboard tercentang sampai Bayar.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa" target="_blank" rel="noopener">Dashboard ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sc-5" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Unduh BPE (bukti penerimaan) di Dokumen Saya, lalu lihat dashboard siswa.</span><span class="hint">Semua PDF yang diunduh memuat watermark diagonal "SIMULASI PEMBELAJARAN — BUKAN DOKUMEN RESMI".</span></div><a class="btn btn-ghost btn-sm go" href="/siswa" target="_blank" rel="noopener">Dashboard ↗</a></li>
         </ol>
-        <p class="expect"><b>Berhasil jika:</b> SPT berstatus Dilaporkan dan BPE bisa diunduh.</p>
+        <p class="expect"><b>Berhasil jika:</b> SPT berstatus Dilaporkan dan BPE bisa diunduh dengan watermark simulasi pembelajaran.</p>
+      </article>
+
+      <article class="scenario" data-role="siswa">
+        <header><h3>D. Mengumpulkan Tugas Kelas &amp; Penilaian Otomatis</h3><span class="state"></span><div class="meta"><span>⏱ 10 menit</span><span>setelah guru menerbitkan tugas</span></div></header>
+        <ol class="steps">
+          <li class="step"><span class="check"><input type="checkbox" id="sd-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka menu Portal Saya › Tugas (atau klik tugas aktif di bagian "Yang perlu dikerjakan" pada Dasbor Siswa).</span><span class="hint">Daftar tugas kelas yang diterbitkan guru akan tampil beserta tenggat dan jenis dokumen wajibnya.</span></div><a class="btn btn-ghost btn-sm go" href="/siswa/tugas" target="_blank" rel="noopener">Tugas Saya ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sd-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka detail tugas, baca soal studi kasus, lalu buat atau pilih dokumen milik Anda yang sesuai jenis dokumen tugas.</span><span class="hint">Gunakan tombol pintas "Buat ..." bila belum membuat dokumennya.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sd-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Pilih dokumen yang sudah diterbitkan/dilaporkan, lalu klik "Kumpulkan Dokumen".</span><span class="hint">Sistem langsung menjalankan pemeriksaan otomatis (status terbit, NPWP/NIK, masa pajak, tarif, rumus DPP/PPh/PPN, tanda tangan).</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="sd-4" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Periksa Skor Otomatis (0–100) dan daftar cek (✓/✗). Jika masih ada yang belum lulus, perbaiki atau pilih dokumen baru lalu klik "Kirim Ulang".</span><span class="hint">Kirim ulang dapat dilakukan selama tugas belum ditutup dan belum dinilai akhir oleh guru.</span></div></li>
+        </ol>
+        <p class="expect"><b>Berhasil jika:</b> skor pemeriksaan otomatis beserta rincian setiap poin pemeriksaan tampil seketika setelah dokumen dikumpulkan.</p>
       </article>
     </section>
 
     <section class="panel" id="panel-guru" role="tabpanel" aria-labelledby="tab-guru" hidden>
       <div class="panel-head">
-        <span class="eyebrow">Peran guru · sekitar 15 menit</span>
-        <h2>Memantau dan menilai siswa</h2>
-        <p>Paling terasa setelah siswa di kelas Anda mencoba skenario siswa. Guru 1 mengampu XII Akuntansi 1, Guru 2 mengampu XII Akuntansi 2.</p>
+        <span class="eyebrow">Peran guru · sekitar 20 menit</span>
+        <h2>Menugaskan, memantau, dan menilai siswa</h2>
+        <p>Guru dapat membuat tugas studi kasus untuk kelasnya, melihat hasil pemeriksaan otomatis, memberikan nilai akhir, serta mengunduh daftar nilai dalam format Excel (.xlsx) maupun CSV.</p>
       </div>
       <div class="accounts">
         <header><h3>Akun guru</h3></header>
@@ -288,7 +299,17 @@ footer.band { padding-block: 18px 32px; border-top: 1px solid var(--line); font-
         </div>
       </div>
       <article class="scenario" data-role="guru">
-        <header><h3>D. Dashboard guru dan penilaian</h3><span class="state"></span><div class="meta"><span>⏱ 15 menit</span><span>1 akun guru</span></div></header>
+        <header><h3>E. Membuat Tugas Kelas, Menilai, &amp; Ekspor Nilai (.xlsx / .csv)</h3><span class="state"></span><div class="meta"><span>⏱ 10 menit</span><span>1 akun guru</span></div></header>
+        <ol class="steps">
+          <li class="step"><span class="check"><input type="checkbox" id="gt-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka menu Tugas › Buat Tugas Baru, pilih kelas, jenis dokumen (mis. BPPU atau Faktur Pajak Keluaran), tenggat, dan soal studi kasus, lalu klik "Simpan &amp; Terbitkan".</span><span class="hint">Tugas yang diterbitkan otomatis muncul di daftar tugas seluruh siswa di kelas tersebut.</span></div><a class="btn btn-ghost btn-sm go" href="/guru/tugas/create" target="_blank" rel="noopener">Buat Tugas ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="gt-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka halaman detail tugas untuk memantau seluruh siswa terdaftar (termasuk baris "Belum mengumpulkan" bagi siswa yang belum mengumpulkan).</span></div><a class="btn btn-ghost btn-sm go" href="/guru/tugas" target="_blank" rel="noopener">Daftar Tugas ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="gt-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Klik "Tinjau &amp; Nilai" pada siswa yang sudah mengumpulkan, periksa rincian cek otomatis, isi Nilai Akhir Guru serta umpan balik, lalu simpan.</span><span class="hint">Nilai akhir dan umpan balik juga tersinkron ke dokumen asli siswa.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="gt-4" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Klik "Unduh Nilai (.xlsx)" atau "Unduh (.csv)" pada detail tugas, serta "Rekap Kelas (.xlsx)" pada daftar tugas.</span><span class="hint">Berkas Excel memuat nilai seluruh siswa di kelas beserta rata-rata nilai per siswa.</span></div></li>
+        </ol>
+        <p class="expect"><b>Berhasil jika:</b> nilai akhir guru tersimpan dan berkas Excel (.xlsx) maupun CSV berhasil diunduh.</p>
+      </article>
+      <article class="scenario" data-role="guru">
+        <header><h3>F. Dashboard guru dan penilaian dokumen mandiri</h3><span class="state"></span><div class="meta"><span>⏱ 10 menit</span><span>1 akun guru</span></div></header>
         <ol class="steps">
           <li class="step"><span class="check"><input type="checkbox" id="gd-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Lihat tabel Progres Siswa: siapa yang sudah membuat bukti potong, faktur, SPT, dan membayar.</span><span class="hint">Siswa yang belum beraktivitas ditandai kuning.</span></div><a class="btn btn-ghost btn-sm go" href="/guru" target="_blank" rel="noopener">Dashboard ↗</a></li>
           <li class="step"><span class="check"><input type="checkbox" id="gd-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Di panel Perlu Dinilai, klik salah satu dokumen siswa.</span></div></li>
@@ -302,8 +323,8 @@ footer.band { padding-block: 18px 32px; border-top: 1px solid var(--line); font-
     <section class="panel" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
       <div class="panel-head">
         <span class="eyebrow">Peran admin instansi · sekitar 10 menit</span>
-        <h2>Mengelola akun dan kelas</h2>
-        <p>Admin mengatur guru, siswa, dan kelas di instansinya sendiri.</p>
+        <h2>Mengelola akun, kelas, dan rekap nilai</h2>
+        <p>Admin mengatur guru, siswa, kelas, serta mengunduh rekap nilai per kelas di instansinya.</p>
       </div>
       <div class="accounts">
         <header><h3>Akun admin</h3></header>
@@ -313,14 +334,14 @@ footer.band { padding-block: 18px 32px; border-top: 1px solid var(--line); font-
         </div>
       </div>
       <article class="scenario" data-role="admin">
-        <header><h3>E. Kuota, pengguna, dan kelas</h3><span class="state"></span><div class="meta"><span>⏱ 10 menit</span><span>1 akun admin</span></div></header>
+        <header><h3>G. Kuota, pengguna, kelas, dan unduh rekap nilai kelas</h3><span class="state"></span><div class="meta"><span>⏱ 10 menit</span><span>1 akun admin</span></div></header>
         <ol class="steps">
           <li class="step"><span class="check"><input type="checkbox" id="ae-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Periksa Ringkasan Institusi: kuota guru/siswa/kelas dan sisa masa berlaku.</span></div><a class="btn btn-ghost btn-sm go" href="/admin" target="_blank" rel="noopener">Dashboard ↗</a></li>
           <li class="step"><span class="check"><input type="checkbox" id="ae-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Klik Tambah User dan buat satu akun siswa baru.</span><span class="hint">Pemakaian kuota siswa bertambah satu.</span></div></li>
-          <li class="step"><span class="check"><input type="checkbox" id="ae-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka menu Kelas dan masukkan siswa baru ke salah satu kelas.</span></div><a class="btn btn-ghost btn-sm go" href="/admin/kelas" target="_blank" rel="noopener">Kelola Kelas ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="ae-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka menu Kelas, masukkan siswa baru ke salah satu kelas, dan coba klik tombol "Rekap (.xlsx)" pada baris kelas.</span></div><a class="btn btn-ghost btn-sm go" href="/admin/kelas" target="_blank" rel="noopener">Kelola Kelas ↗</a></li>
           <li class="step"><span class="check"><input type="checkbox" id="ae-4" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Login sebagai siswa baru itu dan pastikan kelasnya terlihat di dashboard.</span></div></li>
         </ol>
-        <p class="expect"><b>Berhasil jika:</b> siswa baru bisa masuk dan langsung terdaftar di kelasnya.</p>
+        <p class="expect"><b>Berhasil jika:</b> siswa baru bisa masuk, terdaftar di kelasnya, dan berkas rekap nilai kelas (.xlsx) berhasil diunduh.</p>
       </article>
     </section>
 
