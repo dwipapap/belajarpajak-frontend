@@ -418,7 +418,7 @@ function money(value: number) {
 
     <div v-else-if="sptStatus === 'pending'" class="py-16 text-center text-sm text-muted">Memuat...</div>
 
-    <DocumentSignModal v-model:open="signOpen" :loading="signing" @confirm="confirmSign" />
+    <DocumentSignModal v-model:open="signOpen" :loading="signing" use-account-password @confirm="confirmSign" />
   </div>
 </template>
 

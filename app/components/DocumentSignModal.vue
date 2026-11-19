@@ -23,8 +23,10 @@ const props = withDefaults(
     signerId?: string
     /** True while the caller is performing the issue request. */
     loading?: boolean
+    /** SPT Bayar dan Lapor: the passphrase is the user's own account password. */
+    useAccountPassword?: boolean
   }>(),
-  { signerId: undefined, loading: false }
+  { signerId: undefined, loading: false, useAccountPassword: false }
 )
 
 const emit = defineEmits<{
@@ -34,7 +36,8 @@ const emit = defineEmits<{
 const auth = useAuth()
 
 const signingType = ref('Tanda Tangan Pembayar Pajak')
-const signingProvider = ref('Kode Otorisasi (simulasi)')
+const providerLabel = computed(() => props.useAccountPassword ? 'Kata sandi akun (simulasi)' : 'Kode Otorisasi (simulasi)')
+const signingProvider = ref(providerLabel.value)
 const signerName = ref('')
 const kodeOtorisasi = ref('')
 const error = ref<string | null>(null)
@@ -52,8 +55,8 @@ watch(open, (value) => {
 })
 
 function confirm() {
-  if (kodeOtorisasi.value.trim().length < 6) {
-    error.value = 'Kata Sandi Penandatanganan minimal 6 karakter.'
+  if (props.useAccountPassword ? !kodeOtorisasi.value : kodeOtorisasi.value.trim().length < 6) {
+    error.value = props.useAccountPassword ? 'Isi kata sandi akun Anda.' : 'Kata Sandi Penandatanganan minimal 6 karakter.'
     return
   }
   error.value = null
@@ -68,7 +71,7 @@ function confirm() {
   <UModal v-model:open="open" title="Tanda Tangan Dokumen">
     <template #body>
       <p class="text-sm text-muted mb-3">
-        Penandatangan simulasi + Kode Otorisasi simulasi. Bukan tanda tangan resmi.
+        {{ props.useAccountPassword ? 'Untuk SPT, kata sandi penandatanganan adalah kata sandi akun Anda (seperti passphrase pada aplikasi asli). Bukan tanda tangan resmi.' : 'Penandatangan simulasi + Kode Otorisasi simulasi. Bukan tanda tangan resmi.' }}
       </p>
       <UFormField name="signing_type" label="Jenis Penandatanganan" required>
         <USelect
@@ -80,7 +83,7 @@ function confirm() {
       <UFormField name="signing_provider" label="Penyedia Penandatanganan" required class="mt-3">
         <USelect
           v-model="signingProvider"
-          :items="['Kode Otorisasi (simulasi)']"
+          :items="[providerLabel]"
           class="w-full"
         />
       </UFormField>
@@ -94,7 +97,7 @@ function confirm() {
         <UInput
           v-model="kodeOtorisasi"
           type="password"
-          placeholder="Minimal 6 karakter"
+          :placeholder="props.useAccountPassword ? 'Kata sandi akun Anda' : 'Minimal 6 karakter'"
           class="w-full"
         />
       </UFormField>
