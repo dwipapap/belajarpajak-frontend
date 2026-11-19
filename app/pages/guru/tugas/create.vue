@@ -5,10 +5,12 @@ import type {
   AssignmentRead,
   SchoolClass
 } from '~/types/api'
+import { docTypeToModuleKey, isModuleEnabled } from '~/utils/modules'
 import { DOC_TYPE_OPTIONS } from '~/utils/tugas'
 
 definePageMeta({ middleware: 'role', roles: ['guru'] })
 
+const auth = useAuth()
 const { apiFetch } = useApi()
 const toast = useToast()
 
@@ -27,10 +29,14 @@ const classOptions = computed(() =>
   }))
 )
 
-const docTypeOptions = DOC_TYPE_OPTIONS.map(o => ({
-  label: o.label,
-  value: o.value
-}))
+const docTypeOptions = computed(() =>
+  DOC_TYPE_OPTIONS
+    .filter(o => isModuleEnabled(auth.user.value, docTypeToModuleKey(o.value)))
+    .map(o => ({
+      label: o.label,
+      value: o.value
+    }))
+)
 
 const form = reactive({
   class_id: undefined as number | undefined,
@@ -39,6 +45,12 @@ const form = reactive({
   due_at_local: '',
   instructions: ''
 })
+
+watch(docTypeOptions, (opts) => {
+  if (opts.length > 0 && !opts.some(o => o.value === form.doc_type)) {
+    form.doc_type = opts[0]!.value
+  }
+}, { immediate: true })
 
 watch(activeClasses, (list) => {
   if (form.class_id === undefined && list.length > 0) {

@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import type { SchoolClass, SiswaDashboard, SiswaTodo } from '~/types/api'
 import { formatCurrency, statusColor, statusLabel } from '~/utils/bupot'
+import { EBUPOT_KEYS, EFAKTUR_KEYS, SPT_KEYS, isAnyModuleEnabled, isModuleEnabled } from '~/utils/modules'
 import { sptStatusLabel } from '~/utils/spt'
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
 const auth = useAuth()
 const { apiFetch } = useApi()
+
+const has = (key: string) => isModuleEnabled(auth.user.value, key)
+const hasAny = (keys: string[]) => isAnyModuleEnabled(auth.user.value, keys)
 
 const { data: dash, status: dashStatus, error: dashError, refresh: refreshDash } = useAsyncData(
   'siswa-dashboard-main',
@@ -21,13 +25,22 @@ const { data: classes, status: classesStatus, error: classesError } = useAsyncDa
 
 const loading = computed(() => dashStatus.value === 'pending' && !dash.value)
 
-const quickActions = [
-  { label: 'Tugas Kelas', to: '/siswa/tugas', primary: true },
-  { label: 'Buat Faktur', to: '/siswa/e-faktur/keluaran/create' },
-  { label: 'Buat BPPU', to: '/siswa/bppu/create' },
-  { label: 'Buat BP21', to: '/siswa/bp21/create' },
-  { label: 'Buat SPT', to: '/siswa/spt/create' }
-]
+const quickActions = computed(() => [
+  ...(has('tugas') ? [{ label: 'Tugas Kelas', to: '/siswa/tugas', primary: true }] : []),
+  ...(has('faktur_keluaran') ? [{ label: 'Buat Faktur', to: '/siswa/e-faktur/keluaran/create' }] : []),
+  ...(has('bppu') ? [{ label: 'Buat BPPU', to: '/siswa/bppu/create' }] : []),
+  ...(has('bp21') ? [{ label: 'Buat BP21', to: '/siswa/bp21/create' }] : []),
+  ...(hasAny(SPT_KEYS) ? [{ label: 'Buat SPT', to: '/siswa/spt/create' }] : [])
+])
+
+const firstEnabledDocPath = computed(() => {
+  for (const k of EBUPOT_KEYS) {
+    if (has(k)) return `/siswa/${k}`
+  }
+  if (has('faktur_keluaran')) return '/siswa/e-faktur/keluaran'
+  if (has('faktur_masukan')) return '/siswa/e-faktur/masukan'
+  return '/siswa/dokumen-saya'
+})
 
 /** Langkah belajar — done/not-done derived from the student's own rows. */
 const steps = computed(() => {
@@ -35,29 +48,37 @@ const steps = computed(() => {
   const made = d ? d.ebupot.total + d.faktur_keluaran.total + d.faktur_masukan.total : 0
   const issued = d ? d.ebupot.issued + d.faktur_keluaran.issued : 0
   return [
-    {
-      title: 'Buat',
-      desc: 'Buat e-Bupot / e-Faktur sebagai konsep.',
-      to: '/siswa/bp21',
-      done: made > 0,
-      state: made > 0 ? `${made} dokumen dibuat` : 'Belum ada dokumen'
-    },
-    {
-      title: 'Terbitkan',
-      desc: 'Terbitkan dokumen pada tab Telah Terbit.',
-      to: '/siswa/bppu',
-      done: issued > 0,
-      state: issued > 0 ? `${issued} telah terbit` : 'Belum ada yang terbit'
-    },
-    {
-      title: 'SPT',
-      desc: 'Laporkan dalam SPT Masa.',
-      to: '/siswa/spt',
-      done: !!d && d.spt.reported > 0 && d.spt.unreported === 0,
-      state: d && d.spt.reported > 0
-        ? `${d.spt.reported} dilaporkan${d.spt.unreported ? `, ${d.spt.unreported} belum` : ''}`
-        : (d?.spt.unreported ? `${d.spt.unreported} belum dilaporkan` : 'Belum ada SPT')
-    },
+    ...(hasAny([...EBUPOT_KEYS, ...EFAKTUR_KEYS])
+      ? [
+          {
+            title: 'Buat',
+            desc: 'Buat e-Bupot / e-Faktur sebagai konsep.',
+            to: firstEnabledDocPath.value,
+            done: made > 0,
+            state: made > 0 ? `${made} dokumen dibuat` : 'Belum ada dokumen'
+          },
+          {
+            title: 'Terbitkan',
+            desc: 'Terbitkan dokumen pada tab Telah Terbit.',
+            to: firstEnabledDocPath.value,
+            done: issued > 0,
+            state: issued > 0 ? `${issued} telah terbit` : 'Belum ada yang terbit'
+          }
+        ]
+      : []),
+    ...(hasAny(SPT_KEYS)
+      ? [
+          {
+            title: 'SPT',
+            desc: 'Laporkan dalam SPT Masa.',
+            to: '/siswa/spt',
+            done: !!d && d.spt.reported > 0 && d.spt.unreported === 0,
+            state: d && d.spt.reported > 0
+              ? `${d.spt.reported} dilaporkan${d.spt.unreported ? `, ${d.spt.unreported} belum` : ''}`
+              : (d?.spt.unreported ? `${d.spt.unreported} belum dilaporkan` : 'Belum ada SPT')
+          }
+        ]
+      : []),
     {
       title: 'Bayar',
       desc: 'Bayar kode billing SPT.',
@@ -81,25 +102,38 @@ const stats = computed(() => {
   const d = dash.value
   if (!d) return []
   return [
-    {
-      label: 'Tugas aktif',
-      value: d.open_tugas_count ?? 0,
-      hint: 'Tugas kelas belum dikumpulkan',
-      to: '/siswa/tugas'
-    },
-    { label: 'eBupot', value: d.ebupot.total, hint: `${d.ebupot.issued} terbit, ${d.ebupot.draft} konsep`, to: '/siswa/bp21' },
-    {
-      label: 'e-Faktur',
-      value: d.faktur_keluaran.issued,
-      hint: `keluaran terbit; ${d.faktur_masukan.not_credited} masukan menunggu kredit`,
-      to: '/siswa/e-faktur/keluaran'
-    },
-    {
-      label: 'SPT belum dilaporkan',
-      value: d.spt.unreported,
-      hint: `${d.spt.draft} konsep, ${d.spt.awaiting_payment} menunggu bayar`,
-      to: '/siswa/spt'
-    },
+    ...(has('tugas')
+      ? [{
+          label: 'Tugas aktif',
+          value: d.open_tugas_count ?? 0,
+          hint: 'Tugas kelas belum dikumpulkan',
+          to: '/siswa/tugas'
+        }]
+      : []),
+    ...(hasAny(EBUPOT_KEYS)
+      ? [{
+          label: 'eBupot',
+          value: d.ebupot.total,
+          hint: `${d.ebupot.issued} terbit, ${d.ebupot.draft} konsep`,
+          to: firstEnabledDocPath.value
+        }]
+      : []),
+    ...(hasAny(EFAKTUR_KEYS)
+      ? [{
+          label: 'e-Faktur',
+          value: d.faktur_keluaran.issued,
+          hint: `keluaran terbit; ${d.faktur_masukan.not_credited} masukan menunggu kredit`,
+          to: has('faktur_keluaran') ? '/siswa/e-faktur/keluaran' : '/siswa/e-faktur/masukan'
+        }]
+      : []),
+    ...(hasAny(SPT_KEYS)
+      ? [{
+          label: 'SPT belum dilaporkan',
+          value: d.spt.unreported,
+          hint: `${d.spt.draft} konsep, ${d.spt.awaiting_payment} menunggu bayar`,
+          to: '/siswa/spt'
+        }]
+      : []),
     {
       label: 'Billing belum dibayar',
       value: d.billing.unpaid,

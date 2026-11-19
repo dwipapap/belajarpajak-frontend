@@ -343,6 +343,15 @@ footer.band { padding-block: 18px 32px; border-top: 1px solid var(--line); font-
         </ol>
         <p class="expect"><b>Berhasil jika:</b> siswa baru bisa masuk, terdaftar di kelasnya, dan berkas rekap nilai kelas (.xlsx) berhasil diunduh.</p>
       </article>
+      <article class="scenario" data-role="admin">
+        <header><h3>H. Pengaturan: matikan modul BPNR, cek menu siswa hilang, nyalakan lagi</h3><span class="state"></span><div class="meta"><span>⏱ 5 menit</span><span>1 akun admin &amp; 1 akun siswa</span></div></header>
+        <ol class="steps">
+          <li class="step"><span class="check"><input type="checkbox" id="ah-1" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Buka menu Pengaturan, matikan sakelar modul BPNR (serta periksa peringatan ketergantungan bila mematikan BPPU), lalu klik Simpan Pengaturan.</span><span class="hint">Data pada modul yang dimatikan tidak dihapus dan tetap aman di database.</span></div><a class="btn btn-ghost btn-sm go" href="/admin/pengaturan" target="_blank" rel="noopener">Pengaturan ↗</a></li>
+          <li class="step"><span class="check"><input type="checkbox" id="ah-2" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Masuk sebagai siswa di instansi yang sama, buka menu eBUPOT, dan pastikan item BPNR tidak tampil; akses langsung ke /siswa/bpnr akan diarahkan kembali ke dasbor.</span></div></li>
+          <li class="step"><span class="check"><input type="checkbox" id="ah-3" aria-label="Tandai langkah selesai"></span><div class="body"><span class="what">Kembali ke akun admin, nyalakan kembali modul BPNR di halaman Pengaturan, lalu simpan agar menu siswa kembali lengkap.</span></div><a class="btn btn-ghost btn-sm go" href="/admin/pengaturan" target="_blank" rel="noopener">Pengaturan ↗</a></li>
+        </ol>
+        <p class="expect"><b>Berhasil jika:</b> modul BPNR hilang dari menu siswa saat dimatikan dan muncul kembali beserta datanya saat dinyalakan lagi.</p>
+      </article>
     </section>
 
     <section class="panel" id="panel-super" role="tabpanel" aria-labelledby="tab-super" hidden>
@@ -355,7 +364,7 @@ footer.band { padding-block: 18px 32px; border-top: 1px solid var(--line); font-
         <header><h3>Akun superadmin</h3></header>
         <div class="acc-groups"><div class="acc-group"><h4>Platform</h4><div class="acc"><span class="who"><span class="email">super@pajaksim.local</span></span><button class="copy" data-copy="super@pajaksim.local">Salin</button></div></div></div>
       </div>
-      <div class="card"><h4>Yang bisa dicoba</h4><ul class="plain"><li>Membuat instansi baru beserta admin pertamanya</li><li>Mengatur kuota dan masa berlaku instansi</li><li>Melihat Tarif Pajak dan Log Audit</li></ul></div>
+      <div class="card"><h4>Yang bisa dicoba</h4><ul class="plain"><li>Membuat instansi baru beserta admin pertamanya</li><li>Mengatur kuota dan masa berlaku instansi</li><li>Mengatur <strong>Paket Modul</strong> per instansi (lewat tombol Atur / Modul pada kartu instansi atau menu Pengaturan): modul di luar paket akan terkunci dengan penanda "Tidak termasuk paket" di halaman admin sekolah</li><li>Melihat Tarif Pajak dan Log Audit</li></ul></div>
     </section>
 
     <section class="panel" aria-labelledby="h-belum">

@@ -5,6 +5,7 @@ import type {
   AssignmentStatus,
   SchoolClass
 } from '~/types/api'
+import { docTypeToModuleKey, isModuleEnabled } from '~/utils/modules'
 import {
   assignmentStatusColor,
   assignmentStatusLabel,
@@ -16,6 +17,7 @@ import {
 
 definePageMeta({ middleware: 'role', roles: ['guru'] })
 
+const auth = useAuth()
 const { apiFetch } = useApi()
 const toast = useToast()
 
@@ -61,10 +63,12 @@ const statusOptions = [
   { label: 'Ditutup', value: 'closed' }
 ]
 
-const docTypeFilterOptions = [
+const docTypeFilterOptions = computed(() => [
   { label: 'Semua Jenis Dokumen', value: 'all' },
-  ...DOC_TYPE_OPTIONS.map(o => ({ label: o.label, value: o.value }))
-]
+  ...DOC_TYPE_OPTIONS
+    .filter(o => isModuleEnabled(auth.user.value, docTypeToModuleKey(o.value)))
+    .map(o => ({ label: o.label, value: o.value }))
+])
 
 const { data: assignments, status: listStatus, refresh: refreshAssignments } = useAsyncData(
   'guru-tugas-list',
