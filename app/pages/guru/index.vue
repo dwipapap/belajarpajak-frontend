@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import type { GuruDashboard } from '~/types/api'
+import { SPT_KEYS, isAnyModuleEnabled, isModuleEnabled } from '~/utils/modules'
 
 definePageMeta({ middleware: 'role', roles: ['guru'] })
 
+const auth = useAuth()
 const { apiFetch } = useApi()
+
+const has = (key: string) => isModuleEnabled(auth.user.value, key)
+const hasAny = (keys: string[]) => isAnyModuleEnabled(auth.user.value, keys)
 
 // ---- Class selector + per-class dashboard ----------------------------------
 const classId = ref<number | undefined>(undefined)
@@ -38,53 +43,64 @@ const sptTotal = computed(() => students.value.reduce((n, s) => n + s.spt_report
 interface StatusRow { status: string }
 interface QueueList { items: StatusRow[], total: number }
 
-function queueFetch(path: string) {
+async function queueFetch(path: string, key: string): Promise<QueueList> {
+  if (!has(key)) return { items: [], total: 0 }
   return apiFetch<QueueList>(path, { query: { page: 1, size: 100 } })
 }
-const { data: pbkList, error: pbkError } = useAsyncData('guru-dashboard-pbk', () => queueFetch('/api/v1/pbk'))
-const { data: tagihanList, error: tagihanError } = useAsyncData('guru-dashboard-tagihan', () => queueFetch('/api/v1/tagihan'))
-const { data: angsuranList, error: angsuranError } = useAsyncData('guru-dashboard-angsuran', () => queueFetch('/api/v1/angsuran'))
+const { data: pbkList, error: pbkError } = useAsyncData('guru-dashboard-pbk', () => queueFetch('/api/v1/pbk', 'pbk'))
+const { data: tagihanList, error: tagihanError } = useAsyncData('guru-dashboard-tagihan', () => queueFetch('/api/v1/tagihan', 'tagihan'))
+const { data: angsuranList, error: angsuranError } = useAsyncData('guru-dashboard-angsuran', () => queueFetch('/api/v1/angsuran', 'angsuran'))
 
 function countOf(list: QueueList | null | undefined, status: string): number | null {
   return list ? list.items.filter(i => i.status === status).length : null
 }
 
 const attention = computed(() => [
-  { label: 'Tugas perlu dinilai', to: '/guru/tugas', value: dash.value?.tugas_pending_grading ?? 0, failed: false },
-  { label: 'Pbk menunggu', to: '/guru/pbk', value: countOf(pbkList.value, 'diajukan'), failed: !!pbkError.value },
-  { label: 'Tagihan belum dibilling', to: '/guru/tagihan', value: countOf(tagihanList.value, 'belum'), failed: !!tagihanError.value },
-  { label: 'Angsuran berjalan', to: '/guru/angsuran', value: countOf(angsuranList.value, 'berjalan'), failed: !!angsuranError.value }
+  ...(has('tugas') ? [{ label: 'Tugas perlu dinilai', to: '/guru/tugas', value: dash.value?.tugas_pending_grading ?? 0, failed: false }] : []),
+  ...(has('pbk') ? [{ label: 'Pbk menunggu', to: '/guru/pbk', value: countOf(pbkList.value, 'diajukan'), failed: !!pbkError.value }] : []),
+  ...(has('tagihan') ? [{ label: 'Tagihan belum dibilling', to: '/guru/tagihan', value: countOf(tagihanList.value, 'belum'), failed: !!tagihanError.value }] : []),
+  ...(has('angsuran') ? [{ label: 'Angsuran berjalan', to: '/guru/angsuran', value: countOf(angsuranList.value, 'berjalan'), failed: !!angsuranError.value }] : [])
 ])
 
-const monitorGroups = [
-  {
-    title: 'Tugas',
-    links: [
-      { label: 'Kelola Tugas', to: '/guru/tugas' },
-      { label: 'Buat Tugas', to: '/guru/tugas/create' }
-    ]
-  },
-  {
-    title: 'eBupot',
-    links: [
-      { label: 'BP21', to: '/guru/bp21' },
-      { label: 'BPPU', to: '/guru/bppu' },
-      { label: 'BP26', to: '/guru/bp26' },
-      { label: 'BPNR', to: '/guru/bpnr' },
-      { label: 'SP', to: '/guru/sp' },
-      { label: 'CY', to: '/guru/cy' },
-      { label: 'BPMP', to: '/guru/bpmp' }
-    ]
-  },
-  {
-    title: 'e-Faktur',
-    links: [
-      { label: 'Faktur Keluaran', to: '/guru/e-faktur/keluaran' },
-      { label: 'Faktur Masukan', to: '/guru/e-faktur/masukan' }
-    ]
-  },
-  { title: 'SPT', links: [{ label: 'SPT Masa', to: '/guru/spt' }] }
-]
+const monitorGroups = computed(() => {
+  const raw = [
+    {
+      title: 'Tugas',
+      links: [
+        ...(has('tugas')
+          ? [
+              { label: 'Kelola Tugas', to: '/guru/tugas' },
+              { label: 'Buat Tugas', to: '/guru/tugas/create' }
+            ]
+          : [])
+      ]
+    },
+    {
+      title: 'eBupot',
+      links: [
+        ...(has('bp21') ? [{ label: 'BP21', to: '/guru/bp21' }] : []),
+        ...(has('bppu') ? [{ label: 'BPPU', to: '/guru/bppu' }] : []),
+        ...(has('bp26') ? [{ label: 'BP26', to: '/guru/bp26' }] : []),
+        ...(has('bpnr') ? [{ label: 'BPNR', to: '/guru/bpnr' }] : []),
+        ...(has('sp') ? [{ label: 'SP', to: '/guru/sp' }] : []),
+        ...(has('cy') ? [{ label: 'CY', to: '/guru/cy' }] : []),
+        ...(has('bpmp') ? [{ label: 'BPMP', to: '/guru/bpmp' }] : [])
+      ]
+    },
+    {
+      title: 'e-Faktur',
+      links: [
+        ...(has('faktur_keluaran') ? [{ label: 'Faktur Keluaran', to: '/guru/e-faktur/keluaran' }] : []),
+        ...(has('faktur_masukan') ? [{ label: 'Faktur Masukan', to: '/guru/e-faktur/masukan' }] : [])
+      ]
+    },
+    {
+      title: 'SPT',
+      links: hasAny(SPT_KEYS) ? [{ label: 'SPT Masa', to: '/guru/spt' }] : []
+    }
+  ]
+  return raw.filter(g => g.links.length > 0)
+})
 </script>
 
 <template>
@@ -141,7 +157,7 @@ const monitorGroups = [
             <span class="dash-stat__value">{{ students.length }}</span>
             <span class="dash-stat__hint">{{ selectedClass?.name }}</span>
           </div>
-          <NuxtLink to="/guru/tugas" class="dash-stat hover:bg-elevated">
+          <NuxtLink v-if="has('tugas')" to="/guru/tugas" class="dash-stat hover:bg-elevated">
             <span class="dash-stat__label">Tugas perlu dinilai</span>
             <span class="dash-stat__value">{{ dash?.tugas_pending_grading ?? 0 }}</span>
             <span class="dash-stat__hint">Pengumpulan tugas menunggu nilai guru</span>
@@ -156,7 +172,7 @@ const monitorGroups = [
             <span class="dash-stat__value">{{ idleCount }}</span>
             <span class="dash-stat__hint">Siswa belum membuat dokumen</span>
           </div>
-          <div class="dash-stat">
+          <div v-if="hasAny(SPT_KEYS)" class="dash-stat">
             <span class="dash-stat__label">SPT dilaporkan</span>
             <span class="dash-stat__value">{{ sptTotal }}</span>
             <span class="dash-stat__hint">PPN, PPh Unifikasi, PPh 21/26</span>

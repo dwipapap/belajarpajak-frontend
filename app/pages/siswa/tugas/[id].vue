@@ -16,6 +16,7 @@ import {
 
 definePageMeta({ middleware: 'role', roles: ['siswa'] })
 
+const auth = useAuth()
 const route = useRoute()
 const { apiFetch } = useApi()
 const toast = useToast()
@@ -53,17 +54,33 @@ watch(
   { immediate: true }
 )
 
+const allowResubmission = computed(() => auth.user.value?.settings?.allow_resubmission ?? true)
+const allowLateSubmission = computed(() => auth.user.value?.settings?.allow_late_submission ?? true)
+const isPastDue = computed(() => {
+  if (!detail.value?.due_at) return false
+  return new Date(detail.value.due_at).getTime() < Date.now()
+})
+
 const canSubmit = computed(() => {
   if (!detail.value) return false
   if (detail.value.status !== 'published') return false
   if (mySub.value?.final_score !== null && mySub.value?.final_score !== undefined) return false
+  if (mySub.value?.submitted && !allowResubmission.value) return false
+  if (isPastDue.value && !allowLateSubmission.value) return false
   return true
 })
 
 const isSubmissionLocked = computed(() => {
   if (detail.value?.status === 'closed') return true
-  return mySub.value?.final_score !== null && mySub.value?.final_score !== undefined
+  if (mySub.value?.final_score !== null && mySub.value?.final_score !== undefined) return true
+  if (mySub.value?.submitted && !allowResubmission.value) return true
+  if (isPastDue.value && !allowLateSubmission.value) return true
+  return false
 })
+
+const autoChecksHidden = computed(() =>
+  Boolean(mySub.value?.auto_checks_hidden) || auth.user.value?.settings?.show_auto_check_details === false
+)
 
 async function onSubmitDoc() {
   if (!detail.value || !selectedDocId.value) {
@@ -232,6 +249,24 @@ async function onSubmitDoc() {
                 description="Dokumen yang sudah dinilai akhir oleh guru tidak dapat diganti lagi."
               />
 
+              <UAlert
+                v-else-if="mySub?.submitted && !allowResubmission"
+                color="neutral"
+                variant="subtle"
+                icon="i-lucide-lock"
+                title="Pengiriman ulang dinonaktifkan"
+                description="Instansi Anda tidak mengizinkan penggantian dokumen kiriman setelah dikumpulkan."
+              />
+
+              <UAlert
+                v-else-if="isPastDue && !allowLateSubmission"
+                color="warning"
+                variant="subtle"
+                icon="i-lucide-clock-alert"
+                title="Tenggat sudah lewat"
+                description="Pengumpulan tugas terlambat dinonaktifkan oleh pengaturan instansi Anda."
+              />
+
               <div v-if="!isSubmissionLocked && candidates.length === 0" class="rounded-lg border border-dashed border-default p-6 text-center">
                 <UIcon name="i-lucide-file-question" class="mx-auto size-8 text-muted" />
                 <p class="mt-2 text-sm font-medium text-highlighted">
@@ -386,12 +421,20 @@ async function onSubmitDoc() {
               <div class="border-t border-default pt-3">
                 <div class="flex items-center justify-between text-xs font-semibold text-highlighted">
                   <span>Rincian Pemeriksaan Otomatis</span>
-                  <span class="font-mono text-muted">
+                  <span v-if="!autoChecksHidden" class="font-mono text-muted">
                     {{ mySub.auto_checks.filter(c => c.passed).length }}/{{ mySub.auto_checks.length }} lulus
                   </span>
                 </div>
 
-                <ul class="mt-2.5 divide-y divide-default text-xs">
+                <div
+                  v-if="autoChecksHidden"
+                  class="mt-2.5 flex items-center gap-2 rounded-lg border border-default bg-elevated/40 p-3 text-xs text-muted"
+                >
+                  <UIcon name="i-lucide-eye-off" class="size-4 shrink-0" />
+                  <span>Rincian pemeriksaan disembunyikan oleh guru/admin</span>
+                </div>
+
+                <ul v-else class="mt-2.5 divide-y divide-default text-xs">
                   <li
                     v-for="chk in mySub.auto_checks"
                     :key="chk.code"
