@@ -60,6 +60,11 @@ const canSubmit = computed(() => {
   return true
 })
 
+const isSubmissionLocked = computed(() => {
+  if (detail.value?.status === 'closed') return true
+  return mySub.value?.final_score !== null && mySub.value?.final_score !== undefined
+})
+
 async function onSubmitDoc() {
   if (!detail.value || !selectedDocId.value) {
     submitError.value = 'Pilih dokumen yang akan dikumpulkan terlebih dahulu.'
@@ -227,7 +232,7 @@ async function onSubmitDoc() {
                 description="Dokumen yang sudah dinilai akhir oleh guru tidak dapat diganti lagi."
               />
 
-              <div v-if="candidates.length === 0" class="rounded-lg border border-dashed border-default p-6 text-center">
+              <div v-if="!isSubmissionLocked && candidates.length === 0" class="rounded-lg border border-dashed border-default p-6 text-center">
                 <UIcon name="i-lucide-file-question" class="mx-auto size-8 text-muted" />
                 <p class="mt-2 text-sm font-medium text-highlighted">
                   Anda belum memiliki dokumen {{ docTypeLabel(detail.doc_type) }}
@@ -245,7 +250,7 @@ async function onSubmitDoc() {
                 />
               </div>
 
-              <div v-else class="space-y-2">
+              <div v-else-if="!isSubmissionLocked" class="space-y-2">
                 <label
                   v-for="doc in candidates"
                   :key="doc.id"
