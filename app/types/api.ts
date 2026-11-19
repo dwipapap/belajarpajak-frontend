@@ -16,6 +16,7 @@ export interface Tenant {
   max_siswa: number | null
   max_kelas: number | null
   deactivated_reason: string | null
+  allowed_modules?: string[] | null
 }
 
 export interface TenantAdminInput {
@@ -44,6 +45,7 @@ export interface TenantUpdate {
   max_guru?: number | null
   max_siswa?: number | null
   max_kelas?: number | null
+  allowed_modules?: string[] | null
 }
 
 /**
@@ -80,8 +82,16 @@ export interface User {
   must_change_password: boolean
 }
 
+export interface LearningSettings {
+  show_auto_check_details: boolean
+  allow_late_submission: boolean
+  allow_resubmission: boolean
+}
+
 export interface Me extends User {
   tenant_name: string | null
+  enabled_modules?: string[]
+  settings?: LearningSettings
 }
 
 export interface UserBulkItemInput {
@@ -1483,6 +1493,7 @@ export interface SubmissionRead {
   is_late: boolean
   auto_score: number | null
   auto_checks: AutoCheckRead[]
+  auto_checks_hidden?: boolean
   final_score: number | null
   displayed_score: number | null
   teacher_feedback: string | null
@@ -1534,5 +1545,54 @@ export interface AssignmentUpdate {
 export interface SubmissionGradeRequest {
   final_score: number
   teacher_feedback?: string | null
+}
+
+// ---- Pengaturan Instansi ----------------------------------------------------
+
+export interface ModuleCatalogItem {
+  key: string
+  label: string
+  group: string
+  depends_on: string[]
+  dependency_hint: string | null
+}
+
+export interface PengaturanQuotas {
+  guru: TenantQuotaUsage
+  siswa: TenantQuotaUsage
+  kelas: TenantQuotaUsage
+}
+
+export interface PengaturanProfile {
+  tenant_id: number
+  name: string
+  slug: string
+  type: TenantType
+  is_active: boolean
+  contact_wa: string | null
+  berlaku_dari: string | null
+  berlaku_sampai: string | null
+  days_remaining: number | null
+  expired: boolean
+  expired_soon: boolean
+  quotas: PengaturanQuotas
+}
+
+export interface PengaturanRead {
+  profile: PengaturanProfile
+  module_catalog: ModuleCatalogItem[]
+  allowed_modules: string[]
+  enabled_modules: string[]
+  effective: string[]
+  settings: LearningSettings
+}
+
+export interface PengaturanUpdate {
+  enabled_modules?: string[]
+  settings?: Partial<LearningSettings>
+}
+
+export interface PaketModulUpdate {
+  allowed_modules: string[] | null
 }
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
+import { EBUPOT_KEYS, EFAKTUR_KEYS, SPT_KEYS, isAnyModuleEnabled, isModuleEnabled } from '~/utils/modules'
 
 const auth = useAuth()
 const route = useRoute()
@@ -27,6 +28,10 @@ function efakturHeading(label: string) {
 }
 
 const moduleItems = computed<NavigationMenuItem[]>(() => {
+  const user = auth.user.value
+  const has = (key: string) => isModuleEnabled(user, key)
+  const hasAny = (keys: string[]) => isAnyModuleEnabled(user, keys)
+
   // Superadmin is a platform operator, not a taxpayer: show only the
   // platform-management menu (all point at routes that exist today).
   // Institution + cross-tenant user management live on the /admin dashboard.
@@ -37,6 +42,12 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
         icon: 'i-lucide-layout-dashboard',
         to: '/admin',
         active: route.path === '/admin'
+      },
+      {
+        label: 'Pengaturan',
+        icon: 'i-lucide-sliders-horizontal',
+        to: '/admin/pengaturan',
+        active: route.path.includes('/admin/pengaturan')
       },
       {
         label: 'Tarif Pajak',
@@ -53,6 +64,47 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
     ]
   }
 
+  // Build e-Faktur children dynamically based on enabled modules
+  const efakturMainItems: NavigationMenuItem[] = [
+    ...(has('faktur_keluaran') ? [{ label: 'Pajak Keluaran', icon: 'i-lucide-file-output', to: modulePath('e-faktur/keluaran') }] : []),
+    ...(has('faktur_masukan') ? [{ label: 'Pajak Masukan', icon: 'i-lucide-file-input', to: modulePath('e-faktur/masukan') }] : []),
+    ...(has('retur')
+      ? [
+          { label: 'Retur Pajak Keluaran', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-keluaran') },
+          { label: 'Retur Pajak Masukan', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-masukan') }
+        ]
+      : [])
+  ]
+  const efakturOtherItems: NavigationMenuItem[] = [
+    ...(has('faktur_keluaran') ? [{ label: 'Pajak Keluaran', icon: 'i-lucide-files', to: modulePath('e-faktur/dokumen-lain-keluaran') }] : []),
+    ...(has('faktur_masukan') ? [{ label: 'Pajak Masukan', icon: 'i-lucide-files', to: modulePath('e-faktur/dokumen-lain-masukan') }] : []),
+    ...(has('retur')
+      ? [
+          { label: 'Retur Dokumen Lain Keluaran', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-dokumen-lain-keluaran') },
+          { label: 'Retur Dokumen Lain Masukan', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-dokumen-lain-masukan') }
+        ]
+      : [])
+  ]
+
+  // Build eBupot children dynamically
+  const ebupotChildren: NavigationMenuItem[] = [
+    ...(hasAny(EBUPOT_KEYS) ? [{ label: 'Bukti Potong Saya', icon: 'i-lucide-file-user', to: modulePath('bukti-potong-saya') }] : []),
+    ...(has('bppu') ? [{ label: 'BPPU', icon: 'i-lucide-files', to: modulePath('bppu') }] : []),
+    ...(has('bpnr') ? [{ label: 'BPNR', icon: 'i-lucide-files', to: modulePath('bpnr') }] : []),
+    ...(has('sp') ? [{ label: 'Penyetoran Sendiri', icon: 'i-lucide-wallet-cards', to: modulePath('sp') }] : []),
+    ...(has('cy') ? [{ label: 'Pemotongan Secara Digunggung', icon: 'i-lucide-layers-3', to: modulePath('cy') }] : []),
+    { label: 'Dokumen yang Dipersamakan dengan Bukti Potong', icon: 'i-lucide-file-check-2', disabled: true, badge: 'Segera hadir' },
+    ...(has('bp21') ? [{ label: 'BP 21 - Bukti Pemotongan Selain Pegawai Tetap', icon: 'i-lucide-file-text', to: modulePath('bp21') }] : []),
+    ...(has('bp26') ? [{ label: 'BP 26 - Bukti Pemotongan Wajib Pajak Luar Negeri', icon: 'i-lucide-globe', to: modulePath('bp26') }] : []),
+    ...(has('bpmp')
+      ? [
+          { label: 'BP A1 - Bukti Pemotongan A1 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', to: modulePath('a1') },
+          { label: 'BP A2 - Bukti Pemotongan A2 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', to: modulePath('a2') },
+          { label: 'Bukti Pemotongan Bulanan Pegawai Tetap', icon: 'i-lucide-file-stack', to: modulePath('bpmp') }
+        ]
+      : [])
+  ]
+
   return [
   ...(auth.user.value?.role === 'siswa'
     ? [
@@ -62,7 +114,7 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
           active: route.path === homePath.value || route.path.includes('/dokumen-saya') || route.path.includes('/siswa/tugas'),
           children: [
             { label: 'Dasbor', icon: 'i-lucide-layout-dashboard', to: homePath.value, active: route.path === homePath.value },
-            { label: 'Tugas', icon: 'i-lucide-clipboard-check', to: '/siswa/tugas', active: route.path.includes('/siswa/tugas') },
+            ...(has('tugas') ? [{ label: 'Tugas', icon: 'i-lucide-clipboard-check', to: '/siswa/tugas', active: route.path.includes('/siswa/tugas') }] : []),
             { label: 'Dokumen Saya', icon: 'i-lucide-folder-open', to: '/siswa/dokumen-saya', active: route.path.includes('/dokumen-saya') },
             { label: 'Profil Saya', icon: 'i-lucide-id-card', disabled: true, badge: 'Segera hadir' }
           ]
@@ -76,7 +128,7 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
           active: route.path === homePath.value
         }
       ]),
-  ...(auth.user.value?.role === 'guru'
+  ...(auth.user.value?.role === 'guru' && has('tugas')
     ? [
         {
           label: 'Tugas',
@@ -93,71 +145,69 @@ const moduleItems = computed<NavigationMenuItem[]>(() => {
           icon: 'i-lucide-book-open',
           to: '/admin/kelas',
           active: route.path.includes('/admin/kelas')
+        },
+        {
+          label: 'Pengaturan',
+          icon: 'i-lucide-sliders-horizontal',
+          to: '/admin/pengaturan',
+          active: route.path.includes('/admin/pengaturan')
         }
       ]
     : []),
-  {
-    label: 'e-Faktur',
-    icon: 'i-lucide-receipt-text',
-    active: route.path.includes('/e-faktur'),
-    // One column so each group heading sits directly above its own items.
-    ui: { childList: 'grid-cols-1 gap-0.5 min-w-80' },
-    children: [
-      // Group headings mirror the reference sidebar (disabled, heading-styled rows).
-      efakturHeading('Dasbor e-Faktur'),
-      { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', to: modulePath('e-faktur'), exact: true },
-      efakturHeading('e-Faktur'),
-      { label: 'Pajak Keluaran', icon: 'i-lucide-file-output', to: modulePath('e-faktur/keluaran') },
-      { label: 'Pajak Masukan', icon: 'i-lucide-file-input', to: modulePath('e-faktur/masukan') },
-      { label: 'Retur Pajak Keluaran', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-keluaran') },
-      { label: 'Retur Pajak Masukan', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-masukan') },
-      efakturHeading('Dokumen Lain'),
-      { label: 'Pajak Keluaran', icon: 'i-lucide-files', to: modulePath('e-faktur/dokumen-lain-keluaran') },
-      { label: 'Pajak Masukan', icon: 'i-lucide-files', to: modulePath('e-faktur/dokumen-lain-masukan') },
-      { label: 'Retur Dokumen Lain Keluaran', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-dokumen-lain-keluaran') },
-      { label: 'Retur Dokumen Lain Masukan', icon: 'i-lucide-undo-2', to: modulePath('e-faktur/retur-dokumen-lain-masukan') }
-    ]
-  },
-  {
-    label: 'eBUPOT',
-    icon: 'i-lucide-scroll-text',
-    active: route.path.includes('/bp21') || route.path.includes('/bp26') || route.path.includes('/bppu') || route.path.includes('/bpnr') || route.path.includes('/bukti-potong') || route.path.includes('/sp') || route.path.includes('/cy') || route.path.includes('/bpmp') || route.path.includes('/a1') || route.path.includes('/a2'),
-    children: [
-      { label: 'Bukti Potong Saya', icon: 'i-lucide-file-user', to: modulePath('bukti-potong-saya') },
-      { label: 'BPPU', icon: 'i-lucide-files', to: modulePath('bppu') },
-      { label: 'BPNR', icon: 'i-lucide-files', to: modulePath('bpnr') },
-      { label: 'Penyetoran Sendiri', icon: 'i-lucide-wallet-cards', to: modulePath('sp') },
-      { label: 'Pemotongan Secara Digunggung', icon: 'i-lucide-layers-3', to: modulePath('cy') },
-      { label: 'Dokumen yang Dipersamakan dengan Bukti Potong', icon: 'i-lucide-file-check-2', disabled: true, badge: 'Segera hadir' },
-      { label: 'BP 21 - Bukti Pemotongan Selain Pegawai Tetap', icon: 'i-lucide-file-text', to: modulePath('bp21') },
-      { label: 'BP 26 - Bukti Pemotongan Wajib Pajak Luar Negeri', icon: 'i-lucide-globe', to: modulePath('bp26') },
-      { label: 'BP A1 - Bukti Pemotongan A1 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', to: modulePath('a1') },
-      { label: 'BP A2 - Bukti Pemotongan A2 Masa Pajak Terakhir', icon: 'i-lucide-file-lock-2', to: modulePath('a2') },
-      { label: 'Bukti Pemotongan Bulanan Pegawai Tetap', icon: 'i-lucide-file-stack', to: modulePath('bpmp') }
-    ]
-  },
-  {
-    label: 'SPT',
-    icon: 'i-lucide-clipboard-list',
-    active: route.path.includes('/siswa/spt') || route.path.includes('/guru/spt'),
-    children: [
-      { label: 'Surat Pemberitahuan (SPT)', icon: 'i-lucide-file-spreadsheet', to: modulePath('spt') },
-      { label: 'Formulir Pajak', icon: 'i-lucide-clipboard-pen', disabled: true, badge: 'Segera hadir' },
-      { label: 'Pencatatan', icon: 'i-lucide-book-text', disabled: true, badge: 'Segera hadir' },
-      { label: 'Dasbor Kompensasi', icon: 'i-lucide-layout-dashboard', disabled: true, badge: 'Segera hadir' },
-      { label: 'Pengungkapan Ketidakbenaran SPT', icon: 'i-lucide-file-warning', disabled: true, badge: 'Segera hadir' }
-    ]
-  },
+  ...(hasAny(EFAKTUR_KEYS)
+    ? [
+        {
+          label: 'e-Faktur',
+          icon: 'i-lucide-receipt-text',
+          active: route.path.includes('/e-faktur'),
+          ui: { childList: 'grid-cols-1 gap-0.5 min-w-80' },
+          children: [
+            efakturHeading('Dasbor e-Faktur'),
+            { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', to: modulePath('e-faktur'), exact: true },
+            efakturHeading('e-Faktur'),
+            ...efakturMainItems,
+            efakturHeading('Dokumen Lain'),
+            ...efakturOtherItems
+          ]
+        }
+      ]
+    : []),
+  ...(hasAny(EBUPOT_KEYS)
+    ? [
+        {
+          label: 'eBUPOT',
+          icon: 'i-lucide-scroll-text',
+          active: route.path.includes('/bp21') || route.path.includes('/bp26') || route.path.includes('/bppu') || route.path.includes('/bpnr') || route.path.includes('/bukti-potong') || route.path.includes('/sp') || route.path.includes('/cy') || route.path.includes('/bpmp') || route.path.includes('/a1') || route.path.includes('/a2'),
+          children: ebupotChildren
+        }
+      ]
+    : []),
+  ...(hasAny(SPT_KEYS)
+    ? [
+        {
+          label: 'SPT',
+          icon: 'i-lucide-clipboard-list',
+          active: route.path.includes('/siswa/spt') || route.path.includes('/guru/spt'),
+          children: [
+            { label: 'Surat Pemberitahuan (SPT)', icon: 'i-lucide-file-spreadsheet', to: modulePath('spt') },
+            { label: 'Formulir Pajak', icon: 'i-lucide-clipboard-pen', disabled: true, badge: 'Segera hadir' },
+            { label: 'Pencatatan', icon: 'i-lucide-book-text', disabled: true, badge: 'Segera hadir' },
+            { label: 'Dasbor Kompensasi', icon: 'i-lucide-layout-dashboard', disabled: true, badge: 'Segera hadir' },
+            { label: 'Pengungkapan Ketidakbenaran SPT', icon: 'i-lucide-file-warning', disabled: true, badge: 'Segera hadir' }
+          ]
+        }
+      ]
+    : []),
   {
     label: 'Pembayaran',
     icon: 'i-lucide-badge-dollar-sign',
     active: route.path.includes('/siswa/pembayaran') || route.path.includes('/pembayaran/mandiri'),
     children: [
-      { label: 'Permohonan Pemindahbukuan', icon: 'i-lucide-arrow-left-right', to: modulePath('pembayaran/pbk') },
+      ...(has('pbk') ? [{ label: 'Permohonan Pemindahbukuan', icon: 'i-lucide-arrow-left-right', to: modulePath('pembayaran/pbk') }] : []),
       { label: 'Layanan Mandiri Kode Billing', icon: 'i-lucide-receipt', to: modulePath('pembayaran/mandiri') },
-      { label: 'Tagihan Pajak', icon: 'i-lucide-file-plus-2', to: modulePath('pembayaran/tagihan') },
-      { label: 'Angsuran', icon: 'i-lucide-calendar-clock', to: modulePath('pembayaran/angsuran') },
-      { label: 'Deposit Pajak', icon: 'i-lucide-wallet', to: modulePath('pembayaran/deposit') },
+      ...(has('tagihan') ? [{ label: 'Tagihan Pajak', icon: 'i-lucide-file-plus-2', to: modulePath('pembayaran/tagihan') }] : []),
+      ...(has('angsuran') ? [{ label: 'Angsuran', icon: 'i-lucide-calendar-clock', to: modulePath('pembayaran/angsuran') }] : []),
+      ...(has('deposit') ? [{ label: 'Deposit Pajak', icon: 'i-lucide-wallet', to: modulePath('pembayaran/deposit') }] : []),
       { label: 'Daftar Kode Billing', icon: 'i-lucide-list-checks', to: modulePath('pembayaran') },
       { label: 'Formulir Restitusi Pajak', icon: 'i-lucide-file-input', disabled: true, badge: 'Segera hadir' },
       { label: 'Permohonan Pemberian Imbalan Bunga', icon: 'i-lucide-circle-dollar-sign', disabled: true, badge: 'Segera hadir' },

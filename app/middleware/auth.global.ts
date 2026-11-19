@@ -1,3 +1,5 @@
+import { isRouteAllowedForUser } from '~/utils/modules'
+
 export default defineNuxtRouteMiddleware(async (to) => {
   const auth = useAuth()
   await auth.init()
@@ -20,5 +22,18 @@ export default defineNuxtRouteMiddleware(async (to) => {
     && to.path !== '/ganti-password'
   ) {
     return navigateTo('/ganti-password', { replace: true })
+  }
+
+  // Guard routes belonging to modules disabled for the user's institution.
+  if (!isRouteAllowedForUser(to.path, auth.user.value)) {
+    if (import.meta.client) {
+      const toast = useToast()
+      toast.add({
+        title: 'Modul tidak aktif',
+        description: 'Modul ini tidak aktif untuk instansi Anda',
+        color: 'warning',
+      })
+    }
+    return navigateTo(roleHome(auth.user.value?.role), { replace: true })
   }
 })
