@@ -142,12 +142,7 @@ export function isRouteAllowedForUser(path: string, user: Me | null | undefined)
   ) {
     return isModuleEnabled(user, 'faktur_masukan')
   }
-  if (
-    path === '/siswa/e-faktur/retur' ||
-    path.startsWith('/siswa/e-faktur/retur/') ||
-    path === '/guru/e-faktur/retur' ||
-    path.startsWith('/guru/e-faktur/retur/')
-  ) {
+  if (/^\/(siswa|guru)\/e-faktur\/retur-(masukan|keluaran)(\/|$)/.test(path)) {
     return isModuleEnabled(user, 'retur')
   }
   if (path === '/siswa/e-faktur' || path === '/guru/e-faktur') {
