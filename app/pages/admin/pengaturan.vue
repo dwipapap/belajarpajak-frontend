@@ -308,15 +308,14 @@ function onResetChanges() {
 
 <template>
   <div class="dash-page">
-    <header class="dash-toolbar">
+    <header class="dash-head">
       <div>
-        <span class="dash-eyebrow">Administrasi Instansi</span>
-        <h1 class="dash-title">Pengaturan Instansi</h1>
-        <p class="dash-subtitle">
+        <h1>Pengaturan Instansi</h1>
+        <p>
           Atur modul pembelajaran yang aktif bagi guru dan siswa serta kebijakan pengumpulan tugas di instansi Anda.
         </p>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="dash-head__actions">
         <UButton
           v-if="isDirty || isPaketDirty"
           color="neutral"
