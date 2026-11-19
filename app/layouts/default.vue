@@ -275,6 +275,12 @@ const userMenuItems = computed(() => [
   ],
   [
     {
+      label: 'Panduan Penggunaan',
+      icon: 'i-lucide-book-open',
+      to: '/panduan.html',
+      target: '_blank' as const
+    },
+    {
       label: 'Keluar',
       icon: 'i-lucide-log-out',
       color: 'error' as const,
