@@ -77,6 +77,7 @@ const periodState = computed(() => {
         </dl>
         <div class="flex flex-wrap gap-2">
           <UButton to="/admin/kelas" size="sm" color="neutral" variant="outline" icon="i-lucide-book-open" label="Kelola Kelas" />
+          <UButton to="/admin/pengaturan" size="sm" color="neutral" variant="outline" icon="i-lucide-sliders-horizontal" label="Pengaturan Instansi" />
           <UButton to="/admin/audit" size="sm" color="neutral" variant="outline" icon="i-lucide-scroll-text" label="Log Audit" />
         </div>
       </div>

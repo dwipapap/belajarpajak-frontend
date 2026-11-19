@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Tenant, TenantCreate, TenantOverview, TenantSummary, TenantUpdate, User, UserListResponse } from '~/types/api'
+import { ALL_MODULE_KEYS, FALLBACK_MODULE_CATALOG, MODULE_GROUPS } from '~/utils/modules'
 
 /**
  * Superadmin console for the institution lifecycle: create (+ first admin),
@@ -352,6 +353,25 @@ const editDatesTouched = ref(false)
 const editUnlimitedGuru = ref(true)
 const editUnlimitedSiswa = ref(true)
 const editUnlimitedKelas = ref(true)
+const editAllowedModules = ref<string[]>([...ALL_MODULE_KEYS])
+
+const catalogByGroup = computed(() =>
+  MODULE_GROUPS.map(group => ({
+    group,
+    items: FALLBACK_MODULE_CATALOG.filter(m => m.group === group)
+  }))
+)
+
+function toggleAllowedModule(key: string, checked: boolean) {
+  const s = new Set(editAllowedModules.value)
+  if (checked) s.add(key)
+  else s.delete(key)
+  editAllowedModules.value = ALL_MODULE_KEYS.filter(k => s.has(k))
+}
+
+function selectAllAllowedModules() {
+  editAllowedModules.value = [...ALL_MODULE_KEYS]
+}
 
 function toDateInput(iso: string | null | undefined): string {
   if (!iso) return ''
@@ -384,6 +404,9 @@ function openEdit(tenant: Tenant) {
   editUnlimitedGuru.value = tenant.max_guru === null
   editUnlimitedSiswa.value = tenant.max_siswa === null
   editUnlimitedKelas.value = tenant.max_kelas === null
+  editAllowedModules.value = tenant.allowed_modules
+    ? [...tenant.allowed_modules]
+    : [...ALL_MODULE_KEYS]
   editOpen.value = true
 }
 
@@ -507,7 +530,8 @@ async function onSaveEdit() {
       contact_wa: editForm.contact_wa || null,
       max_guru: editUnlimitedGuru.value ? null : editForm.max_guru,
       max_siswa: editUnlimitedSiswa.value ? null : editForm.max_siswa,
-      max_kelas: editUnlimitedKelas.value ? null : editForm.max_kelas
+      max_kelas: editUnlimitedKelas.value ? null : editForm.max_kelas,
+      allowed_modules: editAllowedModules.value
     }
     if (editForm.name.trim() !== target.name) body.name = editForm.name.trim()
     if (editForm.type !== target.type) body.type = editForm.type as TenantUpdate['type']
@@ -652,6 +676,7 @@ function formatDate(iso: string | null) {
         <div class="flex flex-wrap gap-1 border-t border-default p-3">
           <UButton icon="i-lucide-eye" size="xs" color="neutral" variant="soft" label="Detail" @click="openDetail(tenant)" />
           <UButton icon="i-lucide-settings-2" size="xs" label="Atur" @click="openEdit(tenant)" />
+          <UButton icon="i-lucide-sliders-horizontal" size="xs" color="neutral" variant="soft" label="Modul" :to="`/admin/pengaturan?tenant_id=${tenant.id}`" />
           <UButton
             icon="i-lucide-power"
             size="xs"
@@ -900,6 +925,28 @@ function formatDate(iso: string | null) {
                 <UInputNumber v-model="editForm.max_kelas" :min="0" :disabled="editUnlimitedKelas" placeholder="∞" class="w-full" />
               </UFormField>
               <UCheckbox v-model="editUnlimitedKelas" label="Tanpa batas" class="mt-1" />
+            </div>
+          </div>
+
+          <USeparator label="Paket Modul" />
+          <div class="space-y-2 rounded border border-default p-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="text-xs text-muted">
+                Pilih modul yang termasuk dalam paket instansi ini ({{ editAllowedModules.length }}/{{ ALL_MODULE_KEYS.length }} modul). Admin sekolah hanya dapat menyalakan modul di dalam paket.
+              </p>
+              <UButton size="xs" color="neutral" variant="soft" label="Pilih Semua" @click="selectAllAllowedModules" />
+            </div>
+            <div v-for="grp in catalogByGroup" :key="grp.group" class="space-y-1 pt-1">
+              <p class="text-xs font-bold text-highlighted">{{ grp.group }}</p>
+              <div class="grid gap-1.5 sm:grid-cols-2">
+                <UCheckbox
+                  v-for="mod in grp.items"
+                  :key="mod.key"
+                  :model-value="editAllowedModules.includes(mod.key)"
+                  :label="mod.label"
+                  @update:model-value="(val: boolean | 'indeterminate') => toggleAllowedModule(mod.key, Boolean(val))"
+                />
+              </div>
             </div>
           </div>
         </div>
